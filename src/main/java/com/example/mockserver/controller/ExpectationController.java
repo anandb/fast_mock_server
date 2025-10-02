@@ -3,6 +3,8 @@ package com.example.mockserver.controller;
 import com.example.mockserver.exception.InvalidExpectationException;
 import com.example.mockserver.service.MockServerManager;
 import com.example.mockserver.service.MockServerManager.ServerInstance;
+import com.example.mockserver.service.MockServerOperations;
+import com.example.mockserver.service.MockServerOperationsImpl;
 import com.example.mockserver.model.GlobalHeader;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -76,42 +78,40 @@ public class ExpectationController {
         ClientAndServer server = serverInstance.getServer();
         List<GlobalHeader> globalHeaders = serverInstance.getGlobalHeaders();
 
-        try {
-            // Parse expectations from JSON
-            Expectation[] expectations = parseExpectations(expectationsJson);
-            log.debug("Parsed {} expectations", expectations.length);
+        // Create MockServerOperations instance for this server
+        MockServerOperations mockServerOperations = new MockServerOperationsImpl(server);
 
-            // Apply global headers to each expectation and configure
-            if (globalHeaders != null && !globalHeaders.isEmpty()) {
-                log.debug("Applying {} global headers to expectations", globalHeaders.size());
-                for (Expectation expectation : expectations) {
-                    Expectation mergedExpectation = applyGlobalHeaders(expectation, globalHeaders);
-                    server.when(mergedExpectation.getHttpRequest())
-                          .respond(mergedExpectation.getHttpResponse());
-                }
-            } else {
-                // No global headers, configure as-is
-                for (Expectation expectation : expectations) {
-                    server.when(expectation.getHttpRequest())
-                          .respond(expectation.getHttpResponse());
-                }
+        // Parse expectations from JSON
+        Expectation[] expectations = parseExpectations(expectationsJson);
+        log.debug("Parsed {} expectations", expectations.length);
+
+        // Apply global headers to each expectation and configure
+        if (globalHeaders != null && !globalHeaders.isEmpty()) {
+            log.debug("Applying {} global headers to expectations", globalHeaders.size());
+            for (Expectation expectation : expectations) {
+                Expectation mergedExpectation = applyGlobalHeaders(expectation, globalHeaders);
+                mockServerOperations.configureExpectation(
+                    mergedExpectation.getHttpRequest(),
+                    mergedExpectation.getHttpResponse()
+                );
             }
-
-            String message = String.format(
-                "Successfully configured %d expectation(s) for server: %s",
-                expectations.length,
-                serverId
-            );
-            log.info(message);
-            return ResponseEntity.ok(message);
-
-        } catch (JsonProcessingException e) {
-            log.error("Failed to parse expectations JSON", e);
-            throw new InvalidExpectationException(
-                "Invalid expectation JSON: " + e.getMessage(),
-                e
-            );
+        } else {
+            // No global headers, configure as-is
+            for (Expectation expectation : expectations) {
+                mockServerOperations.configureExpectation(
+                    expectation.getHttpRequest(),
+                    expectation.getHttpResponse()
+                );
+            }
         }
+
+        String message = String.format(
+            "Successfully configured %d expectation(s) for server: %s",
+            expectations.length,
+            serverId
+        );
+        log.info(message);
+        return ResponseEntity.ok(message);
     }
 
     /**
@@ -174,24 +174,36 @@ public class ExpectationController {
      * Parses expectation JSON into an array of Expectation objects.
      * <p>
      * Supports both single expectation objects and arrays of expectations.
+     * Uses MockServer's serialization for proper parsing.
      * </p>
      *
      * @param json JSON string to parse
      * @return array of Expectation objects
-     * @throws JsonProcessingException if the JSON cannot be parsed
+     * @throws InvalidExpectationException if the JSON cannot be parsed
      */
-    private Expectation[] parseExpectations(String json) throws JsonProcessingException {
-        // Try parsing as array first
-        try {
-            return objectMapper.readValue(json, Expectation[].class);
-        } catch (JsonProcessingException e) {
-            // Try parsing as single expectation
+    private Expectation[] parseExpectations(String json) {
+        json = json.trim();
+
+        org.mockserver.serialization.ExpectationSerializer serializer =
+            new org.mockserver.serialization.ExpectationSerializer(new org.mockserver.logging.MockServerLogger());
+
+        // Check if it's an array
+        if (json.startsWith("[")) {
+            // Parse as array using MockServer's serializer
             try {
-                Expectation single = objectMapper.readValue(json, Expectation.class);
+                return serializer.deserializeArray(json, false);
+            } catch (Exception e) {
+                log.error("Failed to parse expectations array", e);
+                throw new InvalidExpectationException("Failed to parse expectations array: " + e.getMessage(), e);
+            }
+        } else {
+            // Parse as single expectation using MockServer's serializer
+            try {
+                Expectation single = serializer.deserialize(json);
                 return new Expectation[]{single};
-            } catch (JsonProcessingException e2) {
-                // Neither worked, throw original error
-                throw e;
+            } catch (Exception e) {
+                log.error("Failed to parse expectation", e);
+                throw new InvalidExpectationException("Failed to parse expectation: " + e.getMessage(), e);
             }
         }
     }
@@ -208,7 +220,10 @@ public class ExpectationController {
         log.debug("Retrieving expectations for server: {}", serverId);
 
         ServerInstance serverInstance = mockServerManager.getServerInstance(serverId);
-        Expectation[] expectations = serverInstance.getServer()
+        ClientAndServer server = serverInstance.getServer();
+        MockServerOperations mockServerOperations = new MockServerOperationsImpl(server);
+
+        Expectation[] expectations = mockServerOperations
             .retrieveActiveExpectations(request());
 
         return ResponseEntity.ok(expectations);
@@ -229,7 +244,10 @@ public class ExpectationController {
         log.info("Clearing expectations for server: {}", serverId);
 
         ServerInstance serverInstance = mockServerManager.getServerInstance(serverId);
-        serverInstance.getServer().reset();
+        ClientAndServer server = serverInstance.getServer();
+        MockServerOperations mockServerOperations = new MockServerOperationsImpl(server);
+
+        mockServerOperations.reset();
 
         String message = String.format("Cleared all expectations for server: %s", serverId);
         log.info(message);
