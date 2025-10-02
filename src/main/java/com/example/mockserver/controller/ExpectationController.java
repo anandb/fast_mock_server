@@ -35,7 +35,11 @@ import static org.mockserver.model.Header.header;
 import static org.mockserver.model.HttpRequest.request;
 
 /**
- * REST controller for configuring expectations on mock servers
+ * REST controller for configuring expectations on mock servers.
+ * <p>
+ * Provides endpoints to add, retrieve, and clear expectations for mock server instances.
+ * Supports merging global headers with expectation-specific headers.
+ * </p>
  */
 @Slf4j
 @RestController
@@ -47,8 +51,18 @@ public class ExpectationController {
     private final ObjectMapper objectMapper;
 
     /**
-     * Configure expectations for a specific server
-     * Merges global headers with expectation-specific headers
+     * Configures expectations for a specific mock server.
+     * <p>
+     * This method accepts expectation JSON (single or array) and merges any global headers
+     * configured for the server with the expectation-specific headers. Expectation-specific
+     * headers take precedence over global headers in case of conflicts.
+     * </p>
+     *
+     * @param serverId the unique identifier of the server
+     * @param expectationsJson JSON string containing one or more expectations
+     * @return ResponseEntity with a success message
+     * @throws ServerNotFoundException if the server with the specified ID is not found
+     * @throws InvalidExpectationException if the expectation JSON is invalid
      */
     @PostMapping("/{serverId}/expectations")
     public ResponseEntity<String> configureExpectations(
@@ -101,8 +115,15 @@ public class ExpectationController {
     }
 
     /**
-     * Apply global headers to an expectation
-     * Expectation-specific headers take precedence over global headers
+     * Applies global headers to an expectation's HTTP response.
+     * <p>
+     * Merges global headers with expectation-specific headers. If a header with the same
+     * name exists in both, the expectation-specific header takes precedence.
+     * </p>
+     *
+     * @param expectation the original expectation to enhance
+     * @param globalHeaders list of global headers to apply
+     * @return a new Expectation with merged headers
      */
     private Expectation applyGlobalHeaders(
         Expectation expectation,
@@ -150,7 +171,14 @@ public class ExpectationController {
     }
 
     /**
-     * Parse expectation JSON - supports single expectation or array
+     * Parses expectation JSON into an array of Expectation objects.
+     * <p>
+     * Supports both single expectation objects and arrays of expectations.
+     * </p>
+     *
+     * @param json JSON string to parse
+     * @return array of Expectation objects
+     * @throws JsonProcessingException if the JSON cannot be parsed
      */
     private Expectation[] parseExpectations(String json) throws JsonProcessingException {
         // Try parsing as array first
@@ -169,7 +197,11 @@ public class ExpectationController {
     }
 
     /**
-     * Get current expectations for a server (optional feature)
+     * Retrieves all active expectations for a specific mock server.
+     *
+     * @param serverId the unique identifier of the server
+     * @return ResponseEntity containing an array of active expectations
+     * @throws ServerNotFoundException if the server with the specified ID is not found
      */
     @GetMapping("/{serverId}/expectations")
     public ResponseEntity<Expectation[]> getExpectations(@PathVariable String serverId) {
@@ -183,7 +215,14 @@ public class ExpectationController {
     }
 
     /**
-     * Clear all expectations for a server
+     * Clears all expectations for a specific mock server.
+     * <p>
+     * This resets the server to its initial state with no configured expectations.
+     * </p>
+     *
+     * @param serverId the unique identifier of the server
+     * @return ResponseEntity with a success message
+     * @throws ServerNotFoundException if the server with the specified ID is not found
      */
     @DeleteMapping("/{serverId}/expectations")
     public ResponseEntity<String> clearExpectations(@PathVariable String serverId) {

@@ -20,7 +20,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Service for managing multiple MockServer instances
+ * Service for managing multiple MockServer instances.
+ * <p>
+ * Provides lifecycle management for mock servers including creation, retrieval, deletion,
+ * and status tracking. Maintains a registry of all active server instances and handles
+ * TLS configuration through delegation to {@link TlsConfigurationService}.
+ * </p>
  */
 @Slf4j
 @Service
@@ -29,11 +34,20 @@ public class MockServerManager {
 
     private final TlsConfigurationService tlsConfigService;
 
-    // Registry of all active servers
+    /** Registry of all active server instances, keyed by server ID */
     private final Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
 
     /**
-     * Create a new mock server
+     * Creates a new mock server instance with the specified configuration.
+     * <p>
+     * This method configures TLS if requested, starts the MockServer instance,
+     * and registers it in the active servers map.
+     * </p>
+     *
+     * @param request the server creation request containing configuration details
+     * @return ServerInfo object containing details about the created server
+     * @throws ServerAlreadyExistsException if a server with the same ID already exists
+     * @throws ServerCreationException if server creation fails due to configuration or runtime errors
      */
     public ServerInfo createServer(CreateServerRequest request) {
         String serverId = request.getServerId();
@@ -79,7 +93,11 @@ public class MockServerManager {
     }
 
     /**
-     * Get a server instance by ID
+     * Retrieves a server instance by its unique identifier.
+     *
+     * @param serverId the unique identifier of the server
+     * @return the ServerInstance object
+     * @throws ServerNotFoundException if no server with the specified ID exists
      */
     public ServerInstance getServerInstance(String serverId) {
         ServerInstance instance = servers.get(serverId);
@@ -90,14 +108,20 @@ public class MockServerManager {
     }
 
     /**
-     * Get server info by ID
+     * Retrieves server information by its unique identifier.
+     *
+     * @param serverId the unique identifier of the server
+     * @return ServerInfo object containing details about the server
+     * @throws ServerNotFoundException if no server with the specified ID exists
      */
     public ServerInfo getServerInfo(String serverId) {
         return toServerInfo(getServerInstance(serverId));
     }
 
     /**
-     * List all servers
+     * Lists all active mock server instances.
+     *
+     * @return list of ServerInfo objects for all active servers
      */
     public List<ServerInfo> listServers() {
         return servers.values().stream()
@@ -106,7 +130,16 @@ public class MockServerManager {
     }
 
     /**
-     * Delete a server
+     * Deletes a mock server instance and cleans up associated resources.
+     * <p>
+     * This method stops the server, removes it from the registry, and cleans up
+     * any temporary certificate files created for the server.
+     * </p>
+     *
+     * @param serverId the unique identifier of the server to delete
+     * @return true if the server was successfully deleted
+     * @throws ServerNotFoundException if no server with the specified ID exists
+     * @throws ServerCreationException if the server cannot be stopped or cleaned up
      */
     public boolean deleteServer(String serverId) {
         ServerInstance instance = servers.remove(serverId);
@@ -135,21 +168,32 @@ public class MockServerManager {
     }
 
     /**
-     * Check if a server exists
+     * Checks if a server with the specified ID exists in the registry.
+     *
+     * @param serverId the unique identifier of the server to check
+     * @return true if the server exists, false otherwise
      */
     public boolean serverExists(String serverId) {
         return servers.containsKey(serverId);
     }
 
     /**
-     * Get the count of active servers
+     * Gets the count of active mock server instances.
+     *
+     * @return the number of servers currently in the registry
      */
     public int getServerCount() {
         return servers.size();
     }
 
     /**
-     * Convert ServerInstance to ServerInfo
+     * Converts a ServerInstance to a ServerInfo DTO.
+     * <p>
+     * This method transforms the internal server representation into the public API response format.
+     * </p>
+     *
+     * @param instance the ServerInstance to convert
+     * @return ServerInfo DTO containing the server's public information
      */
     private ServerInfo toServerInfo(ServerInstance instance) {
         return ServerInfo.builder()
@@ -167,7 +211,11 @@ public class MockServerManager {
     }
 
     /**
-     * Stop all servers on shutdown
+     * Stops all active mock servers during application shutdown.
+     * <p>
+     * This method is automatically called by Spring when the application context is closing.
+     * It ensures all servers are properly stopped and resources are cleaned up.
+     * </p>
      */
     @PreDestroy
     public void shutdown() {
@@ -186,35 +234,72 @@ public class MockServerManager {
     }
 
     /**
-     * Internal class representing a server instance
+     * Internal class representing a server instance with all its runtime information.
+     * <p>
+     * This class encapsulates the MockServer instance along with its configuration
+     * and metadata. It provides convenience methods for determining protocol, URLs,
+     * and feature availability.
+     * </p>
      */
     @lombok.Data
     @lombok.AllArgsConstructor
     public static class ServerInstance {
+        /** Unique identifier of the server */
         private String serverId;
+        /** Port number the server is listening on */
         private int port;
+        /** The underlying MockServer instance */
         private ClientAndServer server;
+        /** TLS configuration, if enabled */
         private TlsConfig tlsConfig;
+        /** List of global headers to apply to all responses */
         private List<GlobalHeader> globalHeaders;
+        /** Timestamp when the server was created */
         private LocalDateTime createdAt;
+        /** Human-readable description of the server */
         private String description;
 
+        /**
+         * Gets the protocol being used by this server.
+         *
+         * @return "https" if TLS is configured and valid, "http" otherwise
+         */
         public String getProtocol() {
             return (tlsConfig != null && tlsConfig.isValid()) ? "https" : "http";
         }
 
+        /**
+         * Gets the complete base URL for accessing this server.
+         *
+         * @return formatted base URL (e.g., "https://localhost:1443")
+         */
         public String getBaseUrl() {
             return String.format("%s://localhost:%d", getProtocol(), port);
         }
 
+        /**
+         * Checks if TLS is enabled for this server.
+         *
+         * @return true if TLS is configured and valid, false otherwise
+         */
         public boolean isTlsEnabled() {
             return tlsConfig != null && tlsConfig.isValid();
         }
 
+        /**
+         * Checks if mutual TLS (mTLS) is enabled for this server.
+         *
+         * @return true if mTLS is configured and valid, false otherwise
+         */
         public boolean isMtlsEnabled() {
             return tlsConfig != null && tlsConfig.hasMtls();
         }
 
+        /**
+         * Checks if global headers are configured for this server.
+         *
+         * @return true if at least one global header is configured, false otherwise
+         */
         public boolean hasGlobalHeaders() {
             return globalHeaders != null && !globalHeaders.isEmpty();
         }
