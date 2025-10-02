@@ -51,9 +51,93 @@ mvn spring-boot:run
 
 # Or run the JAR
 java -jar target/mock-server-1.0.0.jar
+
+# Run with configuration file
+java -Dmock.server.config.file=server-config.json -jar target/mock-server-1.0.0.jar
+
+# Or with Maven
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=server-config.json"
 ```
 
 The management API will be available at `http://localhost:8080`
+
+## Loading Configuration from File
+
+You can automatically create servers and configure expectations at startup by providing a JSON configuration file. This is useful for:
+- Consistent test environments
+- CI/CD pipelines
+- Automated testing setups
+- Quick server setup without API calls
+
+### Configuration File Format
+
+Create a JSON file (e.g., `server-config.json`) with an array of server configurations:
+
+```json
+[
+  {
+    "server": {
+      "serverId": "api-server",
+      "port": 8081,
+      "description": "API Mock Server",
+      "globalHeaders": [
+        {
+          "name": "X-API-Version",
+          "value": "1.0"
+        }
+      ]
+    },
+    "expectations": [
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/users"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"users\": [{\"id\": 1, \"name\": \"John Doe\"}]}"
+        }
+      }
+    ]
+  }
+]
+```
+
+### Usage
+
+Specify the configuration file path using the `mock.server.config.file` system property:
+
+```bash
+# Using java command
+java -Dmock.server.config.file=/path/to/server-config.json -jar target/mock-server-1.0.0.jar
+
+# Using Maven
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./server-config.json"
+
+# Using relative path
+java -Dmock.server.config.file=./config/servers.json -jar target/mock-server-1.0.0.jar
+```
+
+### Configuration File Structure
+
+Each server configuration object contains:
+- **server** (required): Server creation parameters (same as POST /api/servers)
+  - `serverId`: Unique identifier
+  - `port`: Port number (1024-65535)
+  - `description`: Optional description
+  - `tlsConfig`: Optional TLS/HTTPS configuration
+  - `globalHeaders`: Optional global response headers
+- **expectations** (optional): Array of expectations to configure on this server
+
+See `server-config-example.json` for a complete example with multiple servers and various configurations.
+
+### Benefits
+
+- **Reproducible Environments**: Same configuration across all environments
+- **Version Control**: Track configuration changes in Git
+- **Quick Setup**: Start multiple servers with expectations in one command
+- **CI/CD Integration**: Easily integrate with automated testing pipelines
+- **No API Calls**: Servers and expectations ready immediately on startup
 
 ## API Documentation
 

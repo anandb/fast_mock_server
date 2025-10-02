@@ -1,0 +1,27 @@
+[
+  {
+    "server": {
+      "serverId": "test-api",
+      "port": 9001,
+      "description": "Test API Server",
+      "globalHeaders": [
+        {
+          "name": "X-Test-Header",
+          "value": "test-value"
+        }
+      ]
+    },
+    "expectations": [
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/test"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"message\": \"Hello from test server\"}"
+        }
+      }
+    ]
+  }
+]
