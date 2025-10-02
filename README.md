@@ -8,6 +8,7 @@ A Spring Boot application for managing multiple MockServer instances with suppor
 - **Dynamic Configuration**: Configure expectations via REST API
 - **TLS/HTTPS Support**: Enable HTTPS with custom certificates
 - **Mutual TLS (mTLS)**: Client certificate validation with CA certificate
+- **Basic Authentication**: HTTP Basic Auth protection for mock servers
 - **Global Headers**: Apply headers to all responses from a server
 - **Header Merging**: Intelligent merge of global and expectation-specific headers
 
@@ -191,6 +192,22 @@ See `server-config-example.json` for a complete example with multiple servers an
 }
 ```
 
+**Server with Basic Authentication**:
+```json
+{
+  "serverId": "protected-api",
+  "port": 9090,
+  "description": "API server with basic authentication",
+  "basicAuthConfig": {
+    "username": "admin",
+    "password": "secret123"
+  },
+  "globalHeaders": [
+    {"name": "X-API-Version", "value": "1.0"}
+  ]
+}
+```
+
 **Response**: `201 Created`
 ```json
 {
@@ -201,6 +218,7 @@ See `server-config-example.json` for a complete example with multiple servers an
   "baseUrl": "https://localhost:1443",
   "tlsEnabled": true,
   "mtlsEnabled": false,
+  "basicAuthEnabled": false,
   "globalHeaders": [
     {"name": "X-Service-Version", "value": "1.0.0"},
     {"name": "X-Environment", "value": "test"}
@@ -521,6 +539,89 @@ curl -k https://localhost:1444/test \
   --cert client.crt \
   --key client.key
 ```
+
+## Basic Authentication Example
+
+Basic authentication adds HTTP Basic Auth protection to your mock server. When enabled, all requests must include valid credentials.
+
+### Create Server with Basic Auth
+
+```bash
+curl -X POST http://localhost:8080/api/servers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverId": "auth-api",
+    "port": 9090,
+    "description": "Protected API",
+    "basicAuthConfig": {
+      "username": "admin",
+      "password": "secret123"
+    }
+  }'
+```
+
+### Configure Expectations
+
+Expectations are configured normally - the basic auth is applied automatically:
+
+```bash
+curl -X POST http://localhost:8080/api/servers/auth-api/expectations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "httpRequest": {
+      "method": "GET",
+      "path": "/api/data"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "body": {"message": "Protected data"}
+    }
+  }'
+```
+
+### Test with Credentials
+
+```bash
+# Without credentials - will fail
+curl http://localhost:9090/api/data
+
+# With correct credentials - will succeed
+curl -u admin:secret123 http://localhost:9090/api/data
+
+# Or using Authorization header
+curl -H "Authorization: Basic YWRtaW46c2VjcmV0MTIz" http://localhost:9090/api/data
+```
+
+### Combining Basic Auth with TLS
+
+You can enable both basic authentication and TLS for extra security:
+
+```bash
+curl -X POST http://localhost:8080/api/servers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverId": "secure-auth-api",
+    "port": 9443,
+    "description": "HTTPS API with Basic Auth",
+    "tlsConfig": {
+      "certificate": "'"$(cat server.crt | sed 's/$/\\n/' | tr -d '\n')"'",
+      "privateKey": "'"$(cat server.key | sed 's/$/\\n/' | tr -d '\n')"'"
+    },
+    "basicAuthConfig": {
+      "username": "admin",
+      "password": "secret123"
+    }
+  }'
+```
+
+Test the secured endpoint:
+```bash
+curl -k -u admin:secret123 https://localhost:9443/api/data
+```
+
+### Configuration File with Basic Auth
+
+See `server-config-basicauth-example.json` for a complete example configuration file that includes basic authentication.
 
 ## Error Handling
 

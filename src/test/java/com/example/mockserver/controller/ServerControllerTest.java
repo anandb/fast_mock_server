@@ -59,6 +59,7 @@ class ServerControllerTest {
             8080,
             "Test Server",
             null,
+            null,
             null
         );
 
@@ -96,6 +97,7 @@ class ServerControllerTest {
             8080,
             "Test Server",
             null,
+            null,
             null
         );
 
@@ -117,6 +119,7 @@ class ServerControllerTest {
             100,  // Invalid port (< 1024)
             "Test Server",
             null,
+            null,
             null
         );
 
@@ -134,6 +137,7 @@ class ServerControllerTest {
             8080,
             "Test Server",
             null,
+            null,
             null
         );
 
@@ -150,6 +154,7 @@ class ServerControllerTest {
             "test-server",
             70000,  // Port exceeds 65535
             "Test Server",
+            null,
             null,
             null
         );
@@ -289,6 +294,7 @@ class ServerControllerTest {
             "",  // Empty serverId
             8080,
             "Test Server",
+            null,
             null,
             null
         );

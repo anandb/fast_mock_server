@@ -18,10 +18,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
+import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.mock.Expectation;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Base64;
 import java.util.stream.Collectors;
 
 import org.mockserver.model.NottableString;
@@ -85,24 +87,28 @@ public class ExpectationController {
         Expectation[] expectations = parseExpectations(expectationsJson);
         log.debug("Parsed {} expectations", expectations.length);
 
-        // Apply global headers to each expectation and configure
-        if (globalHeaders != null && !globalHeaders.isEmpty()) {
-            log.debug("Applying {} global headers to expectations", globalHeaders.size());
-            for (Expectation expectation : expectations) {
-                Expectation mergedExpectation = applyGlobalHeaders(expectation, globalHeaders);
-                mockServerOperations.configureExpectation(
-                    mergedExpectation.getHttpRequest(),
-                    mergedExpectation.getHttpResponse()
+        // Apply global headers and basic auth to each expectation and configure
+        for (Expectation expectation : expectations) {
+            // Apply global headers if present
+            Expectation processedExpectation = expectation;
+            if (globalHeaders != null && !globalHeaders.isEmpty()) {
+                log.debug("Applying {} global headers to expectation", globalHeaders.size());
+                processedExpectation = applyGlobalHeaders(processedExpectation, globalHeaders);
+            }
+
+            // Apply basic auth requirement if enabled
+            if (serverInstance.isBasicAuthEnabled()) {
+                log.debug("Applying basic auth requirement to expectation");
+                processedExpectation = applyBasicAuthRequirement(
+                    processedExpectation,
+                    serverInstance.getBasicAuthConfig()
                 );
             }
-        } else {
-            // No global headers, configure as-is
-            for (Expectation expectation : expectations) {
-                mockServerOperations.configureExpectation(
-                    expectation.getHttpRequest(),
-                    expectation.getHttpResponse()
-                );
-            }
+
+            mockServerOperations.configureExpectation(
+                processedExpectation.getHttpRequest(),
+                processedExpectation.getHttpResponse()
+            );
         }
 
         String message = String.format(
@@ -112,6 +118,36 @@ public class ExpectationController {
         );
         log.info(message);
         return ResponseEntity.ok(message);
+    }
+
+    /**
+     * Applies basic authentication requirement to an expectation's HTTP request.
+     * <p>
+     * Adds an Authorization header matcher to the request that validates the provided
+     * credentials match the server's configured basic auth credentials.
+     * </p>
+     *
+     * @param expectation the original expectation to enhance
+     * @param basicAuthConfig the basic auth configuration with username and password
+     * @return a new Expectation with basic auth requirement added
+     */
+    private Expectation applyBasicAuthRequirement(
+        Expectation expectation,
+        com.example.mockserver.model.BasicAuthConfig basicAuthConfig
+    ) {
+        // Generate expected Authorization header value
+        String credentials = basicAuthConfig.getUsername() + ":" + basicAuthConfig.getPassword();
+        String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes());
+        String expectedAuthHeader = "Basic " + encodedCredentials;
+
+        // Get original request and add Authorization header requirement
+        // Cast RequestDefinition to HttpRequest (which is what we expect from expectations)
+        HttpRequest requestWithAuth = ((HttpRequest) expectation.getHttpRequest())
+            .withHeader("Authorization", expectedAuthHeader);
+
+        // Return new expectation with modified request
+        return new Expectation(requestWithAuth)
+            .thenRespond(expectation.getHttpResponse());
     }
 
     /**

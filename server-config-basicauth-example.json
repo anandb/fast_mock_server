@@ -1,0 +1,60 @@
+{
+  "server": {
+    "serverId": "api-server-with-auth",
+    "port": 9090,
+    "description": "Example API server with basic authentication",
+    "basicAuthConfig": {
+      "username": "admin",
+      "password": "secret123"
+    },
+    "globalHeaders": [
+      {
+        "name": "Content-Type",
+        "value": "application/json"
+      },
+      {
+        "name": "X-API-Version",
+        "value": "1.0"
+      }
+    ]
+  },
+  "expectations": [
+    {
+      "httpRequest": {
+        "method": "GET",
+        "path": "/api/users"
+      },
+      "httpResponse": {
+        "statusCode": 200,
+        "body": {
+          "users": [
+            {
+              "id": 1,
+              "name": "John Doe",
+              "email": "john@example.com"
+            },
+            {
+              "id": 2,
+              "name": "Jane Smith",
+              "email": "jane@example.com"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "httpRequest": {
+        "method": "POST",
+        "path": "/api/users"
+      },
+      "httpResponse": {
+        "statusCode": 201,
+        "body": {
+          "id": 3,
+          "name": "New User",
+          "email": "newuser@example.com"
+        }
+      }
+    }
+  ]
+}

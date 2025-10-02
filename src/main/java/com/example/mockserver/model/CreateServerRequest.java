@@ -49,6 +49,11 @@ public class CreateServerRequest {
     @JsonProperty("globalHeaders")
     private List<GlobalHeader> globalHeaders;
 
+    /** Optional basic authentication configuration */
+    @Valid
+    @JsonProperty("basicAuthConfig")
+    private BasicAuthConfig basicAuthConfig;
+
     /**
      * Checks if TLS is enabled and properly configured for this server.
      *
@@ -56,6 +61,15 @@ public class CreateServerRequest {
      */
     public boolean isTlsEnabled() {
         return tlsConfig != null && tlsConfig.isValid();
+    }
+
+    /**
+     * Checks if basic authentication is enabled and properly configured for this server.
+     *
+     * @return true if basic auth configuration is present and valid, false otherwise
+     */
+    public boolean isBasicAuthEnabled() {
+        return basicAuthConfig != null && basicAuthConfig.isValid();
     }
 
     /**

@@ -61,6 +61,7 @@ class MockServerManagerTest {
             9001,
             "Test HTTP Server",
             null,
+            null,
             null
         );
 
@@ -88,7 +89,8 @@ class MockServerManagerTest {
             9002,
             "Test Server with Headers",
             null,
-            headers
+            headers,
+            null
         );
 
         ServerInfo serverInfo = mockServerManager.createServer(request);
@@ -108,6 +110,7 @@ class MockServerManagerTest {
             9003,
             "First Server",
             null,
+            null,
             null
         );
 
@@ -117,6 +120,7 @@ class MockServerManagerTest {
             "test-server",
             9004,
             "Duplicate Server",
+            null,
             null,
             null
         );
@@ -139,6 +143,7 @@ class MockServerManagerTest {
             9005,
             "TLS Server",
             tlsConfig,
+            null,
             null
         );
 
@@ -162,6 +167,7 @@ class MockServerManagerTest {
             9006,
             "TLS Server",
             tlsConfig,
+            null,
             null
         );
 
@@ -183,6 +189,7 @@ class MockServerManagerTest {
             "test-server",
             9007,
             "Test Server",
+            null,
             null,
             null
         );
@@ -212,6 +219,7 @@ class MockServerManagerTest {
             9008,
             "Test Server",
             null,
+            null,
             null
         );
 
@@ -229,9 +237,9 @@ class MockServerManagerTest {
     @Test
     @DisplayName("Should list all servers")
     void testListServers() {
-        CreateServerRequest request1 = new CreateServerRequest("server1", 9009, "Server 1", null, null);
-        CreateServerRequest request2 = new CreateServerRequest("server2", 9010, "Server 2", null, null);
-        CreateServerRequest request3 = new CreateServerRequest("server3", 9011, "Server 3", null, null);
+        CreateServerRequest request1 = new CreateServerRequest("server1", 9009, "Server 1", null, null, null);
+        CreateServerRequest request2 = new CreateServerRequest("server2", 9010, "Server 2", null, null, null);
+        CreateServerRequest request3 = new CreateServerRequest("server3", 9011, "Server 3", null, null, null);
 
         mockServerManager.createServer(request1);
         mockServerManager.createServer(request2);
@@ -266,6 +274,7 @@ class MockServerManagerTest {
             9012,
             "Test Server",
             null,
+            null,
             null
         );
 
@@ -296,6 +305,7 @@ class MockServerManagerTest {
             9013,
             "Test Server",
             null,
+            null,
             null
         );
 
@@ -314,6 +324,7 @@ class MockServerManagerTest {
             "test-server",
             9014,
             "Test Server",
+            null,
             null,
             null
         );
@@ -336,10 +347,10 @@ class MockServerManagerTest {
     void testGetServerCount() {
         assertEquals(0, mockServerManager.getServerCount());
 
-        mockServerManager.createServer(new CreateServerRequest("server1", 9015, "Server 1", null, null));
+        mockServerManager.createServer(new CreateServerRequest("server1", 9015, "Server 1", null, null, null));
         assertEquals(1, mockServerManager.getServerCount());
 
-        mockServerManager.createServer(new CreateServerRequest("server2", 9016, "Server 2", null, null));
+        mockServerManager.createServer(new CreateServerRequest("server2", 9016, "Server 2", null, null, null));
         assertEquals(2, mockServerManager.getServerCount());
 
         mockServerManager.deleteServer("server1");
@@ -351,8 +362,8 @@ class MockServerManagerTest {
     @Test
     @DisplayName("Should shutdown all servers on service shutdown")
     void testShutdown() {
-        mockServerManager.createServer(new CreateServerRequest("server1", 9017, "Server 1", null, null));
-        mockServerManager.createServer(new CreateServerRequest("server2", 9018, "Server 2", null, null));
+        mockServerManager.createServer(new CreateServerRequest("server1", 9017, "Server 1", null, null, null));
+        mockServerManager.createServer(new CreateServerRequest("server2", 9018, "Server 2", null, null, null));
 
         assertEquals(2, mockServerManager.getServerCount());
 
@@ -370,6 +381,7 @@ class MockServerManagerTest {
             "http-server",
             9019,
             "HTTP Server",
+            null,
             null,
             null
         );
@@ -393,7 +405,8 @@ class MockServerManagerTest {
             9020,
             "Server with Headers",
             null,
-            headers
+            headers,
+            null
         );
 
         mockServerManager.createServer(request);
@@ -410,6 +423,7 @@ class MockServerManagerTest {
             "server-no-headers",
             9021,
             "Server without Headers",
+            null,
             null,
             null
         );
@@ -428,6 +442,7 @@ class MockServerManagerTest {
             9022,
             "This is a detailed description",
             null,
+            null,
             null
         );
 
@@ -442,6 +457,7 @@ class MockServerManagerTest {
         CreateServerRequest request = new CreateServerRequest(
             "no-description-server",
             9023,
+            null,
             null,
             null,
             null

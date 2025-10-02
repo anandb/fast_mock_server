@@ -74,6 +74,7 @@ class MockServerIntegrationTest {
             9100,
             "Integration Test Server",
             null,
+            null,
             null
         );
 
@@ -126,7 +127,8 @@ class MockServerIntegrationTest {
             9101,
             "Server with Headers",
             null,
-            globalHeaders
+            globalHeaders,
+            null
         );
 
         ResponseEntity<ServerInfo> createResponse = restTemplate.postForEntity(
@@ -175,9 +177,9 @@ class MockServerIntegrationTest {
     @DisplayName("Should list multiple servers")
     void testListMultipleServers() {
         // Create multiple servers
-        CreateServerRequest request1 = new CreateServerRequest("server1", 9102, "Server 1", null, null);
-        CreateServerRequest request2 = new CreateServerRequest("server2", 9103, "Server 2", null, null);
-        CreateServerRequest request3 = new CreateServerRequest("server3", 9104, "Server 3", null, null);
+        CreateServerRequest request1 = new CreateServerRequest("server1", 9102, "Server 1", null, null, null);
+        CreateServerRequest request2 = new CreateServerRequest("server2", 9103, "Server 2", null, null, null);
+        CreateServerRequest request3 = new CreateServerRequest("server3", 9104, "Server 3", null, null, null);
 
         restTemplate.postForEntity(baseUrl, request1, ServerInfo.class);
         restTemplate.postForEntity(baseUrl, request2, ServerInfo.class);
@@ -208,6 +210,7 @@ class MockServerIntegrationTest {
             "duplicate-test",
             9105,
             "Original Server",
+            null,
             null,
             null
         );
@@ -244,6 +247,7 @@ class MockServerIntegrationTest {
             100,
             "Invalid Port",
             null,
+            null,
             null
         );
 
@@ -260,6 +264,7 @@ class MockServerIntegrationTest {
             "invalid-port-2",
             70000,
             "Invalid Port",
+            null,
             null,
             null
         );
@@ -282,6 +287,7 @@ class MockServerIntegrationTest {
             "exists-test",
             9106,
             "Existence Test",
+            null,
             null,
             null
         );
@@ -319,6 +325,7 @@ class MockServerIntegrationTest {
             "clear-test",
             9107,
             "Clear Test",
+            null,
             null,
             null
         );
@@ -411,6 +418,7 @@ class MockServerIntegrationTest {
             9108,
             "Missing ID",
             null,
+            null,
             null
         );
 
@@ -427,6 +435,7 @@ class MockServerIntegrationTest {
             "missing-port",
             null,
             "Missing Port",
+            null,
             null,
             null
         );
@@ -449,6 +458,7 @@ class MockServerIntegrationTest {
             "multi-exp-test",
             9109,
             "Multiple Expectations Test",
+            null,
             null,
             null
         );

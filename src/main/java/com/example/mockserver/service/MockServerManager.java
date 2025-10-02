@@ -75,6 +75,7 @@ public class MockServerManager {
                 server,
                 request.getTlsConfig(),
                 request.getGlobalHeaders(),
+                request.getBasicAuthConfig(),
                 LocalDateTime.now(),
                 request.getDescription()
             );
@@ -205,6 +206,7 @@ public class MockServerManager {
             .tlsEnabled(instance.isTlsEnabled())
             .mtlsEnabled(instance.isMtlsEnabled())
             .globalHeaders(instance.getGlobalHeaders())
+            .basicAuthEnabled(instance.isBasicAuthEnabled())
             .createdAt(instance.getCreatedAt())
             .status(instance.getServer().isRunning() ? "running" : "stopped")
             .build();
@@ -254,6 +256,8 @@ public class MockServerManager {
         private TlsConfig tlsConfig;
         /** List of global headers to apply to all responses */
         private List<GlobalHeader> globalHeaders;
+        /** Basic authentication configuration, if enabled */
+        private com.example.mockserver.model.BasicAuthConfig basicAuthConfig;
         /** Timestamp when the server was created */
         private LocalDateTime createdAt;
         /** Human-readable description of the server */
@@ -302,6 +306,15 @@ public class MockServerManager {
          */
         public boolean hasGlobalHeaders() {
             return globalHeaders != null && !globalHeaders.isEmpty();
+        }
+
+        /**
+         * Checks if basic authentication is enabled for this server.
+         *
+         * @return true if basic auth is configured and valid, false otherwise
+         */
+        public boolean isBasicAuthEnabled() {
+            return basicAuthConfig != null && basicAuthConfig.isValid();
         }
     }
 }

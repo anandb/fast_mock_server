@@ -54,6 +54,10 @@ public class ServerInfo {
     @JsonProperty("globalHeaders")
     private List<GlobalHeader> globalHeaders;
 
+    /** Indicates whether basic authentication is enabled for this server */
+    @JsonProperty("basicAuthEnabled")
+    private boolean basicAuthEnabled;
+
     /** Timestamp when the server was created */
     @JsonProperty("createdAt")
     private LocalDateTime createdAt;
