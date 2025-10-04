@@ -33,6 +33,22 @@ public class JsonCommentParser {
     }
 
     /**
+     * Processes a JSON string to remove comments and convert multiline strings.
+     * Returns the cleaned JSON string without attempting to parse it.
+     *
+     * @param jsonWithComments The JSON string with comments and/or multiline strings
+     * @return A cleaned JSON string
+     * @throws IllegalArgumentException if the input is null
+     */
+    public static String clean(String jsonWithComments) {
+        if (jsonWithComments == null) {
+            throw new IllegalArgumentException("JSON string cannot be null");
+        }
+
+        return removeCommentsAndConvertMultilineStrings(jsonWithComments);
+    }
+
+    /**
      * Removes comments and converts multiline strings in the JSON text.
      */
     private static String removeCommentsAndConvertMultilineStrings(String json) {

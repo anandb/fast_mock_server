@@ -3,6 +3,7 @@ package com.example.mockserver.service;
 import com.example.mockserver.exception.ServerCreationException;
 import com.example.mockserver.model.CreateServerRequest;
 import com.example.mockserver.model.ServerConfiguration;
+import com.example.mockserver.util.JsonCommentParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import jakarta.annotation.PostConstruct;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 /**
@@ -77,16 +79,40 @@ public class ConfigurationLoaderService {
 
     /**
      * Loads and processes all server configurations from the specified file.
+     * If the file has a .jsonmc extension, it will be processed through JsonCommentParser
+     * to handle comments and multiline strings before parsing.
      *
      * @param configFile the JSON configuration file to read
      * @throws IOException if the file cannot be read or parsed
      */
     private void loadConfigurations(File configFile) throws IOException {
-        // Parse the JSON file into ServerConfiguration array
-        ServerConfiguration[] configurations = objectMapper.readValue(
-            configFile,
-            ServerConfiguration[].class
-        );
+        ServerConfiguration[] configurations;
+
+        // Check if file has .jsonmc extension
+        String fileName = configFile.getName();
+        boolean isJsonmc = fileName.toLowerCase().endsWith(".jsonmc");
+
+        if (isJsonmc) {
+            log.info("Detected .jsonmc file, processing with JsonCommentParser");
+
+            // Read file content as string
+            String fileContent = Files.readString(configFile.toPath());
+
+            // Clean the JSON (remove comments and convert multiline strings)
+            String cleanedJson = JsonCommentParser.clean(fileContent);
+
+            // Parse the cleaned JSON with ObjectMapper
+            configurations = objectMapper.readValue(
+                cleanedJson,
+                ServerConfiguration[].class
+            );
+        } else {
+            // Standard JSON file processing
+            configurations = objectMapper.readValue(
+                configFile,
+                ServerConfiguration[].class
+            );
+        }
 
         if (configurations == null || configurations.length == 0) {
             log.warn("No server configurations found in file: {}", configFile.getAbsolutePath());
