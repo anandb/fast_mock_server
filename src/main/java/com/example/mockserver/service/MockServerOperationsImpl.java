@@ -2,7 +2,6 @@ package com.example.mockserver.service;
 
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.mock.Expectation;
-import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.model.RequestDefinition;
 

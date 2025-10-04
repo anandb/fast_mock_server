@@ -51,6 +51,19 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- FreeMarker Template Engine -->
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+            <version>2.3.32</version>
+        </dependency>
+
+        <!-- Gson for JSON parsing -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+
         <!-- Spring Boot DevTools (Optional, for development) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

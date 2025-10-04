@@ -1,13 +1,14 @@
 package com.example.mockserver.controller;
 
 import com.example.mockserver.exception.InvalidExpectationException;
+import com.example.mockserver.exception.ServerNotFoundException;
 import com.example.mockserver.service.MockServerManager;
 import com.example.mockserver.service.MockServerManager.ServerInstance;
 import com.example.mockserver.service.MockServerOperations;
 import com.example.mockserver.service.MockServerOperationsImpl;
+import com.example.mockserver.service.FreemarkerTemplateService;
+import com.example.mockserver.callback.FreemarkerResponseCallback;
 import com.example.mockserver.model.GlobalHeader;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +53,7 @@ import static org.mockserver.model.HttpRequest.request;
 public class ExpectationController {
 
     private final MockServerManager mockServerManager;
-    private final ObjectMapper objectMapper;
+    private final FreemarkerTemplateService freemarkerTemplateService;
 
     /**
      * Configures expectations for a specific mock server.
@@ -105,10 +106,28 @@ public class ExpectationController {
                 );
             }
 
-            mockServerOperations.configureExpectation(
-                processedExpectation.getHttpRequest(),
-                processedExpectation.getHttpResponse()
-            );
+            // Clear any existing expectations with same method and path to allow overwriting
+            clearMatchingExpectation(server, processedExpectation.getHttpRequest());
+
+            // Check if response body contains Freemarker template
+            HttpResponse response = processedExpectation.getHttpResponse();
+            String responseBody = response.getBodyAsString();
+
+            if (responseBody != null && isFreemarkerTemplate(responseBody)) {
+                log.debug("Detected Freemarker template in response body, configuring callback");
+                configureTemplateExpectation(
+                    server,
+                    processedExpectation.getHttpRequest(),
+                    response,
+                    responseBody
+                );
+            } else {
+                // Regular static response
+                mockServerOperations.configureExpectation(
+                    processedExpectation.getHttpRequest(),
+                    response
+                );
+            }
         }
 
         String message = String.format(
@@ -242,6 +261,69 @@ public class ExpectationController {
                 throw new InvalidExpectationException("Failed to parse expectation: " + e.getMessage(), e);
             }
         }
+    }
+
+    /**
+     * Clears any existing expectations that match the same HTTP method and path.
+     * This allows new expectations to overwrite previous ones for the same endpoint.
+     *
+     * @param server the MockServer instance
+     * @param request the HTTP request to match (method and path)
+     */
+    private void clearMatchingExpectation(ClientAndServer server, org.mockserver.model.RequestDefinition request) {
+        if (request instanceof HttpRequest) {
+            HttpRequest httpRequest = (HttpRequest) request;
+
+            // Create a matcher for the same method and path
+            HttpRequest matcher = request()
+                    .withMethod(httpRequest.getMethod())
+                    .withPath(httpRequest.getPath());
+
+            // Clear expectations matching this method and path
+            server.clear(matcher);
+            log.debug("Cleared existing expectations for {} {}",
+                     httpRequest.getMethod(), httpRequest.getPath());
+        }
+    }
+
+    /**
+     * Checks if a string contains Freemarker template syntax.
+     *
+     * @param content the string to check
+     * @return true if the content contains Freemarker syntax, false otherwise
+     */
+    private boolean isFreemarkerTemplate(String content) {
+        // Check for common Freemarker syntax patterns
+        return content.contains("${") ||
+               content.contains("<#") ||
+               content.contains("[#") ||
+               content.contains("<@") ||
+               content.contains("[@");
+    }
+
+    /**
+     * Configures an expectation with a Freemarker template callback.
+     *
+     * @param server the MockServer instance
+     * @param request the HTTP request matcher
+     * @param response the base HTTP response (contains headers and status)
+     * @param templateString the Freemarker template string
+     */
+    private void configureTemplateExpectation(
+            ClientAndServer server,
+            org.mockserver.model.RequestDefinition request,
+            HttpResponse response,
+            String templateString) {
+
+        // Create callback with template service
+        FreemarkerResponseCallback callback = new FreemarkerResponseCallback(
+            freemarkerTemplateService,
+            templateString,
+            response
+        );
+
+        // Configure expectation with callback
+        server.when(request).respond(callback);
     }
 
     /**
