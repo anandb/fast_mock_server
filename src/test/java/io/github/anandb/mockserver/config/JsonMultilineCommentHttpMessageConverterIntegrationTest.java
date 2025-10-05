@@ -100,7 +100,8 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
                   "tlsConfig": {
                     "enabled": true,
                     // Certificate details
-                    "certificatePath": "/path/to/cert.pem"
+                    "certificate": "/path/to/cert.pem",
+                    "privateKey": "/path/to/key.pem"
                   },
 
                   // Multiline error message template

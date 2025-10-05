@@ -1,7 +1,7 @@
 package io.github.anandb.mockserver.util;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 
 /**
  * Parser for JSON documents with extended syntax support:
@@ -10,15 +10,17 @@ import com.google.gson.JsonParser;
  */
 public class JsonCommentParser {
 
+    private static final JsonMapper objectMapper = MapperSupplier.getMapper();
+
     /**
      * Parses a JSON string that may contain comments and multiline strings.
      * Comments are removed and multiline strings are converted to standard JSON strings.
      *
      * @param jsonWithComments The JSON string with comments and/or multiline strings
-     * @return A JsonObject with comments removed and multiline strings converted
+     * @return A JsonNode with comments removed and multiline strings converted
      * @throws IllegalArgumentException if the JSON is invalid
      */
-    public static JsonObject parse(String jsonWithComments) {
+    public static JsonNode parse(String jsonWithComments) {
         if (jsonWithComments == null) {
             throw new IllegalArgumentException("JSON string cannot be null");
         }
@@ -26,7 +28,7 @@ public class JsonCommentParser {
         String processedJson = removeCommentsAndConvertMultilineStrings(jsonWithComments);
 
         try {
-            return JsonParser.parseString(processedJson).getAsJsonObject();
+            return objectMapper.readTree(processedJson);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid JSON: " + e.getMessage(), e);
         }

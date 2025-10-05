@@ -1,8 +1,9 @@
 package io.github.anandb.mockserver.config;
 
 import io.github.anandb.mockserver.util.JsonCommentParser;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
+import io.github.anandb.mockserver.util.MapperSupplier;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
@@ -29,16 +30,16 @@ import java.nio.charset.StandardCharsets;
  */
 public class JsonMultilineCommentHttpMessageConverter extends AbstractHttpMessageConverter<Object> {
 
-    private final Gson gson;
+    private final JsonMapper objectMapper;
 
     public JsonMultilineCommentHttpMessageConverter() {
         super(new MediaType("application", "jsonmc", StandardCharsets.UTF_8));
-        this.gson = new Gson();
+        this.objectMapper = MapperSupplier.getMapper();
     }
 
     @Override
     protected boolean supports(Class<?> clazz) {
-        // Support all types - we'll convert to the target type using Gson
+        // Support all types - we'll convert to the target type using Jackson
         return true;
     }
 
@@ -59,10 +60,10 @@ public class JsonMultilineCommentHttpMessageConverter extends AbstractHttpMessag
             }
 
             // Parse using JsonCommentParser to get clean JSON
-            JsonObject cleanJsonObject = JsonCommentParser.parse(jsonWithComments.toString());
+            JsonNode cleanJsonNode = JsonCommentParser.parse(jsonWithComments.toString());
 
             // Convert the clean JSON to the target class type
-            return gson.fromJson(cleanJsonObject, clazz);
+            return objectMapper.treeToValue(cleanJsonNode, clazz);
 
         } catch (Exception e) {
             throw new HttpMessageNotReadableException(
@@ -78,7 +79,7 @@ public class JsonMultilineCommentHttpMessageConverter extends AbstractHttpMessag
         // For responses, we write standard JSON (not jsonmc)
         try (OutputStreamWriter writer = new OutputStreamWriter(
                 outputMessage.getBody(), StandardCharsets.UTF_8)) {
-            gson.toJson(object, writer);
+            objectMapper.writeValue(writer, object);
         }
     }
 }

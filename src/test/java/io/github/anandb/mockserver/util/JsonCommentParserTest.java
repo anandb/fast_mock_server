@@ -1,6 +1,6 @@
 package io.github.anandb.mockserver.util;
 
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,10 +11,10 @@ class JsonCommentParserTest {
     @Test
     void testSimpleJsonWithoutComments() {
         String json = "{\"name\": \"John\", \"age\": 30}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("John", result.get("name").getAsString());
-        assertEquals(30, result.get("age").getAsInt());
+        assertEquals("John", result.get("name").asText());
+        assertEquals(30, result.get("age").asInt());
     }
 
     @Test
@@ -26,10 +26,10 @@ class JsonCommentParserTest {
                 "age": 30 // Another comment
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("John", result.get("name").getAsString());
-        assertEquals(30, result.get("age").getAsInt());
+        assertEquals("John", result.get("name").asText());
+        assertEquals(30, result.get("age").asInt());
     }
 
     @Test
@@ -42,10 +42,10 @@ class JsonCommentParserTest {
                 "age": 30
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("John", result.get("name").getAsString());
-        assertEquals(30, result.get("age").getAsInt());
+        assertEquals("John", result.get("name").asText());
+        assertEquals(30, result.get("age").asInt());
     }
 
     @Test
@@ -59,35 +59,35 @@ class JsonCommentParserTest {
                 "age": 30
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("John", result.get("name").getAsString());
-        assertEquals(30, result.get("age").getAsInt());
+        assertEquals("John", result.get("name").asText());
+        assertEquals(30, result.get("age").asInt());
     }
 
     @Test
     void testMultilineString() {
         String json = "{\"description\": \"\"\"This is a\nmulti-line\ndescription\"\"\"}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
         String expected = "This is a\nmulti-line\ndescription";
-        assertEquals(expected, result.get("description").getAsString());
+        assertEquals(expected, result.get("description").asText());
     }
 
     @Test
     void testMultilineStringWithDoubleQuotes() {
         String json = "{\"quote\": \"\"\"He said \"Hello\" to me\"\"\"}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("He said \"Hello\" to me", result.get("quote").getAsString());
+        assertEquals("He said \"Hello\" to me", result.get("quote").asText());
     }
 
     @Test
     void testMultilineStringWithBackslashes() {
         String json = "{\"path\": \"\"\"C:\\\\Users\\\\test\"\"\"}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("C:\\\\Users\\\\test", result.get("path").getAsString());
+        assertEquals("C:\\\\Users\\\\test", result.get("path").asText());
     }
 
     @Test
@@ -98,10 +98,10 @@ class JsonCommentParserTest {
                 "comment": "This is not /* a comment */"
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("http://example.com//path", result.get("url").getAsString());
-        assertEquals("This is not /* a comment */", result.get("comment").getAsString());
+        assertEquals("http://example.com//path", result.get("url").asText());
+        assertEquals("This is not /* a comment */", result.get("comment").asText());
     }
 
     @Test
@@ -111,9 +111,9 @@ class JsonCommentParserTest {
                 "quote": "He said \\"Hello\\""
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("He said \"Hello\"", result.get("quote").getAsString());
+        assertEquals("He said \"Hello\"", result.get("quote").asText());
     }
 
     @Test
@@ -130,29 +130,29 @@ class JsonCommentParserTest {
                 "description": "Simple text without special chars"
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        JsonObject user = result.getAsJsonObject("user");
-        assertEquals("John Doe", user.get("name").getAsString());
-        assertEquals("john@example.com", user.get("email").getAsString());
-        assertEquals("Simple text without special chars", result.get("description").getAsString());
+        JsonNode user = result.get("user");
+        assertEquals("John Doe", user.get("name").asText());
+        assertEquals("john@example.com", user.get("email").asText());
+        assertEquals("Simple text without special chars", result.get("description").asText());
     }
 
     @Test
     void testMultilineStringWithSpecialCharacters() {
         String json = "{\"text\": \"\"\"Line 1\n\tTabbed line\nLine with \"quotes\" and \\\\backslash\\\\\"\"\"}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
         String expected = "Line 1\n\tTabbed line\nLine with \"quotes\" and \\\\backslash\\\\";
-        assertEquals(expected, result.get("text").getAsString());
+        assertEquals(expected, result.get("text").asText());
     }
 
     @Test
     void testEmptyMultilineString() {
         String json = "{\"empty\": \"\"\"\"\"\"}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("", result.get("empty").getAsString());
+        assertEquals("", result.get("empty").asText());
     }
 
     @Test
@@ -161,10 +161,10 @@ class JsonCommentParserTest {
             "    \"first\": \"\"\"First\nmultiline\"\"\",\n" +
             "    \"second\": \"\"\"Second\nmultiline\"\"\"\n" +
             "}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("First\nmultiline", result.get("first").getAsString());
-        assertEquals("Second\nmultiline", result.get("second").getAsString());
+        assertEquals("First\nmultiline", result.get("first").asText());
+        assertEquals("Second\nmultiline", result.get("second").asText());
     }
 
     @Test
@@ -174,9 +174,9 @@ class JsonCommentParserTest {
                 "name": "John"
             }
             // Final comment""";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("John", result.get("name").getAsString());
+        assertEquals("John", result.get("name").asText());
     }
 
     @Test
@@ -187,9 +187,9 @@ class JsonCommentParserTest {
                 "name": "John"
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("John", result.get("name").getAsString());
+        assertEquals("John", result.get("name").asText());
     }
 
     @Test
@@ -255,17 +255,17 @@ class JsonCommentParserTest {
     @Test
     void testWindowsLineEndings() {
         String json = "{\r\n  // Comment\r\n  \"name\": \"John\"\r\n}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("John", result.get("name").getAsString());
+        assertEquals("John", result.get("name").asText());
     }
 
     @Test
     void testMultilineStringWithWindowsLineEndings() {
         String json = "{\"text\": \"\"\"Line1\r\nLine2\"\"\"}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("Line1\nLine2", result.get("text").getAsString());
+        assertEquals("Line1\nLine2", result.get("text").asText());
     }
 
     @Test
@@ -283,11 +283,11 @@ class JsonCommentParserTest {
                 }
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        JsonObject user = result.getAsJsonObject("user");
-        JsonObject address = user.getAsJsonObject("address");
-        assertEquals("NYC", address.get("city").getAsString());
+        JsonNode user = result.get("user");
+        JsonNode address = user.get("address");
+        assertEquals("NYC", address.get("city").asText());
     }
 
     @Test
@@ -302,10 +302,10 @@ class JsonCommentParserTest {
                 ]
             }
             """;
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals(3, result.getAsJsonArray("names").size());
-        assertEquals("John", result.getAsJsonArray("names").get(0).getAsString());
+        assertEquals(3, result.get("names").size());
+        assertEquals("John", result.get("names").get(0).asText());
     }
 
     @Test
@@ -316,9 +316,9 @@ class JsonCommentParserTest {
             "        \"\"\"Second\nmessage\"\"\"\n" +
             "    ]\n" +
             "}";
-        JsonObject result = JsonCommentParser.parse(json);
+        JsonNode result = JsonCommentParser.parse(json);
 
-        assertEquals("First\nmessage", result.getAsJsonArray("messages").get(0).getAsString());
-        assertEquals("Second\nmessage", result.getAsJsonArray("messages").get(1).getAsString());
+        assertEquals("First\nmessage", result.get("messages").get(0).asText());
+        assertEquals("Second\nmessage", result.get("messages").get(1).asText());
     }
 }

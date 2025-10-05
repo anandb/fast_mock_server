@@ -1,9 +1,9 @@
 package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.model.HttpRequestContext;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import io.github.anandb.mockserver.util.MapperSupplier;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -34,13 +34,13 @@ import java.util.Map;
 public class FreemarkerTemplateService {
 
     private final Configuration freemarkerConfig;
-    private final Gson gson;
+    private final JsonMapper objectMapper;
 
     public FreemarkerTemplateService() {
         this.freemarkerConfig = new Configuration(Configuration.VERSION_2_3_32);
         this.freemarkerConfig.setDefaultEncoding("UTF-8");
         this.freemarkerConfig.setNumberFormat("0.######");
-        this.gson = new Gson();
+        this.objectMapper = MapperSupplier.getMapper();
     }
 
     /**
@@ -62,17 +62,17 @@ public class FreemarkerTemplateService {
         }
 
         // Parse body as JSON
-        JsonObject body = null;
+        JsonNode body = null;
         if (httpRequest.getBodyAsString() != null && !httpRequest.getBodyAsString().isEmpty()) {
             try {
-                body = JsonParser.parseString(httpRequest.getBodyAsString()).getAsJsonObject();
+                body = objectMapper.readTree(httpRequest.getBodyAsString());
             } catch (Exception e) {
                 log.warn("Failed to parse request body as JSON: {}", e.getMessage());
-                // If parsing fails, create empty JsonObject
-                body = new JsonObject();
+                // If parsing fails, create empty JsonNode
+                body = objectMapper.createObjectNode();
             }
         } else {
-            body = new JsonObject();
+            body = objectMapper.createObjectNode();
         }
 
         // Parse cookies
@@ -112,7 +112,7 @@ public class FreemarkerTemplateService {
         // Prepare data model for Freemarker
         Map<String, Object> dataModel = new HashMap<>();
         dataModel.put("headers", context.getHeaders());
-        dataModel.put("body", gson.fromJson(context.getBody(), Map.class));
+        dataModel.put("body", objectMapper.convertValue(context.getBody(), Map.class));
         dataModel.put("cookies", context.getCookies());
 
         // Process template

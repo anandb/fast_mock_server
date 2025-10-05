@@ -57,8 +57,8 @@ import static org.mockserver.model.HttpRequest.request;
 @RequiredArgsConstructor
 public class ExpectationController {
 
-    private final MockServerManager mockServerManager;
     private final FreemarkerTemplateService freemarkerTemplateService;
+    private final MockServerManager mockServerManager;
     private final ObjectMapper objectMapper;
 
     /**
@@ -442,7 +442,7 @@ public class ExpectationController {
      * @return ResponseEntity containing an array of active expectations
      * @throws ServerNotFoundException if the server with the specified ID is not found
      */
-    @GetMapping("/{serverId}/expectations")
+    @GetMapping(value = "/{serverId}/expectations", produces = "application/json")
     public ResponseEntity<Expectation[]> getExpectations(@PathVariable String serverId) {
         log.debug("Retrieving expectations for server: {}", serverId);
 

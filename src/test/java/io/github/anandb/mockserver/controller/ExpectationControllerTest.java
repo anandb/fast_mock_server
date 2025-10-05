@@ -2,6 +2,7 @@ package io.github.anandb.mockserver.controller;
 
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
 import io.github.anandb.mockserver.model.GlobalHeader;
+import io.github.anandb.mockserver.service.FreemarkerTemplateService;
 import io.github.anandb.mockserver.service.MockServerManager;
 import io.github.anandb.mockserver.service.MockServerOperations;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,6 +59,9 @@ class ExpectationControllerTest {
 
     @MockBean
     private MockServerOperations mockServerOperations;
+
+    @MockBean
+    private FreemarkerTemplateService mockTemplateService;
 
     @Mock
     private org.mockserver.integration.ClientAndServer mockClientAndServer;

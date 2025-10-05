@@ -1,8 +1,13 @@
 package io.github.anandb.mockserver.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.github.anandb.mockserver.util.MapperSupplier;
 
 import java.util.List;
 
@@ -31,5 +36,10 @@ public class WebConfig implements WebMvcConfigurer {
         // Add our custom converter at the beginning of the list
         // This ensures it's checked before the standard JSON converters
         converters.add(0, new JsonMultilineCommentHttpMessageConverter());
+    }
+
+    @Bean
+    public ObjectMapper mapper() {
+        return MapperSupplier.getMapper();
     }
 }
