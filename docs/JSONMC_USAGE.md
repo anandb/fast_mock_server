@@ -121,19 +121,19 @@ curl -X POST http://localhost:8080/api/servers \
 
 The implementation consists of three main components:
 
-1. **JsonCommentParser** (`src/main/java/com/example/mockserver/util/JsonCommentParser.java`)
+1. **JsonCommentParser** (`src/main/java/io/github/anandb/mockserver/util/JsonCommentParser.java`)
    - Core parser that removes comments and converts multiline strings
 
-2. **JsonMultilineCommentHttpMessageConverter** (`src/main/java/com/example/mockserver/config/JsonMultilineCommentHttpMessageConverter.java`)
+2. **JsonMultilineCommentHttpMessageConverter** (`src/main/java/io/github/anandb/mockserver/config/JsonMultilineCommentHttpMessageConverter.java`)
    - Spring HTTP message converter that handles `application/jsonmc` content type
 
-3. **WebConfig** (`src/main/java/com/example/mockserver/config/WebConfig.java`)
+3. **WebConfig** (`src/main/java/io/github/anandb/mockserver/config/WebConfig.java`)
    - Registers the custom converter with Spring MVC
 
 ## Testing
 
 Integration tests are available in:
-`src/test/java/com/example/mockserver/config/JsonMultilineCommentHttpMessageConverterIntegrationTest.java`
+`src/test/java/io/github/anandb/mockserver/config/JsonMultilineCommentHttpMessageConverterIntegrationTest.java`
 
 Run tests with:
 ```bash

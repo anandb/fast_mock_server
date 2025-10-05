@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.example</groupId>
+    <groupId>io.github.anandb</groupId>
     <artifactId>mock-server</artifactId>
     <version>1.0.0</version>
     <name>Mock Server Manager</name>

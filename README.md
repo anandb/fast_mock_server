@@ -730,7 +730,7 @@ mockserver.cert.temp-dir=/tmp/mockserver-certs
 mockserver.cert.cleanup-on-shutdown=true
 
 # Logging level
-logging.level.com.example.mockserver=DEBUG
+logging.level.io.github.anandb.mockserver=DEBUG
 ```
 
 ## Project Structure
@@ -739,7 +739,7 @@ logging.level.com.example.mockserver=DEBUG
 mock_server/
 ├── src/
 │   ├── main/
-│   │   ├── java/com/example/mockserver/
+│   │   ├── java/io/github/anandb/mockserver/
 │   │   │   ├── MockServerApplication.java
 │   │   │   ├── controller/
 │   │   │   │   ├── ServerController.java

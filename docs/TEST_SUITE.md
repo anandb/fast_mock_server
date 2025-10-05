@@ -15,7 +15,7 @@ The test suite provides comprehensive coverage across multiple layers:
 
 ```
 src/test/
-├── java/com/example/mockserver/
+├── java/io/github/anandb/mockserver/
 │   ├── MockServerApplicationTests.java          # Context loading test
 │   ├── controller/
 │   │   ├── ServerControllerTest.java           # Server endpoint tests
