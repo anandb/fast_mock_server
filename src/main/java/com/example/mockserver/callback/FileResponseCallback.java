@@ -1,5 +1,7 @@
 package com.example.mockserver.callback;
 
+import com.example.mockserver.service.FreemarkerTemplateService;
+import com.example.mockserver.util.FreemarkerTemplateDetector;
 import lombok.extern.slf4j.Slf4j;
 import org.mockserver.mock.action.ExpectationResponseCallback;
 import org.mockserver.model.HttpRequest;
@@ -29,10 +31,13 @@ public class FileResponseCallback implements ExpectationResponseCallback {
 
     private final List<String> filePaths;
     private final HttpResponse baseResponse;
+    private final FreemarkerTemplateService templateService;
 
-    public FileResponseCallback(List<String> filePaths, HttpResponse baseResponse) {
+    public FileResponseCallback(List<String> filePaths, HttpResponse baseResponse,
+                               FreemarkerTemplateService templateService) {
         this.filePaths = filePaths;
         this.baseResponse = baseResponse;
+        this.templateService = templateService;
     }
 
     @Override
@@ -44,7 +49,10 @@ public class FileResponseCallback implements ExpectationResponseCallback {
             // Build multipart body using ByteArrayOutputStream to handle binary data safely
             ByteArrayOutputStream multipartBody = new ByteArrayOutputStream();
 
-            for (String filePath : filePaths) {
+            for (String filePathTemplate : filePaths) {
+                // Process file path as FreeMarker template and strip whitespace
+                String filePath = evaluateFilePathTemplate(filePathTemplate, httpRequest);
+
                 File file = new File(filePath);
 
                 if (!file.exists()) {
@@ -105,6 +113,37 @@ public class FileResponseCallback implements ExpectationResponseCallback {
             return HttpResponse.response()
                     .withStatusCode(500)
                     .withBody("Error creating file response: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Evaluates a file path as a FreeMarker template and strips whitespace.
+     * <p>
+     * If the file path contains FreeMarker expressions, they will be evaluated
+     * using the request context (headers, body, cookies). After evaluation,
+     * all leading and trailing whitespace and newlines are stripped.
+     * </p>
+     *
+     * @param filePathTemplate the file path template (may contain FreeMarker expressions)
+     * @param httpRequest the incoming HTTP request
+     * @return the evaluated file path with whitespace stripped
+     */
+    private String evaluateFilePathTemplate(String filePathTemplate, HttpRequest httpRequest) {
+        try {
+            // Check if the path contains FreeMarker template expressions
+            if (FreemarkerTemplateDetector.isFreemarkerTemplate(filePathTemplate)) {
+                // Process as FreeMarker template
+                String evaluatedPath = templateService.processTemplateWithRequest(
+                    filePathTemplate, httpRequest);
+                // Strip all leading and trailing whitespace and newlines
+                return evaluatedPath.strip();
+            }
+            // Not a template, return as-is but still strip whitespace
+            return filePathTemplate.strip();
+        } catch (Exception e) {
+            log.warn("Failed to evaluate file path template '{}', using as-is: {}",
+                    filePathTemplate, e.getMessage());
+            return filePathTemplate.strip();
         }
     }
 

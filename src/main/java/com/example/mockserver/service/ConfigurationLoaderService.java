@@ -6,6 +6,7 @@ import com.example.mockserver.callback.FreemarkerResponseCallback;
 import com.example.mockserver.model.CreateServerRequest;
 import com.example.mockserver.model.ServerConfiguration;
 import com.example.mockserver.util.JsonCommentParser;
+import com.example.mockserver.util.FreemarkerTemplateDetector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -243,7 +244,7 @@ public class ConfigurationLoaderService {
                 org.mockserver.model.HttpResponse response = processedExpectation.getHttpResponse();
                 String responseBody = response.getBodyAsString();
 
-                if (responseBody != null && isFreemarkerTemplate(responseBody)) {
+                if (responseBody != null && FreemarkerTemplateDetector.isFreemarkerTemplate(responseBody)) {
                     log.debug("Detected Freemarker template in response body, configuring callback");
                     configureTemplateExpectation(
                         serverInstance.getServer(),
@@ -405,20 +406,6 @@ public class ConfigurationLoaderService {
     }
 
     /**
-     * Checks if a string contains Freemarker template syntax.
-     *
-     * @param content the string to check
-     * @return true if the content contains Freemarker syntax, false otherwise
-     */
-    private boolean isFreemarkerTemplate(String content) {
-        return content.contains("${") ||
-               content.contains("<#") ||
-               content.contains("[#") ||
-               content.contains("<@") ||
-               content.contains("[@");
-    }
-
-    /**
      * Configures an expectation with a file response callback.
      *
      * @param server the MockServer instance
@@ -432,7 +419,11 @@ public class ConfigurationLoaderService {
             org.mockserver.model.HttpResponse response,
             List<String> filePaths) {
 
-        FileResponseCallback callback = new FileResponseCallback(filePaths, response);
+        FileResponseCallback callback = new FileResponseCallback(
+            filePaths,
+            response,
+            freemarkerTemplateService
+        );
         server.when(request).respond(callback);
     }
 

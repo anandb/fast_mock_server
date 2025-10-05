@@ -10,6 +10,7 @@ import com.example.mockserver.service.FreemarkerTemplateService;
 import com.example.mockserver.callback.FreemarkerResponseCallback;
 import com.example.mockserver.callback.FileResponseCallback;
 import com.example.mockserver.model.GlobalHeader;
+import com.example.mockserver.util.FreemarkerTemplateDetector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -134,7 +135,7 @@ public class ExpectationController {
                 HttpResponse response = processedExpectation.getHttpResponse();
                 String responseBody = response.getBodyAsString();
 
-                if (responseBody != null && isFreemarkerTemplate(responseBody)) {
+                if (responseBody != null && FreemarkerTemplateDetector.isFreemarkerTemplate(responseBody)) {
                     log.debug("Detected Freemarker template in response body, configuring callback");
                     configureTemplateExpectation(
                         server,
@@ -309,21 +310,6 @@ public class ExpectationController {
     }
 
     /**
-     * Checks if a string contains Freemarker template syntax.
-     *
-     * @param content the string to check
-     * @return true if the content contains Freemarker syntax, false otherwise
-     */
-    private boolean isFreemarkerTemplate(String content) {
-        // Check for common Freemarker syntax patterns
-        return content.contains("${") ||
-               content.contains("<#") ||
-               content.contains("[#") ||
-               content.contains("<@") ||
-               content.contains("[@");
-    }
-
-    /**
      * Extracts files information from expectation JSON before parsing.
      * This is necessary because MockServer's serializer doesn't know about our custom "files" field.
      *
@@ -413,10 +399,11 @@ public class ExpectationController {
             HttpResponse response,
             List<String> filePaths) {
 
-        // Create callback with file paths
+        // Create callback with file paths and template service for dynamic file paths
         FileResponseCallback callback = new FileResponseCallback(
             filePaths,
-            response
+            response,
+            freemarkerTemplateService
         );
 
         // Configure expectation with callback
