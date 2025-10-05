@@ -23,7 +23,7 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "body": "{\"users\": [{\"id\": 1, \"name\": \"John Doe\"}, {\"id\": 2, \"name\": \"Jane Smith\"}]}"
+          "body": """{"users": [{"id": 1, "name": "John Doe"}, {"id": 2, "name": "Jane Smith"}]}"""
         }
       },
       {
@@ -33,7 +33,7 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "body": "{\"id\": 1, \"name\": \"John Doe\", \"email\": \"john@example.com\"}"
+          "body": """{"id": 1, "name": "John Doe", "email": "john@example.com"}"""
         }
       },
       {
@@ -43,7 +43,7 @@
         },
         "httpResponse": {
           "statusCode": 201,
-          "body": "{\"id\": 3, \"name\": \"New User\", \"message\": \"User created successfully\"}"
+          "body": """{"id": 3, "name": "New User", "message": "User created successfully"}"""
         }
       }
     ]
@@ -73,7 +73,7 @@
               "values": ["true"]
             }
           ],
-          "body": "{\"data\": \"secure content\"}"
+          "body": """{"data": "secure content"}"""
         }
       }
     ]

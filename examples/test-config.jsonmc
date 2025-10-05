@@ -19,7 +19,7 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "body": "{\"message\": \"Hello from test server\"}"
+          "body": """{"message": "Hello from test server"}"""
         }
       }
     ]
