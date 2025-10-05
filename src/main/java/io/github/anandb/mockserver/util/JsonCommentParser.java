@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 /**
  * Parser for JSON documents with extended syntax support:
  * - C++ style comments: // and /* *\/
- * - Multiline strings using triple quotes (""")
+ * - Multiline strings using backticks (`)
  */
 public class JsonCommentParser {
 
@@ -59,8 +59,8 @@ public class JsonCommentParser {
         int length = json.length();
 
         while (i < length) {
-            // Check for multiline string (""")
-            if (i + 2 < length && json.substring(i, i + 3).equals("\"\"\"")) {
+            // Check for multiline string (`)
+            if (json.charAt(i) == '`') {
                 i = processMultilineString(json, i, result);
                 continue;
             }
@@ -92,19 +92,19 @@ public class JsonCommentParser {
     }
 
     /**
-     * Processes a multiline string starting with """ and converts it to a regular JSON string.
+     * Processes a multiline string starting with ` and converts it to a regular JSON string.
      */
     private static int processMultilineString(String json, int start, StringBuilder result) {
-        int i = start + 3; // Skip opening """
+        int i = start + 1; // Skip opening `
         StringBuilder multilineContent = new StringBuilder();
 
-        // Find the closing """
+        // Find the closing `
         while (i < json.length()) {
-            if (i + 2 < json.length() && json.substring(i, i + 3).equals("\"\"\"")) {
-                // Found closing """, convert the content
+            if (json.charAt(i) == '`') {
+                // Found closing `, convert the content
                 String converted = convertMultilineToJsonString(multilineContent.toString());
                 result.append('"').append(converted).append('"');
-                return i + 3; // Skip closing """
+                return i + 1; // Skip closing `
             }
 
             multilineContent.append(json.charAt(i));

@@ -57,9 +57,9 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
                   "port": 8080,
 
                   // Using a multiline string for description
-                  "description": \"\"\"This is a test server
+                  "description": `This is a test server
                 with multiple lines
-                of description text\"\"\"
+                of description text`
                 }
                 """;
 
@@ -105,11 +105,11 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
                   },
 
                   // Multiline error message template
-                  "errorMessage": \"\"\"Error occurred while processing request.
+                  "errorMessage": `Error occurred while processing request.
                 Please check the following:
                 1. Server is running
                 2. Configuration is valid
-                3. Network is accessible\"\"\"
+                3. Network is accessible`
                 }
                 """;
 
@@ -131,7 +131,7 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
         String invalidJsonmc = """
                 {
                   "serverId": "test",
-                  "description": \"\"\"Unclosed multiline string
+                  "description": `Unclosed multiline string
                 }
                 """;
 

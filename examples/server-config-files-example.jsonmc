@@ -94,7 +94,7 @@
            * Regular responses with body continue to work as before
            * Only use "files" for multi-part file downloads
            */
-          "body": """{"message": "This is a regular JSON response"}"""
+          "body": `{"message": "This is a regular JSON response"}`
         }
       }
     ]

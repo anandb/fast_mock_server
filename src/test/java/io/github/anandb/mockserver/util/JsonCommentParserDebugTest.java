@@ -15,9 +15,9 @@ class JsonCommentParserDebugTest {
                        Multiple lines */
                     "email": "john@example.com"
                 },
-                "bio": \"\"\"John is a software engineer.
+                "bio": `John is a software engineer.
             He loves coding and solving problems.
-            His motto: "Keep it simple"\"\"\"
+            His motto: "Keep it simple"`
             }
             """;
 

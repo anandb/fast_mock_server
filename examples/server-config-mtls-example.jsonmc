@@ -98,7 +98,7 @@ h9Z7Z8h9Z7Z8h9
               "values": ["application/json"]
             }
           ],
-          "body": """{"accountId": "12345", "balance": 1000.00, "currency": "USD"}"""
+          "body": `{"accountId": "12345", "balance": 1000.00, "currency": "USD"}`
         }
       },
       {
@@ -118,7 +118,7 @@ h9Z7Z8h9Z7Z8h9
               "values": ["/secure/api/transaction/txn-98765"]
             }
           ],
-          "body": """{"transactionId": "txn-98765", "status": "completed", "timestamp": "2025-10-02T23:00:00Z"}"""
+          "body": `{"transactionId": "txn-98765", "status": "completed", "timestamp": "2025-10-02T23:00:00Z"}`
         }
       },
       {
@@ -134,7 +134,7 @@ h9Z7Z8h9Z7Z8h9
               "values": ["application/json"]
             }
           ],
-          "body": """{"status": "healthy", "mtlsVerified": true, "timestamp": "2025-10-02T23:00:00Z"}"""
+          "body": `{"status": "healthy", "mtlsVerified": true, "timestamp": "2025-10-02T23:00:00Z"}`
         }
       }
     ]

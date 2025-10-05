@@ -64,11 +64,11 @@ class ConfigurationLoaderServiceJsonmcTest {
               "port": 8081,
               /* Multi-line comment
                  explaining the configuration */
-              "description": \"\"\"
+              "description": `
 This is a multiline string
 that spans multiple lines
 and should be properly parsed
-\"\"\"
+`
             },
             "expectations": [
               {

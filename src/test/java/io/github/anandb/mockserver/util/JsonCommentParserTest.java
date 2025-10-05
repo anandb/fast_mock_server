@@ -67,7 +67,7 @@ class JsonCommentParserTest {
 
     @Test
     void testMultilineString() {
-        String json = "{\"description\": \"\"\"This is a\nmulti-line\ndescription\"\"\"}";
+        String json = "{\"description\": `This is a\nmulti-line\ndescription`}";
         JsonNode result = JsonCommentParser.parse(json);
 
         String expected = "This is a\nmulti-line\ndescription";
@@ -76,7 +76,7 @@ class JsonCommentParserTest {
 
     @Test
     void testMultilineStringWithDoubleQuotes() {
-        String json = "{\"quote\": \"\"\"He said \"Hello\" to me\"\"\"}";
+        String json = "{\"quote\": `He said \"Hello\" to me`}";
         JsonNode result = JsonCommentParser.parse(json);
 
         assertEquals("He said \"Hello\" to me", result.get("quote").asText());
@@ -84,7 +84,7 @@ class JsonCommentParserTest {
 
     @Test
     void testMultilineStringWithBackslashes() {
-        String json = "{\"path\": \"\"\"C:\\\\Users\\\\test\"\"\"}";
+        String json = "{\"path\": `C:\\\\Users\\\\test`}";
         JsonNode result = JsonCommentParser.parse(json);
 
         assertEquals("C:\\\\Users\\\\test", result.get("path").asText());
@@ -140,7 +140,7 @@ class JsonCommentParserTest {
 
     @Test
     void testMultilineStringWithSpecialCharacters() {
-        String json = "{\"text\": \"\"\"Line 1\n\tTabbed line\nLine with \"quotes\" and \\\\backslash\\\\\"\"\"}";
+        String json = "{\"text\": `Line 1\n\tTabbed line\nLine with \"quotes\" and \\\\backslash\\\\`}";
         JsonNode result = JsonCommentParser.parse(json);
 
         String expected = "Line 1\n\tTabbed line\nLine with \"quotes\" and \\\\backslash\\\\";
@@ -149,7 +149,7 @@ class JsonCommentParserTest {
 
     @Test
     void testEmptyMultilineString() {
-        String json = "{\"empty\": \"\"\"\"\"\"}";
+        String json = "{\"empty\": ``}";
         JsonNode result = JsonCommentParser.parse(json);
 
         assertEquals("", result.get("empty").asText());
@@ -158,8 +158,8 @@ class JsonCommentParserTest {
     @Test
     void testMultipleMultilineStrings() {
         String json = "{\n" +
-            "    \"first\": \"\"\"First\nmultiline\"\"\",\n" +
-            "    \"second\": \"\"\"Second\nmultiline\"\"\"\n" +
+            "    \"first\": `First\nmultiline`,\n" +
+            "    \"second\": `Second\nmultiline`\n" +
             "}";
         JsonNode result = JsonCommentParser.parse(json);
 
@@ -196,7 +196,7 @@ class JsonCommentParserTest {
     void testUnclosedMultilineString() {
         String json = """
             {
-                "text": \"\"\"This is unclosed
+                "text": `This is unclosed
             }
             """;
 
@@ -262,7 +262,7 @@ class JsonCommentParserTest {
 
     @Test
     void testMultilineStringWithWindowsLineEndings() {
-        String json = "{\"text\": \"\"\"Line1\r\nLine2\"\"\"}";
+        String json = "{\"text\": `Line1\r\nLine2`}";
         JsonNode result = JsonCommentParser.parse(json);
 
         assertEquals("Line1\nLine2", result.get("text").asText());
@@ -312,8 +312,8 @@ class JsonCommentParserTest {
     void testMultilineStringInArray() {
         String json = "{\n" +
             "    \"messages\": [\n" +
-            "        \"\"\"First\nmessage\"\"\",\n" +
-            "        \"\"\"Second\nmessage\"\"\"\n" +
+            "        `First\nmessage`,\n" +
+            "        `Second\nmessage`\n" +
             "    ]\n" +
             "}";
         JsonNode result = JsonCommentParser.parse(json);

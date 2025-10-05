@@ -5,7 +5,7 @@
 The Mock Server now supports a custom MIME type `application/jsonmc` (JSON with Multi-line strings and Comments) that allows you to send HTTP requests with JSON containing:
 
 - **C++ style comments**: Both single-line (`//`) and multi-line (`/* */`) comments
-- **Multiline strings**: Using triple quotes (`"""`) for strings that span multiple lines
+- **Multiline strings**: Using backticks (`` ` ``) for strings that span multiple lines
 
 ## How It Works
 
@@ -31,10 +31,10 @@ curl -X POST http://localhost:8080/api/servers \
     "port": 9090,
 
     // Description using multiline string
-    "description": """This is a test server
+    "description": `This is a test server
     that demonstrates the use of
     multiline strings and comments
-    in JSON configuration"""
+    in JSON configuration`
   }'
 ```
 
@@ -66,10 +66,10 @@ curl -X POST http://localhost:8080/api/servers \
     ],
 
     // Multiline description
-    "description": """Production server with:
+    "description": `Production server with:
     - TLS enabled
     - Custom headers
-    - High security settings"""
+    - High security settings`
   }'
 ```
 
@@ -99,9 +99,9 @@ curl -X POST http://localhost:8080/api/servers \
 
 ```json
 {
-  "description": """This is a multiline string.
+  "description": `This is a multiline string.
   It can span multiple lines.
-  Line breaks are preserved as \n in the final JSON."""
+  Line breaks are preserved as \n in the final JSON.`
 }
 ```
 

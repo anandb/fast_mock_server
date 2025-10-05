@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  * <p>
  * This converter handles JSON documents with extended syntax:
  * - C++ style comments (// and /* *\/)
- * - Multiline strings using triple quotes (""")
+ * - Multiline strings using backticks
  * <p>
  * When a request arrives with Content-Type: application/jsonmc, this converter:
  * 1. Parses the JSON with comments and multiline strings using JsonCommentParser
