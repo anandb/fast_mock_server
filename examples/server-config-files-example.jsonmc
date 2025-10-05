@@ -1,0 +1,102 @@
+[
+  {
+    "server": {
+      "serverId": "file-server",
+      "port": 8082,
+      "description": "Mock server demonstrating multi-part file downloads"
+    },
+    "expectations": [
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/download/documents"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          /*
+           * The "files" field contains an array of absolute file paths
+           * to serve as a multi-part response. When this field is present,
+           * the "body" field should be omitted.
+           */
+          "files": [
+            "/path/to/document1.pdf",
+            "/path/to/document2.pdf"
+          ],
+          "headers": [
+            {
+              "name": "X-Download-Type",
+              "values": ["multi-part"]
+            }
+          ]
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/download/images"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "files": [
+            "/path/to/image1.png",
+            "/path/to/image2.jpg",
+            "/path/to/image3.gif"
+          ]
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/api/export/reports"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          /*
+           * Files can be of different types - the callback will
+           * automatically detect the content type based on file extensions
+           */
+          "files": [
+            "/path/to/report1.csv",
+            "/path/to/report2.xlsx",
+            "/path/to/summary.json"
+          ],
+          "headers": [
+            {
+              "name": "X-Report-Count",
+              "values": ["3"]
+            }
+          ]
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/download/archive"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          /*
+           * Single file downloads also work with the files array
+           */
+          "files": [
+            "/path/to/archive.zip"
+          ]
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/regular/data"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          /*
+           * Regular responses with body continue to work as before
+           * Only use "files" for multi-part file downloads
+           */
+          "body": """{"message": "This is a regular JSON response"}"""
+        }
+      }
+    ]
+  }
+]

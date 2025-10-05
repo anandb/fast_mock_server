@@ -337,6 +337,78 @@ See `server-config-example.json` for a complete example with multiple servers an
 Successfully configured 2 expectation(s) for server: simple-service
 ```
 
+**Multi-Part File Download Expectations**:
+
+For serving file downloads, use the `files` field in `httpResponse` instead of `body`:
+
+```json
+{
+  "httpRequest": {
+    "method": "GET",
+    "path": "/api/download/documents"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "files": [
+      "/absolute/path/to/document1.pdf",
+      "/absolute/path/to/document2.pdf"
+    ],
+    "headers": {
+      "X-Download-Type": ["multi-part"]
+    }
+  }
+}
+```
+
+The `files` field:
+- Accepts an array of absolute file paths
+- Automatically serves files as multipart/form-data response
+- Detects content types based on file extensions
+- Works with any file type (PDF, images, CSV, ZIP, etc.)
+- When `files` is present, the `body` field should be omitted
+
+Supported file types (auto-detected):
+- Documents: PDF, TXT, CSV
+- Archives: ZIP
+- Images: PNG, JPG, JPEG, GIF
+- Data: JSON, XML
+- Office: XLSX (served as application/octet-stream)
+- Default: application/octet-stream for unknown types
+
+**Example with Single File**:
+```json
+{
+  "httpRequest": {
+    "method": "GET",
+    "path": "/api/download/report"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "files": ["/path/to/report.pdf"]
+  }
+}
+```
+
+**Example with Mixed File Types**:
+```json
+{
+  "httpRequest": {
+    "method": "POST",
+    "path": "/api/export/data"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "files": [
+      "/path/to/data.csv",
+      "/path/to/summary.json",
+      "/path/to/archive.zip"
+    ]
+  }
+}
+```
+
+See `examples/server-config-files-example.jsonmc` for complete examples.
+
 #### Get Current Expectations
 
 **Endpoint**: `GET /api/servers/{serverId}/expectations`

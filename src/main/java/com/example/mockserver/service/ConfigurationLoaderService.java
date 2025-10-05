@@ -1,10 +1,13 @@
 package com.example.mockserver.service;
 
 import com.example.mockserver.exception.ServerCreationException;
+import com.example.mockserver.callback.FileResponseCallback;
+import com.example.mockserver.callback.FreemarkerResponseCallback;
 import com.example.mockserver.model.CreateServerRequest;
 import com.example.mockserver.model.ServerConfiguration;
 import com.example.mockserver.util.JsonCommentParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +36,7 @@ public class ConfigurationLoaderService {
 
     private final MockServerManager mockServerManager;
     private final ObjectMapper objectMapper;
+    private final FreemarkerTemplateService freemarkerTemplateService;
 
     /** System property name for specifying the configuration file path */
     private static final String CONFIG_FILE_PROPERTY = "mock.server.config.file";
@@ -180,7 +184,8 @@ public class ConfigurationLoaderService {
      * Configures expectations for a server instance.
      * <p>
      * This method handles the parsing and configuration of expectations,
-     * including merging global headers with expectation-specific headers.
+     * including merging global headers with expectation-specific headers,
+     * and handling file-based responses and Freemarker templates.
      * </p>
      *
      * @param serverInstance the server instance to configure
@@ -192,6 +197,9 @@ public class ConfigurationLoaderService {
     ) {
         MockServerOperations mockServerOperations =
             new MockServerOperationsImpl(serverInstance.getServer());
+
+        // Extract files information before parsing
+        java.util.Map<String, List<String>> filesMap = extractFilesFromJson(expectationsJson);
 
         // Parse expectations from JSON
         org.mockserver.serialization.ExpectationSerializer serializer =
@@ -210,23 +218,46 @@ public class ConfigurationLoaderService {
         List<com.example.mockserver.model.GlobalHeader> globalHeaders =
             serverInstance.getGlobalHeaders();
 
-        if (globalHeaders != null && !globalHeaders.isEmpty()) {
-            log.debug("Applying {} global headers to expectations", globalHeaders.size());
-            for (org.mockserver.mock.Expectation expectation : expectations) {
-                org.mockserver.mock.Expectation mergedExpectation =
-                    applyGlobalHeaders(expectation, globalHeaders);
-                mockServerOperations.configureExpectation(
-                    mergedExpectation.getHttpRequest(),
-                    mergedExpectation.getHttpResponse()
-                );
+        for (org.mockserver.mock.Expectation expectation : expectations) {
+            // Apply global headers if present
+            org.mockserver.mock.Expectation processedExpectation = expectation;
+            if (globalHeaders != null && !globalHeaders.isEmpty()) {
+                log.debug("Applying {} global headers to expectation", globalHeaders.size());
+                processedExpectation = applyGlobalHeaders(expectation, globalHeaders);
             }
-        } else {
-            // No global headers, configure as-is
-            for (org.mockserver.mock.Expectation expectation : expectations) {
-                mockServerOperations.configureExpectation(
-                    expectation.getHttpRequest(),
-                    expectation.getHttpResponse()
+
+            // Check if this expectation has files field
+            String expectationKey = generateExpectationKey(processedExpectation.getHttpRequest());
+            List<String> filePaths = filesMap.get(expectationKey);
+
+            if (filePaths != null && !filePaths.isEmpty()) {
+                log.debug("Detected files field in expectation, configuring file callback");
+                configureFileExpectation(
+                    serverInstance.getServer(),
+                    processedExpectation.getHttpRequest(),
+                    processedExpectation.getHttpResponse(),
+                    filePaths
                 );
+            } else {
+                // Check if response body contains Freemarker template
+                org.mockserver.model.HttpResponse response = processedExpectation.getHttpResponse();
+                String responseBody = response.getBodyAsString();
+
+                if (responseBody != null && isFreemarkerTemplate(responseBody)) {
+                    log.debug("Detected Freemarker template in response body, configuring callback");
+                    configureTemplateExpectation(
+                        serverInstance.getServer(),
+                        processedExpectation.getHttpRequest(),
+                        response,
+                        responseBody
+                    );
+                } else {
+                    // Regular static response
+                    mockServerOperations.configureExpectation(
+                        processedExpectation.getHttpRequest(),
+                        response
+                    );
+                }
             }
         }
     }
@@ -289,5 +320,141 @@ public class ConfigurationLoaderService {
         // Return new expectation with merged response
         return new org.mockserver.mock.Expectation(expectation.getHttpRequest())
             .thenRespond(mergedResponse);
+    }
+
+    /**
+     * Extracts files information from expectation JSON before parsing.
+     *
+     * @param json the raw JSON string
+     * @return map of expectation keys to file path lists
+     */
+    private java.util.Map<String, List<String>> extractFilesFromJson(String json) {
+        java.util.Map<String, List<String>> filesMap = new java.util.HashMap<>();
+
+        try {
+            JsonNode rootNode = objectMapper.readTree(json);
+
+            // Handle array of expectations
+            if (rootNode.isArray()) {
+                for (JsonNode expectationNode : rootNode) {
+                    extractFilesFromExpectationNode(expectationNode, filesMap);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error extracting files from JSON", e);
+        }
+
+        return filesMap;
+    }
+
+    /**
+     * Extracts files from a single expectation node.
+     *
+     * @param expectationNode the expectation JSON node
+     * @param filesMap the map to store extracted file paths
+     */
+    private void extractFilesFromExpectationNode(
+        JsonNode expectationNode,
+        java.util.Map<String, List<String>> filesMap
+    ) {
+        JsonNode httpRequest = expectationNode.get("httpRequest");
+        JsonNode httpResponse = expectationNode.get("httpResponse");
+
+        if (httpRequest != null && httpResponse != null) {
+            JsonNode filesNode = httpResponse.get("files");
+
+            if (filesNode != null && filesNode.isArray()) {
+                List<String> filePaths = new java.util.ArrayList<>();
+                filesNode.forEach(fileNode -> {
+                    if (fileNode.isTextual()) {
+                        filePaths.add(fileNode.asText());
+                    }
+                });
+
+                if (!filePaths.isEmpty()) {
+                    // Generate key from request method and path
+                    String method = httpRequest.has("method") ?
+                        httpRequest.get("method").asText() : "GET";
+                    String path = httpRequest.has("path") ?
+                        httpRequest.get("path").asText() : "/";
+                    String key = method + ":" + path;
+
+                    filesMap.put(key, filePaths);
+                    log.debug("Extracted {} file(s) for {} {}", filePaths.size(), method, path);
+                }
+            }
+        }
+    }
+
+    /**
+     * Generates a unique key for an expectation based on its HTTP request.
+     *
+     * @param request the HTTP request
+     * @return a unique key string
+     */
+    private String generateExpectationKey(org.mockserver.model.RequestDefinition request) {
+        if (request instanceof org.mockserver.model.HttpRequest) {
+            org.mockserver.model.HttpRequest httpRequest = (org.mockserver.model.HttpRequest) request;
+            String method = httpRequest.getMethod() != null ?
+                httpRequest.getMethod().getValue() : "GET";
+            String path = httpRequest.getPath() != null ?
+                httpRequest.getPath().getValue() : "/";
+            return method + ":" + path;
+        }
+        return "UNKNOWN";
+    }
+
+    /**
+     * Checks if a string contains Freemarker template syntax.
+     *
+     * @param content the string to check
+     * @return true if the content contains Freemarker syntax, false otherwise
+     */
+    private boolean isFreemarkerTemplate(String content) {
+        return content.contains("${") ||
+               content.contains("<#") ||
+               content.contains("[#") ||
+               content.contains("<@") ||
+               content.contains("[@");
+    }
+
+    /**
+     * Configures an expectation with a file response callback.
+     *
+     * @param server the MockServer instance
+     * @param request the HTTP request matcher
+     * @param response the base HTTP response
+     * @param filePaths list of absolute file paths to serve
+     */
+    private void configureFileExpectation(
+            org.mockserver.integration.ClientAndServer server,
+            org.mockserver.model.RequestDefinition request,
+            org.mockserver.model.HttpResponse response,
+            List<String> filePaths) {
+
+        FileResponseCallback callback = new FileResponseCallback(filePaths, response);
+        server.when(request).respond(callback);
+    }
+
+    /**
+     * Configures an expectation with a Freemarker template callback.
+     *
+     * @param server the MockServer instance
+     * @param request the HTTP request matcher
+     * @param response the base HTTP response
+     * @param templateString the Freemarker template string
+     */
+    private void configureTemplateExpectation(
+            org.mockserver.integration.ClientAndServer server,
+            org.mockserver.model.RequestDefinition request,
+            org.mockserver.model.HttpResponse response,
+            String templateString) {
+
+        FreemarkerResponseCallback callback = new FreemarkerResponseCallback(
+            freemarkerTemplateService,
+            templateString,
+            response
+        );
+        server.when(request).respond(callback);
     }
 }

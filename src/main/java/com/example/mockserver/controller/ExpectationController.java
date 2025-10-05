@@ -8,9 +8,13 @@ import com.example.mockserver.service.MockServerOperations;
 import com.example.mockserver.service.MockServerOperationsImpl;
 import com.example.mockserver.service.FreemarkerTemplateService;
 import com.example.mockserver.callback.FreemarkerResponseCallback;
+import com.example.mockserver.callback.FileResponseCallback;
 import com.example.mockserver.model.GlobalHeader;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,6 +58,7 @@ public class ExpectationController {
 
     private final MockServerManager mockServerManager;
     private final FreemarkerTemplateService freemarkerTemplateService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Configures expectations for a specific mock server.
@@ -84,6 +89,9 @@ public class ExpectationController {
         // Create MockServerOperations instance for this server
         MockServerOperations mockServerOperations = new MockServerOperationsImpl(server);
 
+        // Extract files information before parsing (since MockServer doesn't know about files field)
+        Map<String, List<String>> filesMap = extractFilesFromJson(expectationsJson);
+
         // Parse expectations from JSON
         Expectation[] expectations = parseExpectations(expectationsJson);
         log.debug("Parsed {} expectations", expectations.length);
@@ -109,24 +117,38 @@ public class ExpectationController {
             // Clear any existing expectations with same method and path to allow overwriting
             clearMatchingExpectation(server, processedExpectation.getHttpRequest());
 
-            // Check if response body contains Freemarker template
-            HttpResponse response = processedExpectation.getHttpResponse();
-            String responseBody = response.getBodyAsString();
+            // Check if this expectation has files field (for multi-part file downloads)
+            String expectationKey = generateExpectationKey(processedExpectation.getHttpRequest());
+            List<String> filePaths = filesMap.get(expectationKey);
 
-            if (responseBody != null && isFreemarkerTemplate(responseBody)) {
-                log.debug("Detected Freemarker template in response body, configuring callback");
-                configureTemplateExpectation(
+            if (filePaths != null && !filePaths.isEmpty()) {
+                log.debug("Detected files field in expectation, configuring file callback");
+                configureFileExpectation(
                     server,
                     processedExpectation.getHttpRequest(),
-                    response,
-                    responseBody
+                    processedExpectation.getHttpResponse(),
+                    filePaths
                 );
             } else {
-                // Regular static response
-                mockServerOperations.configureExpectation(
-                    processedExpectation.getHttpRequest(),
-                    response
-                );
+                // Check if response body contains Freemarker template
+                HttpResponse response = processedExpectation.getHttpResponse();
+                String responseBody = response.getBodyAsString();
+
+                if (responseBody != null && isFreemarkerTemplate(responseBody)) {
+                    log.debug("Detected Freemarker template in response body, configuring callback");
+                    configureTemplateExpectation(
+                        server,
+                        processedExpectation.getHttpRequest(),
+                        response,
+                        responseBody
+                    );
+                } else {
+                    // Regular static response
+                    mockServerOperations.configureExpectation(
+                        processedExpectation.getHttpRequest(),
+                        response
+                    );
+                }
             }
         }
 
@@ -299,6 +321,106 @@ public class ExpectationController {
                content.contains("[#") ||
                content.contains("<@") ||
                content.contains("[@");
+    }
+
+    /**
+     * Extracts files information from expectation JSON before parsing.
+     * This is necessary because MockServer's serializer doesn't know about our custom "files" field.
+     *
+     * @param json the raw JSON string
+     * @return map of expectation keys to file path lists
+     */
+    private Map<String, List<String>> extractFilesFromJson(String json) {
+        Map<String, List<String>> filesMap = new HashMap<>();
+
+        try {
+            JsonNode rootNode = objectMapper.readTree(json);
+
+            // Handle both single expectation and array
+            List<JsonNode> expectationNodes = new ArrayList<>();
+            if (rootNode.isArray()) {
+                rootNode.forEach(expectationNodes::add);
+            } else {
+                expectationNodes.add(rootNode);
+            }
+
+            // Extract files from each expectation
+            for (JsonNode expectationNode : expectationNodes) {
+                JsonNode httpRequest = expectationNode.get("httpRequest");
+                JsonNode httpResponse = expectationNode.get("httpResponse");
+
+                if (httpRequest != null && httpResponse != null) {
+                    JsonNode filesNode = httpResponse.get("files");
+
+                    if (filesNode != null && filesNode.isArray()) {
+                        List<String> filePaths = new ArrayList<>();
+                        filesNode.forEach(fileNode -> {
+                            if (fileNode.isTextual()) {
+                                filePaths.add(fileNode.asText());
+                            }
+                        });
+
+                        if (!filePaths.isEmpty()) {
+                            // Generate key from request method and path
+                            String method = httpRequest.has("method") ?
+                                httpRequest.get("method").asText() : "GET";
+                            String path = httpRequest.has("path") ?
+                                httpRequest.get("path").asText() : "/";
+                            String key = method + ":" + path;
+
+                            filesMap.put(key, filePaths);
+                            log.debug("Extracted {} file(s) for {} {}", filePaths.size(), method, path);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error extracting files from JSON", e);
+        }
+
+        return filesMap;
+    }
+
+    /**
+     * Generates a unique key for an expectation based on its HTTP request.
+     *
+     * @param request the HTTP request
+     * @return a unique key string
+     */
+    private String generateExpectationKey(org.mockserver.model.RequestDefinition request) {
+        if (request instanceof HttpRequest) {
+            HttpRequest httpRequest = (HttpRequest) request;
+            String method = httpRequest.getMethod() != null ?
+                httpRequest.getMethod().getValue() : "GET";
+            String path = httpRequest.getPath() != null ?
+                httpRequest.getPath().getValue() : "/";
+            return method + ":" + path;
+        }
+        return "UNKNOWN";
+    }
+
+    /**
+     * Configures an expectation with a file response callback.
+     *
+     * @param server the MockServer instance
+     * @param request the HTTP request matcher
+     * @param response the base HTTP response (contains headers and status)
+     * @param filePaths list of absolute file paths to serve
+     */
+    private void configureFileExpectation(
+            ClientAndServer server,
+            org.mockserver.model.RequestDefinition request,
+            HttpResponse response,
+            List<String> filePaths) {
+
+        // Create callback with file paths
+        FileResponseCallback callback = new FileResponseCallback(
+            filePaths,
+            response
+        );
+
+        // Configure expectation with callback
+        server.when(request).respond(callback);
     }
 
     /**
