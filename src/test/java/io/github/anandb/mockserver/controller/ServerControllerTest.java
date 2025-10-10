@@ -60,6 +60,7 @@ class ServerControllerTest {
             "Test Server",
             null,
             null,
+            null,
             null
         );
 
@@ -98,6 +99,7 @@ class ServerControllerTest {
             "Test Server",
             null,
             null,
+            null,
             null
         );
 
@@ -120,6 +122,7 @@ class ServerControllerTest {
             "Test Server",
             null,
             null,
+            null,
             null
         );
 
@@ -138,6 +141,7 @@ class ServerControllerTest {
             "Test Server",
             null,
             null,
+            null,
             null
         );
 
@@ -154,6 +158,7 @@ class ServerControllerTest {
             "test-server",
             70000,  // Port exceeds 65535
             "Test Server",
+            null,
             null,
             null,
             null
@@ -294,6 +299,7 @@ class ServerControllerTest {
             "",  // Empty serverId
             8080,
             "Test Server",
+            null,
             null,
             null,
             null
