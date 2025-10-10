@@ -1,0 +1,56 @@
+{
+  /* Example server configuration with relay to a remote server with OAuth2 authentication
+   *
+   * This example demonstrates how to configure a mock server that relays all requests
+   * to a remote server after obtaining an OAuth2 access token.
+   *
+   * Use case: Testing against a real API that requires OAuth2 authentication, or
+   * creating a proxy server that adds authentication to requests.
+   */
+  "server": {
+    "serverId": "relay-server",
+    "port": 8090,
+    "description": "Mock server that relays requests to a remote API with OAuth2",
+
+    /* Relay configuration for forwarding requests to a remote server */
+    "relayConfig": {
+      /* The remote URL to relay requests to (base URL) */
+      "remoteUrl": "https://api.example.com",
+
+      /* OAuth2 token endpoint for obtaining access tokens */
+      "tokenUrl": "https://auth.example.com/oauth/token",
+
+      /* OAuth2 client credentials */
+      "clientId": "your-client-id",
+      "clientSecret": "your-client-secret",
+
+      /* Optional: OAuth2 scope (if required by the token endpoint) */
+      "scope": "api:read api:write",
+
+      /* Optional: OAuth2 grant type (defaults to "client_credentials") */
+      "grantType": "client_credentials",
+
+      /* Optional: Additional headers to include when relaying requests
+       * These headers will be added to all relayed requests
+       */
+      "headers": {
+        "X-Custom-Header": "custom-value",
+        "X-API-Version": "v1"
+      }
+    }
+  },
+
+  /* Note: When relay is configured, the server will forward ALL incoming requests
+   * to the remote URL. Any expectations configured below will be ignored.
+   *
+   * The relay will:
+   * 1. Obtain an OAuth2 access token using the client credentials
+   * 2. Cache the token to avoid unnecessary token requests
+   * 3. Add the token as "Authorization: Bearer <token>" header
+   * 4. Add any custom headers from relayConfig.headers
+   * 5. Forward the request (method, path, headers, body) to the remote URL
+   * 6. Return the response from the remote server
+   */
+
+  "expectations": []
+}

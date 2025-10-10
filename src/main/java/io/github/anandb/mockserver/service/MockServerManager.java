@@ -5,6 +5,7 @@ import io.github.anandb.mockserver.exception.ServerCreationException;
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
 import io.github.anandb.mockserver.model.CreateServerRequest;
 import io.github.anandb.mockserver.model.GlobalHeader;
+import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.model.ServerInfo;
 import io.github.anandb.mockserver.model.TlsConfig;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MockServerManager {
 
     private final TlsConfigurationService tlsConfigService;
+    private final RelayService relayService;
 
     /** Registry of all active server instances, keyed by server ID */
     private final Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
@@ -68,6 +70,12 @@ public class MockServerManager {
             // Start MockServer
             ClientAndServer server = ClientAndServer.startClientAndServer(request.getPort());
 
+            // Configure relay if enabled
+            if (request.isRelayEnabled()) {
+                log.info("Configuring relay for server: {}", serverId);
+                configureRelay(server, request.getRelayConfig());
+            }
+
             // Create server instance
             ServerInstance instance = new ServerInstance(
                 serverId,
@@ -76,6 +84,7 @@ public class MockServerManager {
                 request.getTlsConfig(),
                 request.getGlobalHeaders(),
                 request.getBasicAuthConfig(),
+                request.getRelayConfig(),
                 LocalDateTime.now(),
                 request.getDescription()
             );
@@ -207,6 +216,7 @@ public class MockServerManager {
             .mtlsEnabled(instance.isMtlsEnabled())
             .globalHeaders(instance.getGlobalHeaders())
             .basicAuthEnabled(instance.isBasicAuthEnabled())
+            .relayEnabled(instance.isRelayEnabled())
             .createdAt(instance.getCreatedAt())
             .status(instance.getServer().isRunning() ? "running" : "stopped")
             .build();
@@ -258,6 +268,8 @@ public class MockServerManager {
         private List<GlobalHeader> globalHeaders;
         /** Basic authentication configuration, if enabled */
         private io.github.anandb.mockserver.model.BasicAuthConfig basicAuthConfig;
+        /** Relay configuration, if enabled */
+        private RelayConfig relayConfig;
         /** Timestamp when the server was created */
         private LocalDateTime createdAt;
         /** Human-readable description of the server */
@@ -316,5 +328,37 @@ public class MockServerManager {
         public boolean isBasicAuthEnabled() {
             return basicAuthConfig != null && basicAuthConfig.isValid();
         }
+
+        /**
+         * Checks if relay configuration is enabled for this server.
+         *
+         * @return true if relay is configured and valid, false otherwise
+         */
+        public boolean isRelayEnabled() {
+            return relayConfig != null && relayConfig.isValid();
+        }
+    }
+
+    /**
+     * Configures a catch-all relay expectation for the server.
+     * <p>
+     * This sets up a callback that intercepts all requests and forwards them to
+     * the configured remote server with OAuth2 authentication.
+     * </p>
+     *
+     * @param server the MockServer instance
+     * @param relayConfig the relay configuration
+     */
+    private void configureRelay(ClientAndServer server, RelayConfig relayConfig) {
+        io.github.anandb.mockserver.callback.RelayResponseCallback callback =
+            new io.github.anandb.mockserver.callback.RelayResponseCallback(relayService, relayConfig);
+
+        // Create a catch-all request matcher
+        org.mockserver.model.HttpRequest catchAllRequest = org.mockserver.model.HttpRequest.request();
+
+        // Configure the callback for all requests
+        server.when(catchAllRequest).respond(callback);
+
+        log.info("Relay configured for remote URL: {}", relayConfig.getRemoteUrl());
     }
 }

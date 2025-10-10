@@ -54,6 +54,11 @@ public class CreateServerRequest {
     @JsonProperty("basicAuthConfig")
     private BasicAuthConfig basicAuthConfig;
 
+    /** Optional relay configuration for forwarding requests to a remote server */
+    @Valid
+    @JsonProperty("relayConfig")
+    private RelayConfig relayConfig;
+
     /**
      * Checks if TLS is enabled and properly configured for this server.
      *
@@ -79,5 +84,14 @@ public class CreateServerRequest {
      */
     public boolean hasGlobalHeaders() {
         return globalHeaders != null && !globalHeaders.isEmpty();
+    }
+
+    /**
+     * Checks if relay configuration is enabled and properly configured for this server.
+     *
+     * @return true if relay configuration is present and valid, false otherwise
+     */
+    public boolean isRelayEnabled() {
+        return relayConfig != null && relayConfig.isValid();
     }
 }

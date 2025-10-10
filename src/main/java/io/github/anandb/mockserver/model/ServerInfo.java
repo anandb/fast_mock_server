@@ -58,6 +58,10 @@ public class ServerInfo {
     @JsonProperty("basicAuthEnabled")
     private boolean basicAuthEnabled;
 
+    /** Indicates whether relay configuration is enabled for this server */
+    @JsonProperty("relayEnabled")
+    private boolean relayEnabled;
+
     /** Timestamp when the server was created */
     @JsonProperty("createdAt")
     private LocalDateTime createdAt;
