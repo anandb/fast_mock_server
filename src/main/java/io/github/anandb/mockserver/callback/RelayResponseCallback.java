@@ -13,10 +13,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Callback for relaying HTTP requests to a remote server with OAuth2 authentication.
+ * Callback for relaying HTTP requests to a remote server with optional OAuth2 authentication.
  * <p>
  * This callback intercepts all requests to the mock server and forwards them to the
- * configured remote URL, including OAuth2 token acquisition and custom headers.
+ * configured remote URL, including optional OAuth2 token acquisition and custom headers.
  * </p>
  */
 @Slf4j

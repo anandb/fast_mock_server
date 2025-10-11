@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Service for relaying HTTP requests to remote servers with OAuth2 authentication.
+ * Service for relaying HTTP requests to remote servers with optional OAuth2 authentication.
  * <p>
  * This service handles forwarding incoming requests to remote endpoints, including
- * OAuth2 token acquisition and custom header management.
+ * optional OAuth2 token acquisition and custom header management.
  * </p>
  */
 @Service
@@ -49,9 +49,6 @@ public class RelayService {
      */
     public RelayResponse relayRequest(RelayConfig relayConfig, String method, String path,
                                        Map<String, List<String>> headers, byte[] body) throws Exception {
-        // Get access token
-        String accessToken = tokenService.getAccessToken(relayConfig);
-
         // Build target URL
         String targetUrl = buildTargetUrl(relayConfig.getRemoteUrl(), path);
         log.info("Relaying {} request to: {}", method, targetUrl);
@@ -61,8 +58,14 @@ public class RelayService {
                 .uri(URI.create(targetUrl))
                 .timeout(Duration.ofSeconds(60));
 
-        // Add Authorization header with Bearer token
-        requestBuilder.header("Authorization", "Bearer " + accessToken);
+        // Add Authorization header with Bearer token if OAuth2 is enabled
+        if (relayConfig.isOAuth2Enabled()) {
+            String accessToken = tokenService.getAccessToken(relayConfig);
+            requestBuilder.header("Authorization", "Bearer " + accessToken);
+            log.debug("Added OAuth2 Bearer token to request");
+        } else {
+            log.debug("OAuth2 not configured, relaying without authentication");
+        }
 
         // Add custom headers from relay config
         if (relayConfig.hasHeaders()) {

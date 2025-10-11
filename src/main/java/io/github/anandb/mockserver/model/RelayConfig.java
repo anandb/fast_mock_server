@@ -6,14 +6,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.NotBlank;
-import java.util.List;
 import java.util.Map;
 
 /**
- * Configuration for relaying requests to a remote server with OAuth2 authentication.
+ * Configuration for relaying requests to a remote server with optional OAuth2
+ * authentication.
  * <p>
  * When a server has relay configuration enabled, all incoming requests will be
- * forwarded to the specified remote URL after obtaining an OAuth2 access token.
+ * forwarded to the specified remote URL. If OAuth2 is configured, an access
+ * token
+ * will be obtained and added to the request.
  * </p>
  */
 @Data
@@ -26,18 +28,23 @@ public class RelayConfig {
     @JsonProperty("remoteUrl")
     private String remoteUrl;
 
-    /** The OAuth2 token endpoint URL */
-    @NotBlank(message = "Token URL is required for relay configuration")
+    /**
+     * The OAuth2 token endpoint URL (optional - only required if using OAuth2
+     * authentication)
+     */
     @JsonProperty("tokenUrl")
     private String tokenUrl;
 
-    /** OAuth2 client ID */
-    @NotBlank(message = "Client ID is required for relay configuration")
+    /**
+     * OAuth2 client ID (optional - only required if using OAuth2 authentication)
+     */
     @JsonProperty("clientId")
     private String clientId;
 
-    /** OAuth2 client secret */
-    @NotBlank(message = "Client secret is required for relay configuration")
+    /**
+     * OAuth2 client secret (optional - only required if using OAuth2
+     * authentication)
+     */
     @JsonProperty("clientSecret")
     private String clientSecret;
 
@@ -54,15 +61,41 @@ public class RelayConfig {
     private String grantType = "client_credentials";
 
     /**
-     * Checks if this relay configuration is valid.
+     * Checks if OAuth2 authentication is enabled for this relay configuration.
      *
-     * @return true if all required fields are present, false otherwise
+     * @return true if all OAuth2 fields are present, false otherwise
+     */
+    public boolean isOAuth2Enabled() {
+        return tokenUrl != null && !tokenUrl.isBlank() &&
+                clientId != null && !clientId.isBlank() &&
+                clientSecret != null && !clientSecret.isBlank();
+    }
+
+    /**
+     * Checks if this relay configuration is valid.
+     * A configuration is valid if it has a remote URL, and if OAuth2 fields are
+     * provided,
+     * they must all be complete.
+     *
+     * @return true if configuration is valid, false otherwise
      */
     public boolean isValid() {
-        return remoteUrl != null && !remoteUrl.isBlank() &&
-               tokenUrl != null && !tokenUrl.isBlank() &&
-               clientId != null && !clientId.isBlank() &&
-               clientSecret != null && !clientSecret.isBlank();
+        // Remote URL is always required
+        if (remoteUrl == null || remoteUrl.isBlank()) {
+            return false;
+        }
+
+        // If any OAuth2 field is provided, all must be provided
+        boolean hasTokenUrl = tokenUrl != null && !tokenUrl.isBlank();
+        boolean hasClientId = clientId != null && !clientId.isBlank();
+        boolean hasClientSecret = clientSecret != null && !clientSecret.isBlank();
+
+        // Either all OAuth2 fields are present or none are present
+        if (hasTokenUrl || hasClientId || hasClientSecret) {
+            return hasTokenUrl && hasClientId && hasClientSecret;
+        }
+
+        return true; // Valid if remote URL is present and no partial OAuth2 config
     }
 
     /**

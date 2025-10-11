@@ -2,29 +2,49 @@
 
 ## Overview
 
-The relay configuration feature allows you to create a mock server that acts as a proxy, forwarding all incoming requests to a remote server with OAuth2 authentication. This is useful for:
+The relay configuration feature allows you to create a mock server that acts as a proxy, forwarding all incoming requests to a remote server with optional OAuth2 authentication. This is useful for:
 
-- Testing against real APIs that require OAuth2 authentication
+- Testing against real APIs (with or without OAuth2 authentication)
 - Adding authentication layer to existing APIs
-- Creating a proxy server with custom headers
+- Creating a simple proxy server with custom headers
 - Testing OAuth2 token management and caching
+- Forwarding requests without authentication
 
 ## Features
 
-- **OAuth2 Authentication**: Automatically obtains and manages access tokens using client credentials grant
-- **Token Caching**: Caches access tokens to minimize token endpoint calls
+- **Optional OAuth2 Authentication**: Automatically obtains and manages access tokens using client credentials grant (when configured)
+- **Token Caching**: Caches access tokens to minimize token endpoint calls (for OAuth2)
 - **Custom Headers**: Add custom headers to all relayed requests
 - **Full Request Forwarding**: Forwards all aspects of requests (method, path, query params, headers, body)
 - **Transparent Response**: Returns the exact response from the remote server
+- **No Authentication Mode**: Relay requests without any authentication when OAuth2 is not configured
 
 ## Configuration
 
-### Basic Relay Configuration
+### Basic Relay Configuration (Without Authentication)
+
+The simplest relay configuration only requires a remote URL:
 
 ```json
 {
   "server": {
-    "serverId": "my-relay-server",
+    "serverId": "simple-relay-server",
+    "port": 8080,
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com"
+    }
+  }
+}
+```
+
+### Relay Configuration with OAuth2 Authentication
+
+To add OAuth2 authentication, include the token endpoint and client credentials:
+
+```json
+{
+  "server": {
+    "serverId": "oauth-relay-server",
     "port": 8080,
     "relayConfig": {
       "remoteUrl": "https://api.example.com",
@@ -67,6 +87,13 @@ The relay configuration feature allows you to create a mock server that acts as 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `remoteUrl` | String | The base URL of the remote server to relay requests to |
+
+### OAuth2 Authentication Parameters (Optional)
+
+To enable OAuth2 authentication, you must provide all three of these parameters. If any are provided, all must be provided:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
 | `tokenUrl` | String | The OAuth2 token endpoint URL |
 | `clientId` | String | OAuth2 client ID |
 | `clientSecret` | String | OAuth2 client secret |
@@ -81,7 +108,16 @@ The relay configuration feature allows you to create a mock server that acts as 
 
 ## How It Works
 
-### Request Flow
+### Request Flow (Without Authentication)
+
+1. **Incoming Request**: Client sends a request to the mock server
+2. **Request Forwarding**:
+   - Adds any custom headers from configuration
+   - Forwards original request headers (except certain system headers)
+   - Forwards request method, path, query parameters, and body
+3. **Response Handling**: Returns the exact response from the remote server
+
+### Request Flow (With OAuth2 Authentication)
 
 1. **Incoming Request**: Client sends a request to the mock server
 2. **Token Acquisition**: Server checks if a valid access token exists in cache
@@ -105,7 +141,7 @@ The relay configuration feature allows you to create a mock server that acts as 
 
 #### Headers Added to Relayed Requests
 
-1. `Authorization: Bearer <access_token>` (automatically added)
+1. `Authorization: Bearer <access_token>` (automatically added when OAuth2 is configured)
 2. Custom headers from `relayConfig.headers`
 3. Original request headers (with some exclusions)
 
@@ -121,9 +157,38 @@ The following headers are NOT forwarded to prevent conflicts:
 
 ## Usage Examples
 
-### Example 1: Simple API Relay
+### Example 1: Simple Relay Without Authentication
 
-Create a server configuration file `relay-config.jsonmc`:
+Create a server configuration file `relay-no-auth-config.jsonmc`:
+
+```json
+{
+  "server": {
+    "serverId": "simple-relay",
+    "port": 8090,
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com"
+    }
+  }
+}
+```
+
+Start the server:
+```bash
+curl -X POST http://localhost:8080/api/servers/load \
+  -H "Content-Type: application/json" \
+  -d @relay-no-auth-config.jsonmc
+```
+
+Test the relay:
+```bash
+curl http://localhost:8090/users/123
+# Request is forwarded to https://api.example.com/users/123 without authentication
+```
+
+### Example 2: API Relay with OAuth2 Authentication
+
+Create a server configuration file `relay-oauth-config.jsonmc`:
 
 ```json
 {
@@ -153,7 +218,25 @@ curl http://localhost:8090/users/123
 # Request is forwarded to https://api.example.com/users/123 with OAuth2 token
 ```
 
-### Example 2: Relay with Custom Headers
+### Example 3: Relay with Custom Headers (No Authentication)
+
+```json
+{
+  "server": {
+    "serverId": "relay-custom-headers",
+    "port": 8090,
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com",
+      "headers": {
+        "X-API-Version": "v2",
+        "X-Client-App": "test-suite"
+      }
+    }
+  }
+}
+```
+
+### Example 4: Relay with OAuth2 and Custom Headers
 
 ```json
 {
@@ -174,7 +257,7 @@ curl http://localhost:8090/users/123
 }
 ```
 
-### Example 3: Relay with Scope
+### Example 5: Relay with OAuth2 Scope
 
 ```json
 {
@@ -194,13 +277,27 @@ curl http://localhost:8090/users/123
 
 ## REST API Usage
 
-### Create a Relay Server via API
+### Create a Relay Server via API (Without Authentication)
 
 ```bash
 curl -X POST http://localhost:8080/api/servers \
   -H "Content-Type: application/json" \
   -d '{
-    "serverId": "relay-server",
+    "serverId": "simple-relay",
+    "port": 8090,
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com"
+    }
+  }'
+```
+
+### Create a Relay Server via API (With OAuth2)
+
+```bash
+curl -X POST http://localhost:8080/api/servers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverId": "oauth-relay",
     "port": 8090,
     "relayConfig": {
       "remoteUrl": "https://api.example.com",
@@ -233,13 +330,17 @@ Response will include `"relayEnabled": true`:
 
 1. **Expectations are Ignored**: When relay is enabled, any expectations configured for the server are ignored. ALL requests are forwarded to the remote server.
 
-2. **OAuth2 Support**: Currently only supports `client_credentials` grant type. Other grant types can be specified but the implementation handles client credentials flow.
+2. **OAuth2 is Optional**: OAuth2 authentication is completely optional. You can create a relay without any authentication by only providing the `remoteUrl`.
 
-3. **Error Handling**: If relay fails (e.g., token acquisition fails, remote server is unreachable), the mock server returns a 502 Bad Gateway error with details.
+3. **Partial OAuth2 Config Not Allowed**: If you provide any OAuth2 parameter (`tokenUrl`, `clientId`, or `clientSecret`), you must provide all three. Partial configuration will result in a validation error.
 
-4. **Security**: Client secrets are stored in memory. Use environment variables or secure configuration management in production.
+4. **OAuth2 Support**: When OAuth2 is enabled, currently only supports `client_credentials` grant type. Other grant types can be specified but the implementation handles client credentials flow.
 
-5. **Performance**: Token caching significantly reduces overhead. First request may be slower due to token acquisition.
+5. **Error Handling**: If relay fails (e.g., token acquisition fails, remote server is unreachable), the mock server returns a 502 Bad Gateway error with details.
+
+6. **Security**: Client secrets are stored in memory. Use environment variables or secure configuration management in production.
+
+7. **Performance**: When OAuth2 is enabled, token caching significantly reduces overhead. First request may be slower due to token acquisition.
 
 ## Troubleshooting
 
@@ -294,4 +395,5 @@ Example with TLS:
 
 - [Server Configuration Guide](../README.md)
 - [API Documentation](../QUICKSTART.md)
-- [Example Configuration](../examples/server-config-relay-example.jsonmc)
+- [Relay with OAuth2 Example](../examples/server-config-relay-example.jsonmc)
+- [Relay without Authentication Example](../examples/server-config-relay-no-auth-example.jsonmc)
