@@ -6,6 +6,7 @@ A Spring Boot application for managing multiple MockServer instances with suppor
 
 - **Multiple MockServer Instances**: Create and manage multiple mock servers in a single process
 - **Dynamic Configuration**: Configure expectations via REST API
+- **Relay/Proxy Mode**: Forward requests to remote servers with optional OAuth2 authentication
 - **TLS/HTTPS Support**: Enable HTTPS with custom certificates
 - **Mutual TLS (mTLS)**: Client certificate validation with CA certificate
 - **Basic Authentication**: HTTP Basic Auth protection for mock servers
@@ -62,13 +63,14 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=se
 
 The management API will be available at `http://localhost:8080`
 
-## Loading Configuration from File
+## Loading Configuration from File or Base64
 
-You can automatically create servers and configure expectations at startup by providing a JSON configuration file. This is useful for:
+You can automatically create servers and configure expectations at startup by providing either a JSON configuration file or base64-encoded configuration content. This is useful for:
 - Consistent test environments
 - CI/CD pipelines
 - Automated testing setups
 - Quick server setup without API calls
+- Passing configuration via environment variables or command line
 
 ### Configuration File Format
 
@@ -106,6 +108,10 @@ Create a JSON file (e.g., `server-config.json`) with an array of server configur
 
 ### Usage
 
+You have two options for loading configuration at startup:
+
+#### Option 1: Configuration File
+
 Specify the configuration file path using the `mock.server.config.file` system property:
 
 ```bash
@@ -118,6 +124,32 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./
 # Using relative path
 java -Dmock.server.config.file=./config/servers.json -jar target/mock-server-1.0.0.jar
 ```
+
+#### Option 2: Base64-Encoded Configuration
+
+Alternatively, provide base64-encoded configuration content using the `mock.server.config.fileb64` system property. This is useful when:
+- Configuration needs to be passed via environment variables
+- Files cannot be easily mounted (e.g., container environments)
+- Configuration is generated dynamically
+- Avoiding filesystem access is preferred
+
+```bash
+# First, encode your configuration file to base64
+CONFIG_B64=$(base64 -w 0 server-config.json)
+
+# Then pass it as a system property
+java -Dmock.server.config.fileb64="$CONFIG_B64" -jar target/mock-server-1.0.0.jar
+
+# Or with Maven
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.fileb64=$CONFIG_B64"
+
+# Direct inline base64 (for short configs)
+java -Dmock.server.config.fileb64="WwogIHsKICAgICJzZXJ2ZXIiOiB7CiAgICAgICJzZXJ2ZXJJZCI6ICJ0ZXN0IiwKICAgICAgInBvcnQiOiA4MDgxCiAgICB9CiAgfQpd" -jar target/mock-server-1.0.0.jar
+```
+
+**Priority:** The `mock.server.config.fileb64` property is checked first. If it's set, the application loads configuration from the base64-encoded content and ignores `mock.server.config.file`. If neither property is set, the application starts without pre-configured servers.
+
+**Format Support:** Both JSON and JSONMC formats are supported. The system auto-detects JSONMC format by looking for comment markers (`//` or `/*`) in the decoded content.
 
 ### Configuration File Structure
 
@@ -695,6 +727,153 @@ curl -k -u admin:secret123 https://localhost:9443/api/data
 
 See `server-config-basicauth-example.json` for a complete example configuration file that includes basic authentication.
 
+## Relay Server (Proxy Mode)
+
+The relay server feature allows you to create a mock server that acts as a proxy, forwarding all incoming requests to a remote server. This is useful for testing against real APIs, adding authentication layers, or creating simple proxy servers.
+
+### Key Features
+
+- **Optional OAuth2 Authentication**: Automatically obtains and manages OAuth2 access tokens
+- **Token Caching**: Caches tokens to minimize token endpoint calls
+- **Custom Headers**: Add custom headers to all relayed requests
+- **No Authentication Mode**: Relay requests without any authentication
+- **Full Request Forwarding**: Forwards method, path, query params, headers, and body
+- **Transparent Response**: Returns exact response from remote server
+
+### Create a Simple Relay Server (Without Authentication)
+
+```bash
+curl -X POST http://localhost:8080/api/servers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverId": "simple-relay",
+    "port": 8090,
+    "description": "Simple relay to remote API",
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com"
+    }
+  }'
+```
+
+**Response**: `201 Created`
+```json
+{
+  "serverId": "simple-relay",
+  "port": 8090,
+  "protocol": "http",
+  "baseUrl": "http://localhost:8090",
+  "relayEnabled": true,
+  "status": "running"
+}
+```
+
+### Create a Relay Server with OAuth2 Authentication
+
+```bash
+curl -X POST http://localhost:8080/api/servers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverId": "oauth-relay",
+    "port": 8090,
+    "description": "Relay with OAuth2 authentication",
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com",
+      "tokenUrl": "https://auth.example.com/oauth/token",
+      "clientId": "your-client-id",
+      "clientSecret": "your-client-secret",
+      "scope": "api:read api:write"
+    }
+  }'
+```
+
+### Create a Relay Server with Custom Headers
+
+```bash
+curl -X POST http://localhost:8080/api/servers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverId": "custom-relay",
+    "port": 8090,
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com",
+      "headers": {
+        "X-API-Version": "v2",
+        "X-Client-App": "test-suite"
+      }
+    }
+  }'
+```
+
+### Testing the Relay Server
+
+Once created, any request to the relay server is automatically forwarded to the remote server:
+
+```bash
+# Request to relay server
+curl http://localhost:8090/users/123
+
+# This is forwarded to: https://api.example.com/users/123
+# (with OAuth2 token if configured)
+```
+
+### Relay Configuration Parameters
+
+**Required:**
+- `remoteUrl`: Base URL of the remote server
+
+**OAuth2 Authentication (all three required if using OAuth2):**
+- `tokenUrl`: OAuth2 token endpoint
+- `clientId`: OAuth2 client ID
+- `clientSecret`: OAuth2 client secret
+
+**Optional:**
+- `scope`: OAuth2 scope to request
+- `grantType`: OAuth2 grant type (default: "client_credentials")
+- `headers`: Custom headers to add to all relayed requests
+
+### Important Notes
+
+- When relay is enabled, **expectations are ignored** - all requests are forwarded
+- OAuth2 is completely optional - omit token parameters for no authentication
+- If providing OAuth2 config, all three parameters (`tokenUrl`, `clientId`, `clientSecret`) must be provided
+- Tokens are automatically cached and refreshed when expired
+- Can be combined with TLS/HTTPS and Basic Auth on the mock server side
+
+### Configuration File Examples
+
+**Simple relay without authentication:**
+```json
+{
+  "server": {
+    "serverId": "simple-relay",
+    "port": 8090,
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com"
+    }
+  }
+}
+```
+
+**Relay with OAuth2:**
+```json
+{
+  "server": {
+    "serverId": "oauth-relay",
+    "port": 8090,
+    "relayConfig": {
+      "remoteUrl": "https://api.example.com",
+      "tokenUrl": "https://auth.example.com/oauth/token",
+      "clientId": "client-id",
+      "clientSecret": "client-secret"
+    }
+  }
+}
+```
+
+See `examples/server-config-relay-example.jsonmc` and `examples/server-config-relay-no-auth-example.jsonmc` for complete examples.
+
+For detailed relay configuration documentation, see [docs/RELAY_CONFIGURATION.md](docs/RELAY_CONFIGURATION.md).
+
 ## Error Handling
 
 All errors return a consistent format:
@@ -737,31 +916,92 @@ logging.level.io.github.anandb.mockserver=DEBUG
 
 ```
 mock_server/
+├── docs/                                    # Documentation
+│   ├── FREEMARKER_TEMPLATE_GUIDE.md        # Freemarker templating guide
+│   ├── JSONMC_USAGE.md                     # JSON with comments format guide
+│   ├── RELAY_CONFIGURATION.md              # Relay/proxy configuration guide
+│   └── TEST_SUITE.md                       # Test suite documentation
+├── examples/                                # Configuration examples
+│   ├── server-config-basicauth-example.jsonmc
+│   ├── server-config-example.jsonmc
+│   ├── server-config-files-example.jsonmc
+│   ├── server-config-mtls-example.jsonmc
+│   ├── server-config-relay-example.jsonmc
+│   ├── server-config-relay-no-auth-example.jsonmc
+│   └── test-config.jsonmc
 ├── src/
 │   ├── main/
 │   │   ├── java/io/github/anandb/mockserver/
-│   │   │   ├── MockServerApplication.java
-│   │   │   ├── controller/
-│   │   │   │   ├── ServerController.java
-│   │   │   │   └── ExpectationController.java
-│   │   │   ├── service/
-│   │   │   │   ├── MockServerManager.java
-│   │   │   │   ├── TlsConfigurationService.java
-│   │   │   │   └── CertificateValidator.java
-│   │   │   ├── model/
+│   │   │   ├── MockServerApplication.java   # Main application entry point
+│   │   │   ├── callback/                    # Response callback implementations
+│   │   │   │   ├── FileResponseCallback.java
+│   │   │   │   ├── FreemarkerResponseCallback.java
+│   │   │   │   └── RelayResponseCallback.java
+│   │   │   ├── config/                      # Configuration classes
+│   │   │   │   ├── JsonMultilineCommentHttpMessageConverter.java
+│   │   │   │   └── WebConfig.java
+│   │   │   ├── controller/                  # REST API controllers
+│   │   │   │   ├── ExpectationController.java
+│   │   │   │   └── ServerController.java
+│   │   │   ├── exception/                   # Exception handling
+│   │   │   │   ├── GlobalExceptionHandler.java
+│   │   │   │   ├── InvalidCertificateException.java
+│   │   │   │   ├── InvalidExpectationException.java
+│   │   │   │   ├── ServerAlreadyExistsException.java
+│   │   │   │   ├── ServerCreationException.java
+│   │   │   │   └── ServerNotFoundException.java
+│   │   │   ├── model/                       # Domain models
+│   │   │   │   ├── BasicAuthConfig.java
 │   │   │   │   ├── CreateServerRequest.java
-│   │   │   │   ├── TlsConfig.java
-│   │   │   │   ├── MtlsConfig.java
 │   │   │   │   ├── GlobalHeader.java
-│   │   │   │   └── ServerInfo.java
-│   │   │   └── exception/
-│   │   │       ├── GlobalExceptionHandler.java
-│   │   │       └── [Custom exceptions]
+│   │   │   │   ├── HttpRequestContext.java
+│   │   │   │   ├── MtlsConfig.java
+│   │   │   │   ├── RelayConfig.java
+│   │   │   │   ├── ServerConfiguration.java
+│   │   │   │   ├── ServerInfo.java
+│   │   │   │   └── TlsConfig.java
+│   │   │   ├── service/                     # Business logic services
+│   │   │   │   ├── CertificateValidator.java
+│   │   │   │   ├── ConfigurationLoaderService.java
+│   │   │   │   ├── FreemarkerTemplateService.java
+│   │   │   │   ├── MockServerManager.java
+│   │   │   │   ├── MockServerOperations.java
+│   │   │   │   ├── MockServerOperationsImpl.java
+│   │   │   │   ├── OAuth2TokenService.java
+│   │   │   │   ├── RelayService.java
+│   │   │   │   └── TlsConfigurationService.java
+│   │   │   └── util/                        # Utility classes
+│   │   │       ├── FreemarkerTemplateDetector.java
+│   │   │       ├── JsonCommentParser.java
+│   │   │       └── MapperSupplier.java
 │   │   └── resources/
 │   │       └── application.properties
 │   └── test/
+│       ├── java/io/github/anandb/mockserver/
+│       │   ├── MockServerApplicationTests.java
+│       │   ├── config/
+│       │   │   └── JsonMultilineCommentHttpMessageConverterIntegrationTest.java
+│       │   ├── controller/
+│       │   │   ├── ExpectationControllerTest.java
+│       │   │   └── ServerControllerTest.java
+│       │   ├── integration/
+│       │   │   └── MockServerIntegrationTest.java
+│       │   ├── service/
+│       │   │   ├── CertificateValidatorTest.java
+│       │   │   ├── ConfigurationLoaderServiceJsonmcTest.java
+│       │   │   ├── MockServerManagerTest.java
+│       │   │   └── TlsConfigurationServiceTest.java
+│       │   └── util/
+│       │       ├── JsonCommentParserDebugTest.java
+│       │       └── JsonCommentParserTest.java
+│       └── resources/
+│           ├── application-test.properties
+│           └── test-server-config.jsonmc
+├── .gitignore
 ├── pom.xml
-└── README.md
+├── QUICKSTART.md
+├── README.md
+└── UNLICENSE
 ```
 
 ## Dependencies

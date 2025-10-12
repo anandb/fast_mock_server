@@ -127,35 +127,21 @@ public class JsonCommentParser {
             char c = content.charAt(i);
 
             switch (c) {
-                case '\n':
-                    result.append("\\n");
-                    break;
-                case '\r':
+                case '\n' -> result.append("\\n");
+                case '\r' -> {
                     // Skip \r or convert to \n if not followed by \n
                     if (i + 1 < content.length() && content.charAt(i + 1) == '\n') {
                         // \r\n -> will be handled by \n case
                     } else {
                         result.append("\\n");
                     }
-                    break;
-                case '"':
-                    result.append("\\\"");
-                    break;
-                case '\\':
-                    result.append("\\\\");
-                    break;
-                case '\t':
-                    result.append("\\t");
-                    break;
-                case '\b':
-                    result.append("\\b");
-                    break;
-                case '\f':
-                    result.append("\\f");
-                    break;
-                default:
-                    result.append(c);
-                    break;
+                }
+                case '"' -> result.append("\\\"");
+                case '\\' -> result.append("\\\\");
+                case '\t' -> result.append("\\t");
+                case '\b' -> result.append("\\b");
+                case '\f' -> result.append("\\f");
+                default -> result.append(c);
             }
         }
 

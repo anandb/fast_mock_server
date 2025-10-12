@@ -19,7 +19,9 @@ import jakarta.annotation.PostConstruct;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -42,21 +44,44 @@ public class ConfigurationLoaderService {
     /** System property name for specifying the configuration file path */
     private static final String CONFIG_FILE_PROPERTY = "mock.server.config.file";
 
+    /** System property name for specifying base64-encoded configuration content */
+    private static final String CONFIG_FILE_B64_PROPERTY = "mock.server.config.fileb64";
+
     /**
-     * Loads server configurations from JSON file on application startup.
+     * Loads server configurations from JSON file or base64-encoded content on application startup.
      * <p>
      * This method is automatically called after the Spring context is initialized.
-     * It reads the file path from the system property, validates the file exists,
-     * and then loads all server configurations and their expectations.
+     * It first checks for base64-encoded configuration (mock.server.config.fileb64),
+     * then falls back to file path (mock.server.config.file) if not found.
+     * If neither property is set, the service will log a message and continue
+     * without loading any configurations.
      * </p>
      */
     @PostConstruct
     public void loadConfigurationsOnStartup() {
+        // First check for base64-encoded configuration
+        String configB64 = System.getProperty(CONFIG_FILE_B64_PROPERTY);
+
+        if (configB64 != null && !configB64.trim().isEmpty()) {
+            log.info("Loading server configurations from base64-encoded content");
+
+            try {
+                loadConfigurationsFromBase64(configB64);
+                return;
+            } catch (Exception e) {
+                log.error("Failed to load configurations from base64-encoded content", e);
+                throw new ServerCreationException(
+                    "Failed to load configurations from base64-encoded content: " + e.getMessage(), e);
+            }
+        }
+
+        // Fall back to file-based configuration
         String configFilePath = System.getProperty(CONFIG_FILE_PROPERTY);
 
         if (configFilePath == null || configFilePath.trim().isEmpty()) {
-            log.info("No configuration file specified. Use -D{}=<path> to load servers from a JSON file.",
-                CONFIG_FILE_PROPERTY);
+            log.info("No configuration specified. Use -D{}=<path> to load servers from a JSON file, " +
+                "or -D{}=<base64> to load from base64-encoded content.",
+                CONFIG_FILE_PROPERTY, CONFIG_FILE_B64_PROPERTY);
             return;
         }
 
@@ -74,12 +99,35 @@ public class ConfigurationLoaderService {
         log.info("Loading server configurations from: {}", configFilePath);
 
         try {
-            loadConfigurations(configFile);
+            loadConfigurationsFromFile(configFile);
         } catch (Exception e) {
             log.error("Failed to load configurations from file: {}", configFilePath, e);
             throw new ServerCreationException(
                 "Failed to load configurations from file: " + configFilePath, e);
         }
+    }
+
+    /**
+     * Loads and processes all server configurations from base64-encoded content.
+     * Automatically detects if content is JSONMC format (starts with "/*" or contains comments).
+     *
+     * @param configB64 the base64-encoded configuration content
+     * @throws IOException if the content cannot be decoded or parsed
+     */
+    private void loadConfigurationsFromBase64(String configB64) throws IOException {
+        // Decode base64 content
+        byte[] decodedBytes;
+        try {
+            decodedBytes = Base64.getDecoder().decode(configB64.trim());
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid base64 encoding in configuration", e);
+            throw new IOException("Invalid base64 encoding: " + e.getMessage(), e);
+        }
+
+        String configContent = new String(decodedBytes, StandardCharsets.UTF_8);
+        log.debug("Decoded configuration content ({} bytes)", configContent.length());
+
+        loadConfigurationsFromString(configContent, true);
     }
 
     /**
@@ -90,21 +138,40 @@ public class ConfigurationLoaderService {
      * @param configFile the JSON configuration file to read
      * @throws IOException if the file cannot be read or parsed
      */
-    private void loadConfigurations(File configFile) throws IOException {
-        ServerConfiguration[] configurations;
-
+    private void loadConfigurationsFromFile(File configFile) throws IOException {
         // Check if file has .jsonmc extension
         String fileName = configFile.getName();
         boolean isJsonmc = fileName.toLowerCase().endsWith(".jsonmc");
 
-        if (isJsonmc) {
-            log.info("Detected .jsonmc file, processing with JsonCommentParser");
+        // Read file content as string
+        String fileContent = Files.readString(configFile.toPath());
 
-            // Read file content as string
-            String fileContent = Files.readString(configFile.toPath());
+        loadConfigurationsFromString(fileContent, isJsonmc);
+    }
+
+    /**
+     * Loads and processes all server configurations from a string.
+     * If isJsonmc is true or content appears to be JSONMC format, it will be processed
+     * through JsonCommentParser to handle comments and multiline strings before parsing.
+     *
+     * @param configContent the configuration content as a string
+     * @param isJsonmc whether the content should be treated as JSONMC format
+     * @throws IOException if the content cannot be parsed
+     */
+    private void loadConfigurationsFromString(String configContent, boolean isJsonmc) throws IOException {
+        ServerConfiguration[] configurations;
+
+        // Auto-detect JSONMC format if not explicitly specified
+        if (!isJsonmc && (configContent.trim().startsWith("/*") || configContent.contains("//"))) {
+            log.debug("Auto-detected JSONMC format based on content");
+            isJsonmc = true;
+        }
+
+        if (isJsonmc) {
+            log.info("Processing content as JSONMC format with JsonCommentParser");
 
             // Clean the JSON (remove comments and convert multiline strings)
-            String cleanedJson = JsonCommentParser.clean(fileContent);
+            String cleanedJson = JsonCommentParser.clean(configContent);
 
             // Parse the cleaned JSON with ObjectMapper
             configurations = objectMapper.readValue(
@@ -112,15 +179,15 @@ public class ConfigurationLoaderService {
                 ServerConfiguration[].class
             );
         } else {
-            // Standard JSON file processing
+            // Standard JSON processing
             configurations = objectMapper.readValue(
-                configFile,
+                configContent,
                 ServerConfiguration[].class
             );
         }
 
         if (configurations == null || configurations.length == 0) {
-            log.warn("No server configurations found in file: {}", configFile.getAbsolutePath());
+            log.warn("No server configurations found in content");
             return;
         }
 
@@ -312,7 +379,7 @@ public class ConfigurationLoaderService {
 
         // Create new header array from merged map
         org.mockserver.model.Header[] mergedHeaders =
-            headerMap.values().toArray(new org.mockserver.model.Header[0]);
+            headerMap.values().toArray(org.mockserver.model.Header[]::new);
 
         // Create new response with merged headers
         org.mockserver.model.HttpResponse mergedResponse =
@@ -394,8 +461,7 @@ public class ConfigurationLoaderService {
      * @return a unique key string
      */
     private String generateExpectationKey(org.mockserver.model.RequestDefinition request) {
-        if (request instanceof org.mockserver.model.HttpRequest) {
-            org.mockserver.model.HttpRequest httpRequest = (org.mockserver.model.HttpRequest) request;
+        if (request instanceof org.mockserver.model.HttpRequest httpRequest) {
             String method = httpRequest.getMethod() != null ?
                 httpRequest.getMethod().getValue() : "GET";
             String path = httpRequest.getPath() != null ?

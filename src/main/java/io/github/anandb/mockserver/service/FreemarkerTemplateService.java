@@ -62,7 +62,7 @@ public class FreemarkerTemplateService {
         }
 
         // Parse body as JSON
-        JsonNode body = null;
+        JsonNode body;
         if (httpRequest.getBodyAsString() != null && !httpRequest.getBodyAsString().isEmpty()) {
             try {
                 body = objectMapper.readTree(httpRequest.getBodyAsString());

@@ -89,7 +89,7 @@ public class RelayResponseCallback implements ExpectationResponseCallback {
                 for (Map.Entry<String, List<String>> header : relayResponse.getHeaders().entrySet()) {
                     if (header.getValue() != null && !header.getValue().isEmpty()) {
                         response = response.withHeader(header.getKey(),
-                            header.getValue().toArray(new String[0]));
+                            header.getValue().toArray(String[]::new));
                     }
                 }
             }

@@ -1,7 +1,9 @@
 package io.github.anandb.mockserver.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
+@Slf4j
 class JsonCommentParserDebugTest {
 
     @Test
@@ -21,17 +23,16 @@ class JsonCommentParserDebugTest {
             }
             """;
 
-        System.out.println("Input JSON:");
-        System.out.println(json);
-        System.out.println("\n--- Processing ---\n");
+        log.info("Input JSON:");
+        log.info(json);
+        log.info("\n--- Processing ---\n");
 
         try {
             String processed = getProcessedJson(json);
-            System.out.println("Processed JSON:");
-            System.out.println(processed);
+            log.info("Processed JSON:");
+            log.info(processed);
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error: {}", e.getMessage(), e);
         }
     }
 

@@ -238,7 +238,7 @@ public class ExpectationController {
         }
 
         // Create new header array from merged map
-        Header[] mergedHeaders = headerMap.values().toArray(new Header[0]);
+        Header[] mergedHeaders = headerMap.values().toArray(Header[]::new);
 
         // Create new response with merged headers
         HttpResponse mergedResponse = originalResponse.withHeaders(mergedHeaders);
@@ -294,9 +294,7 @@ public class ExpectationController {
      * @param request the HTTP request to match (method and path)
      */
     private void clearMatchingExpectation(ClientAndServer server, org.mockserver.model.RequestDefinition request) {
-        if (request instanceof HttpRequest) {
-            HttpRequest httpRequest = (HttpRequest) request;
-
+        if (request instanceof HttpRequest httpRequest) {
             // Create a matcher for the same method and path
             HttpRequest matcher = request()
                     .withMethod(httpRequest.getMethod())
@@ -374,8 +372,7 @@ public class ExpectationController {
      * @return a unique key string
      */
     private String generateExpectationKey(org.mockserver.model.RequestDefinition request) {
-        if (request instanceof HttpRequest) {
-            HttpRequest httpRequest = (HttpRequest) request;
+        if (request instanceof HttpRequest httpRequest) {
             String method = httpRequest.getMethod() != null ?
                 httpRequest.getMethod().getValue() : "GET";
             String path = httpRequest.getPath() != null ?

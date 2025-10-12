@@ -12,8 +12,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -44,7 +46,7 @@ class ConfigurationLoaderServiceJsonmcTest {
     private ObjectMapper objectMapper;
 
     @TempDir
-    Path tempDir;
+    private Path tempDir;
 
     @BeforeEach
     void setUp() {
@@ -94,10 +96,10 @@ and should be properly parsed
         when(serverInstance.getServer()).thenReturn(mock(org.mockserver.integration.ClientAndServer.class));
         when(serverInstance.getGlobalHeaders()).thenReturn(null);
 
-        // Call the private loadConfigurations method using reflection
+        // Call the private loadConfigurationsFromFile method using reflection
         ReflectionTestUtils.invokeMethod(
             configurationLoaderService,
-            "loadConfigurations",
+            "loadConfigurationsFromFile",
             configFile.toFile()
         );
 
@@ -137,10 +139,10 @@ and should be properly parsed
         Path configFile = tempDir.resolve("test-config.json");
         Files.writeString(configFile, jsonContent);
 
-        // Call the private loadConfigurations method using reflection
+        // Call the private loadConfigurationsFromFile method using reflection
         ReflectionTestUtils.invokeMethod(
             configurationLoaderService,
-            "loadConfigurations",
+            "loadConfigurationsFromFile",
             configFile.toFile()
         );
 
@@ -169,5 +171,143 @@ and should be properly parsed
 
     private boolean isJsonmcFile(String fileName) {
         return fileName.toLowerCase().endsWith(".jsonmc");
+    }
+
+    @Test
+    void testLoadConfigurationsFromBase64() throws Exception {
+        // Create a JSON configuration string
+        String jsonContent = """
+        [
+          {
+            "server": {
+              "serverId": "base64-server",
+              "port": 8083,
+              "description": "Server loaded from base64"
+            },
+            "expectations": [
+              {
+                "httpRequest": {
+                  "path": "/api/test"
+                },
+                "httpResponse": {
+                  "statusCode": 200,
+                  "body": "{\\"message\\": \\"Hello from base64\\"}"
+                }
+              }
+            ]
+          }
+        ]
+        """;
+
+        // Encode the content to base64
+        String base64Content = Base64.getEncoder().encodeToString(jsonContent.getBytes(StandardCharsets.UTF_8));
+
+        // Mock the server instance
+        when(mockServerManager.getServerInstance(anyString())).thenReturn(serverInstance);
+        when(serverInstance.getServer()).thenReturn(mock(org.mockserver.integration.ClientAndServer.class));
+        when(serverInstance.getGlobalHeaders()).thenReturn(null);
+
+        // Call the private loadConfigurationsFromBase64 method using reflection
+        ReflectionTestUtils.invokeMethod(
+            configurationLoaderService,
+            "loadConfigurationsFromBase64",
+            base64Content
+        );
+
+        // Verify that createServer was called
+        ArgumentCaptor<CreateServerRequest> requestCaptor = ArgumentCaptor.forClass(CreateServerRequest.class);
+        verify(mockServerManager).createServer(requestCaptor.capture());
+
+        // Verify the server configuration was parsed correctly
+        CreateServerRequest capturedRequest = requestCaptor.getValue();
+        assertNotNull(capturedRequest);
+        assertEquals("base64-server", capturedRequest.getServerId());
+        assertEquals(8083, capturedRequest.getPort());
+        assertEquals("Server loaded from base64", capturedRequest.getDescription());
+    }
+
+    @Test
+    void testLoadConfigurationsFromBase64WithJsonmc() throws Exception {
+        // Create a JSONMC configuration string with comments
+        String jsonmcContent = """
+        [
+          // Base64-encoded JSONMC configuration
+          {
+            "server": {
+              "serverId": "base64-jsonmc-server",
+              "port": 8084,
+              /* This is a multiline comment
+                 in a base64-encoded config */
+              "description": `
+Multiline description
+from base64-encoded JSONMC
+`
+            }
+          }
+        ]
+        """;
+
+        // Encode the content to base64
+        String base64Content = Base64.getEncoder().encodeToString(jsonmcContent.getBytes(StandardCharsets.UTF_8));
+
+        // Call the private loadConfigurationsFromBase64 method using reflection
+        ReflectionTestUtils.invokeMethod(
+            configurationLoaderService,
+            "loadConfigurationsFromBase64",
+            base64Content
+        );
+
+        // Verify that createServer was called
+        ArgumentCaptor<CreateServerRequest> requestCaptor = ArgumentCaptor.forClass(CreateServerRequest.class);
+        verify(mockServerManager).createServer(requestCaptor.capture());
+
+        // Verify the server configuration was parsed correctly
+        CreateServerRequest capturedRequest = requestCaptor.getValue();
+        assertNotNull(capturedRequest);
+        assertEquals("base64-jsonmc-server", capturedRequest.getServerId());
+        assertEquals(8084, capturedRequest.getPort());
+
+        // Verify the multiline description was properly processed
+        assertNotNull(capturedRequest.getDescription());
+        assertTrue(capturedRequest.getDescription().contains("Multiline description"));
+        assertTrue(capturedRequest.getDescription().contains("base64-encoded JSONMC"));
+    }
+
+    @Test
+    void testBase64AutoDetectionOfJsonmc() throws Exception {
+        // Create content with comment markers that should be auto-detected as JSONMC
+        String contentWithComments = """
+        // This should be detected as JSONMC
+        [
+          {
+            "server": {
+              "serverId": "auto-detect-server",
+              "port": 8085
+            }
+          }
+        ]
+        """;
+
+        // Encode to base64
+        String base64Content = Base64.getEncoder().encodeToString(
+            contentWithComments.getBytes(StandardCharsets.UTF_8)
+        );
+
+        // Call the method
+        ReflectionTestUtils.invokeMethod(
+            configurationLoaderService,
+            "loadConfigurationsFromBase64",
+            base64Content
+        );
+
+        // Verify that createServer was called, confirming the content was parsed
+        ArgumentCaptor<CreateServerRequest> requestCaptor = ArgumentCaptor.forClass(CreateServerRequest.class);
+        verify(mockServerManager).createServer(requestCaptor.capture());
+
+        // Verify successful parsing
+        CreateServerRequest capturedRequest = requestCaptor.getValue();
+        assertNotNull(capturedRequest);
+        assertEquals("auto-detect-server", capturedRequest.getServerId());
+        assertEquals(8085, capturedRequest.getPort());
     }
 }

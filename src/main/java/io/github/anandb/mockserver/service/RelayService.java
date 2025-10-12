@@ -93,29 +93,14 @@ public class RelayService {
                 : HttpRequest.BodyPublishers.noBody();
 
         switch (method.toUpperCase()) {
-            case "GET":
-                requestBuilder.GET();
-                break;
-            case "POST":
-                requestBuilder.POST(bodyPublisher);
-                break;
-            case "PUT":
-                requestBuilder.PUT(bodyPublisher);
-                break;
-            case "DELETE":
-                requestBuilder.DELETE();
-                break;
-            case "PATCH":
-                requestBuilder.method("PATCH", bodyPublisher);
-                break;
-            case "HEAD":
-                requestBuilder.method("HEAD", HttpRequest.BodyPublishers.noBody());
-                break;
-            case "OPTIONS":
-                requestBuilder.method("OPTIONS", HttpRequest.BodyPublishers.noBody());
-                break;
-            default:
-                requestBuilder.method(method, bodyPublisher);
+            case "GET" -> requestBuilder.GET();
+            case "POST" -> requestBuilder.POST(bodyPublisher);
+            case "PUT" -> requestBuilder.PUT(bodyPublisher);
+            case "DELETE" -> requestBuilder.DELETE();
+            case "PATCH" -> requestBuilder.method("PATCH", bodyPublisher);
+            case "HEAD" -> requestBuilder.method("HEAD", HttpRequest.BodyPublishers.noBody());
+            case "OPTIONS" -> requestBuilder.method("OPTIONS", HttpRequest.BodyPublishers.noBody());
+            default -> requestBuilder.method(method, bodyPublisher);
         }
 
         HttpRequest request = requestBuilder.build();
