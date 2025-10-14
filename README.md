@@ -151,6 +151,66 @@ java -Dmock.server.config.fileb64="WwogIHsKICAgICJzZXJ2ZXIiOiB7CiAgICAgICJzZXJ2Z
 
 **Format Support:** Both JSON and JSONMC formats are supported. The system auto-detects JSONMC format by looking for comment markers (`//` or `/*`) in the decoded content.
 
+## File Glob Pattern Support
+
+The application supports file glob patterns for flexible file matching in both configuration loading and file response callbacks. This feature allows you to specify file path prefixes instead of exact file paths, making it easier to work with dynamic file names or when the exact file name is not known in advance.
+
+### Configuration File Loading with Glob Patterns
+
+When loading server configurations at startup, you can specify a file path prefix using the `mock.server.config.file` system property. The system will search for the first file that starts with the specified prefix:
+
+```bash
+# Instead of exact file path
+java -Dmock.server.config.file=/path/to/server-config.json -jar target/mock-server-1.0.0.jar
+
+# You can use a prefix - finds first file starting with "server-config"
+java -Dmock.server.config.file=/path/to/server-config -jar target/mock-server-1.0.0.jar
+```
+
+**Examples:**
+- Prefix: `server-config` → matches `server-config.json`, `server-config-example.json`, `server-config-v2.json`, etc.
+- Prefix: `config/servers` → matches `config/servers.json`, `config/servers-prod.json`, etc.
+- Prefix: `test-config` → matches `test-config.jsonmc`, `test-config-backup.json`, etc.
+
+The search is performed recursively from the current directory, and the first matching file is used.
+
+### File Response Callbacks with Glob Patterns
+
+When configuring expectations with file responses, you can use glob patterns to specify file path prefixes. The system will find the first file that starts with the specified prefix:
+
+```json
+{
+  "httpRequest": {
+    "method": "GET",
+    "path": "/api/download/report"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "files": ["/path/to/documents/report"]
+  }
+}
+```
+
+**Examples:**
+- Prefix: `/path/to/documents/report` → matches `report.pdf`, `report-v2.pdf`, `report-final.pdf`, etc.
+- Prefix: `/data/exports/user-data` → matches `user-data.csv`, `user-data-2024.csv`, `user-data-backup.json`, etc.
+- Prefix: `/tmp/cache/api-response` → matches `api-response.json`, `api-response.xml`, etc.
+
+### Benefits of File Glob Patterns
+
+- **Flexible File Matching**: No need to know exact file names in advance
+- **Dynamic File Selection**: Works well with generated or timestamped files
+- **Simplified Configuration**: Reduces the need for exact file path specifications
+- **Environment Agnostic**: Easier to work across different environments where file names might vary
+
+### Important Notes
+
+- Glob pattern matching searches recursively from the current working directory
+- Only the **first matching file** is used (alphabetically by file path)
+- If no matching file is found, the system returns a 404 error
+- Glob patterns work with both regular files and FreeMarker template expressions
+- The search includes all subdirectories and is case-sensitive on most filesystems
+
 ### Configuration File Structure
 
 Each server configuration object contains:

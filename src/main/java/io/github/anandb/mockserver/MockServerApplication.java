@@ -22,7 +22,7 @@ public class MockServerApplication {
      * @param args command-line arguments passed to the application
      */
     public static void main(String[] args) {
-        // Optionally remove existing JUL Handlers to prevent duplicate logging
+        // Remove existing JUL Handlers to prevent duplicate logging
         LogManager.getLogManager().reset();
 
         // Install the SLF4JBridgeHandler

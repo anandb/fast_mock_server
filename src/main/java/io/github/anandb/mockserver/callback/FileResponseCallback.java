@@ -12,8 +12,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * Callback for serving multi-part file downloads.
@@ -50,20 +54,20 @@ public class FileResponseCallback implements ExpectationResponseCallback {
                 // Process file path as FreeMarker template and strip whitespace
                 String filePath = evaluateFilePathTemplate(filePathTemplate, httpRequest);
 
-                File file = new File(filePath);
-
-                if (!file.exists()) {
-                    log.error("File not found: {}", filePath);
+                // Use file glob to find the first file that starts with the given path as prefix
+                File file = findFirstFileWithPrefix(filePath);
+                if (file == null) {
+                    log.error("File not found using prefix: {}", filePath);
                     return HttpResponse.response()
                             .withStatusCode(404)
                             .withBody("File not found: " + filePath);
                 }
 
                 if (!file.isFile()) {
-                    log.error("Path is not a file: {}", filePath);
+                    log.error("Path is not a file: {}", file.getAbsolutePath());
                     return HttpResponse.response()
                             .withStatusCode(400)
-                            .withBody("Path is not a file: " + filePath);
+                            .withBody("Path is not a file: " + file.getAbsolutePath());
                 }
 
                 try {
@@ -114,6 +118,37 @@ public class FileResponseCallback implements ExpectationResponseCallback {
     }
 
     /**
+     * Finds the first file that starts with the given path as a prefix using glob patterns.
+     * Searches in the current directory and its subdirectories for files matching the pattern.
+     *
+     * @param filePathPrefix the file path prefix to search for
+     * @return the first matching file, or null if no file is found
+     */
+    private File findFirstFileWithPrefix(String filePathPrefix) {
+        try {
+            // Convert the file path prefix to a glob pattern
+            // Escape special regex characters and convert to glob syntax
+            String escapedPrefix = filePathPrefix.replaceAll("([\\[\\]{}()*+?.\\\\^$|])", "\\\\$1");
+            String globPattern = "glob:**/" + escapedPrefix + "*";
+
+            PathMatcher matcher = FileSystems.getDefault().getPathMatcher(globPattern);
+
+            // Search from current directory recursively
+            try (Stream<Path> paths = Files.walk(Paths.get("."))) {
+                return paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> matcher.matches(path))
+                    .map(Path::toFile)
+                    .findFirst()
+                    .orElse(null);
+            }
+        } catch (Exception e) {
+            log.debug("Error searching for file with prefix: {}", filePathPrefix, e);
+            return null;
+        }
+    }
+
+    /**
      * Evaluates a file path as a FreeMarker template and strips whitespace.
      * <p>
      * If the file path contains FreeMarker expressions, they will be evaluated
@@ -127,12 +162,12 @@ public class FileResponseCallback implements ExpectationResponseCallback {
      */
     private String evaluateFilePathTemplate(String filePathTemplate, HttpRequest httpRequest) {
         try {
-            // Check if the path contains FreeMarker template expressions
             if (FreemarkerTemplateDetector.isFreemarkerTemplate(filePathTemplate)) {
-                // Process as FreeMarker template
-                // Note: Pass null for pathPattern since file paths don't have path variables
+                // Process as FreeMarker template. Note: Pass null for pathPattern since file paths don't have path variables
                 String evaluatedPath = templateService.processTemplateWithRequest(
-                    filePathTemplate, httpRequest, null);
+                    filePathTemplate, httpRequest, null
+                );
+
                 // Strip all leading and trailing whitespace and newlines
                 return evaluatedPath.strip();
             }
