@@ -25,4 +25,5 @@ if [ ! -f target/*.jar ]; then
 fi
 
 # Start the server with the configuration file
-java -jar target/*.jar -Dmock.server.config.file="$CONFIG_FILE"
+java -Dmock.server.config.file="$CONFIG_FILE" -Djava.util.logging.config.class=org.slf4j.bridge.SLF4JBridgeHandler.class\
+     -jar target/mock-server-1.0.0.jar

@@ -3,7 +3,7 @@
 # Test client script for server-config-basicauth-example
 # This script demonstrates calling endpoints with basic authentication
 
-BASE_URL="http://localhost:9090"
+BASE_URL="http://localhost:9001"
 USERNAME="admin"
 PASSWORD="secret123"
 

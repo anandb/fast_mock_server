@@ -8,7 +8,7 @@
   {
     "server": {
       "serverId": "pathvars-demo",
-      "port": 9090,
+      "port": 9001,
       "description": "Demo server for path variables in Freemarker templates"
     },
     "expectations": [
@@ -22,11 +22,11 @@
           "headers": {
             "Content-Type": ["application/json"]
           },
-          "body": /*{
+          "body": {
             "userId": "${pathVariables.id}",
             "message": "User details retrieved",
-            "requestedBy": "${headers['X-User-Name']!"anonymous"}"
-          }*/
+            "requestedBy": "${headers['X-User-Name']!\"anonymous\"}"
+          }
         }
       },
       {
@@ -39,13 +39,13 @@
           "headers": {
             "Content-Type": ["application/json"]
           },
-          "body": /*{
+          "body": {
             "userId": "${pathVariables.userId}",
             "postId": "${pathVariables.postId}",
             "title": "Post ${pathVariables.postId} by user ${pathVariables.userId}",
-            "author": "${headers['X-Author-Name']!"Unknown"}",
+            "author": "${headers['X-Author-Name']!\"Unknown\"}",
             "timestamp": "${.now?iso_utc}"
-          }*/
+          }
         }
       },
       {
@@ -59,17 +59,17 @@
             "Content-Type": ["application/json"],
             "Location": ["/api/v1/organizations/${pathVariables.orgId}/projects/${pathVariables.projectId}/tasks/new-task-123"]
           },
-          "body": /*{
+          "body": {
             "id": "new-task-123",
             "organizationId": "${pathVariables.orgId}",
             "projectId": "${pathVariables.projectId}",
             "title": "${body.title}",
-            "description": "${body.description!"No description provided"}",
-            "assignee": "${body.assignee!"Unassigned"}",
-            "priority": "${body.priority!"medium"}",
-            "createdBy": "${headers['X-User-Id']!"system"}",
+            "description": "${body.description!\"No description provided\"}",
+            "assignee": "${body.assignee!\"Unassigned\"}",
+            "priority": "${body.priority!\"medium\"}",
+            "createdBy": "${headers['X-User-Id']!\"system\"}",
             "createdAt": "${.now?iso_utc}"
-          }*/
+          }
         }
       },
       {
@@ -82,16 +82,16 @@
           "headers": {
             "Content-Type": ["application/json"]
           },
-          "body": /*{
+          "body": {
             "userId": "${pathVariables.id}",
             "updatedFields": {
               "name": "${body.name}",
               "email": "${body.email}",
-              "age": ${body.age}
+              "age": "${body.age}"
             },
-            "updatedBy": "${headers['X-Admin-Id']!"self"}",
+            "updatedBy": "${headers['X-Admin-Id']!\"self\"}",
             "timestamp": "${.now?iso_utc}"
-          }*/
+          }
         }
       },
       {
@@ -104,13 +104,13 @@
           "headers": {
             "Content-Type": ["application/json"]
           },
-          "body": /*{
+          "body": {
             "message": "Comment deleted successfully",
             "deletedCommentId": "${pathVariables.commentId}",
             "belongsToUserId": "${pathVariables.userId}",
-            "deletedBy": "${headers['X-User-Id']!"unknown"}",
+            "deletedBy": "${headers['X-User-Id']!\"unknown\"}",
             "timestamp": "${.now?iso_utc}"
-          }*/
+          }
         }
       },
       {
@@ -123,7 +123,7 @@
           "headers": {
             "Content-Type": ["application/json"]
           },
-          "body": /*{
+          "body": {
             "category": "${pathVariables.category}",
             "productId": "${pathVariables.productId}",
             "reviews": [
@@ -139,8 +139,8 @@
               }
             ],
             "totalReviews": 2,
-            "requestedBy": "${headers['User-Agent']!"Unknown Client"}"
-          }*/
+            "requestedBy": "${headers['User-Agent']!\"Unknown Client\"}"
+          }
         }
       }
     ]

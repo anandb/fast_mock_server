@@ -19,5 +19,5 @@ if [ ! -f "target/mock-server-1.0.0.jar" ]; then
 fi
 
 # Start the server with the configuration
-java -Dmock.server.config.file="$SCRIPT_DIR/server-config-pathvars-example.jsonmc" \
+java -Dmock.server.config.file="$SCRIPT_DIR/server-config-pathvars-example.jsonmc" -Djava.util.logging.config.class=org.slf4j.bridge.SLF4JBridgeHandler.class\
      -jar target/mock-server-1.0.0.jar

@@ -87,79 +87,78 @@ public class ExpectationController {
         ClientAndServer server = serverInstance.getServer();
         List<GlobalHeader> globalHeaders = serverInstance.getGlobalHeaders();
 
-        // Create MockServerOperations instance for this server
-        MockServerOperations mockServerOperations = new MockServerOperationsImpl(server);
+        try {
+            // Use custom parsing that allows flexible structures and bypasses MockServer validation
+            Expectation[] expectations = parseExpectationsCustomOnly(expectationsJson);
+            log.debug("Parsed {} expectations", expectations.length);
 
-        // Extract files information before parsing (since MockServer doesn't know about files field)
-        Map<String, List<String>> filesMap = extractFilesFromJson(expectationsJson);
+            // Extract files information before parsing (since MockServer doesn't know about files field)
+            Map<String, List<String>> filesMap = extractFilesFromJson(expectationsJson);
 
-        // Parse expectations from JSON
-        Expectation[] expectations = parseExpectations(expectationsJson);
-        log.debug("Parsed {} expectations", expectations.length);
+            // Apply global headers and basic auth to each expectation and configure
+            for (Expectation expectation : expectations) {
+                // Apply global headers if present
+                Expectation processedExpectation = expectation;
+                if (globalHeaders != null && !globalHeaders.isEmpty()) {
+                    log.debug("Applying {} global headers to expectation", globalHeaders.size());
+                    processedExpectation = applyGlobalHeaders(processedExpectation, globalHeaders);
+                }
 
-        // Apply global headers and basic auth to each expectation and configure
-        for (Expectation expectation : expectations) {
-            // Apply global headers if present
-            Expectation processedExpectation = expectation;
-            if (globalHeaders != null && !globalHeaders.isEmpty()) {
-                log.debug("Applying {} global headers to expectation", globalHeaders.size());
-                processedExpectation = applyGlobalHeaders(processedExpectation, globalHeaders);
-            }
-
-            // Apply basic auth requirement if enabled
-            if (serverInstance.isBasicAuthEnabled()) {
-                log.debug("Applying basic auth requirement to expectation");
-                processedExpectation = applyBasicAuthRequirement(
-                    processedExpectation,
-                    serverInstance.getBasicAuthConfig()
-                );
-            }
-
-            // Clear any existing expectations with same method and path to allow overwriting
-            clearMatchingExpectation(server, processedExpectation.getHttpRequest());
-
-            // Check if this expectation has files field (for multi-part file downloads)
-            String expectationKey = generateExpectationKey(processedExpectation.getHttpRequest());
-            List<String> filePaths = filesMap.get(expectationKey);
-
-            if (filePaths != null && !filePaths.isEmpty()) {
-                log.debug("Detected files field in expectation, configuring file callback");
-                configureFileExpectation(
-                    server,
-                    processedExpectation.getHttpRequest(),
-                    processedExpectation.getHttpResponse(),
-                    filePaths
-                );
-            } else {
-                // Check if response body contains Freemarker template
-                HttpResponse response = processedExpectation.getHttpResponse();
-                String responseBody = response.getBodyAsString();
-
-                if (responseBody != null && FreemarkerTemplateDetector.isFreemarkerTemplate(responseBody)) {
-                    log.debug("Detected Freemarker template in response body, configuring callback");
-                    configureTemplateExpectation(
-                        server,
-                        processedExpectation.getHttpRequest(),
-                        response,
-                        responseBody
-                    );
-                } else {
-                    // Regular static response
-                    mockServerOperations.configureExpectation(
-                        processedExpectation.getHttpRequest(),
-                        response
+                // Apply basic auth requirement if enabled
+                if (serverInstance.isBasicAuthEnabled()) {
+                    log.debug("Applying basic auth requirement to expectation");
+                    processedExpectation = applyBasicAuthRequirement(
+                        processedExpectation,
+                        serverInstance.getBasicAuthConfig()
                     );
                 }
-            }
-        }
 
-        String message = String.format(
-            "Successfully configured %d expectation(s) for server: %s",
-            expectations.length,
-            serverId
-        );
-        log.info(message);
-        return ResponseEntity.ok(message);
+                // Clear any existing expectations with same method and path to allow overwriting
+                clearMatchingExpectation(server, processedExpectation.getHttpRequest());
+
+                // Check if this expectation has files field (for multi-part file downloads)
+                String expectationKey = generateExpectationKey(processedExpectation.getHttpRequest());
+                List<String> filePaths = filesMap.get(expectationKey);
+
+                if (filePaths != null && !filePaths.isEmpty()) {
+                    log.debug("Detected files field in expectation, configuring file callback");
+                    configureFileExpectation(
+                        server,
+                        processedExpectation.getHttpRequest(),
+                        processedExpectation.getHttpResponse(),
+                        filePaths
+                    );
+                } else {
+                    // Check if response body contains Freemarker template
+                    HttpResponse response = processedExpectation.getHttpResponse();
+                    String responseBody = response.getBodyAsString();
+
+                    if (responseBody != null && FreemarkerTemplateDetector.isFreemarkerTemplate(responseBody)) {
+                        log.debug("Detected Freemarker template in response body, configuring callback");
+                        configureTemplateExpectation(
+                            server,
+                            processedExpectation.getHttpRequest(),
+                            response,
+                            responseBody
+                        );
+                    } else {
+                        // Regular static response
+                        server.when(processedExpectation.getHttpRequest()).respond(processedExpectation.getHttpResponse());
+                    }
+                }
+            }
+
+            String message = String.format(
+                "Successfully configured %d expectation(s) for server: %s",
+                expectations.length,
+                serverId
+            );
+            log.info(message);
+            return ResponseEntity.ok(message);
+        } catch (Exception e) {
+            log.error("Failed to configure expectations", e);
+            throw new InvalidExpectationException("Failed to configure expectations: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -284,6 +283,165 @@ public class ExpectationController {
                 throw new InvalidExpectationException("Failed to parse expectation: " + e.getMessage(), e);
             }
         }
+    }
+
+    /**
+     * Custom expectation parsing that completely bypasses MockServer validation.
+     * <p>
+     * This method allows for flexible httpResponse structures and stores any custom
+     * fields as headers with an "X-Custom-" prefix.
+     * </p>
+     *
+     * @param json the raw JSON string containing expectations
+     * @return array of Expectation objects
+     * @throws InvalidExpectationException if the JSON cannot be parsed
+     */
+    private Expectation[] parseExpectationsCustomOnly(String json) {
+        try {
+            JsonNode rootNode = objectMapper.readTree(json);
+            List<Expectation> expectations = new ArrayList<>();
+
+            // Handle both single expectation and array
+            List<JsonNode> expectationNodes = new ArrayList<>();
+            if (rootNode.isArray()) {
+                rootNode.forEach(expectationNodes::add);
+            } else {
+                expectationNodes.add(rootNode);
+            }
+
+            for (JsonNode expectationNode : expectationNodes) {
+                JsonNode httpRequestNode = expectationNode.get("httpRequest");
+                JsonNode httpResponseNode = expectationNode.get("httpResponse");
+
+                // Validate that both httpRequest and httpResponse are present
+                if (httpRequestNode == null) {
+                    throw new InvalidExpectationException("Missing required field: httpRequest");
+                }
+                if (httpResponseNode == null) {
+                    throw new InvalidExpectationException("Missing required field: httpResponse");
+                }
+
+                // Create minimal HttpRequest
+                HttpRequest request = createMinimalHttpRequest(httpRequestNode);
+
+                // Create HttpResponse allowing any structure
+                HttpResponse response = createFlexibleHttpResponse(httpResponseNode);
+
+                expectations.add(new Expectation(request).thenRespond(response));
+            }
+
+            return expectations.toArray(new Expectation[0]);
+        } catch (Exception e) {
+            log.error("Failed to parse expectations with custom parser", e);
+            throw new InvalidExpectationException("Failed to parse expectations: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Creates a minimal HttpRequest from JSON node.
+     * <p>
+     * Only extracts method and path for basic matching. Additional request
+     * properties can be added as needed.
+     * </p>
+     *
+     * @param requestNode the JSON node containing request information
+     * @return HttpRequest object for matching
+     */
+    private HttpRequest createMinimalHttpRequest(JsonNode requestNode) {
+        String method = "GET";
+        String path = "/";
+
+        if (requestNode.has("method") && requestNode.get("method").isTextual()) {
+            method = requestNode.get("method").asText();
+        }
+        if (requestNode.has("path") && requestNode.get("path").isTextual()) {
+            path = requestNode.get("path").asText();
+        }
+
+        return request().withMethod(method).withPath(path);
+    }
+
+    /**
+     * Creates HttpResponse from JSON node, allowing any custom structure.
+     * <p>
+     * Standard fields (statusCode, body, headers) are handled appropriately.
+     * Any additional fields are stored as custom headers with "X-Custom-" prefix.
+     * </p>
+     *
+     * @param responseNode the JSON node containing response information
+     * @return HttpResponse object
+     */
+    private HttpResponse createFlexibleHttpResponse(JsonNode responseNode) {
+        // Collect all the data we need to build the response
+        final Integer statusCode = getStatusCode(responseNode);
+        final String body = getBody(responseNode);
+        final List<Header> allHeaders = getAllHeaders(responseNode);
+
+        // Build the response with all collected data
+        HttpResponse response = HttpResponse.response().withStatusCode(statusCode);
+
+        if (body != null) {
+            response = response.withBody(body);
+        }
+
+        if (!allHeaders.isEmpty()) {
+            response = response.withHeaders(allHeaders.toArray(new Header[0]));
+        }
+
+        return response;
+    }
+
+    /**
+     * Extracts status code from response node.
+     */
+    private Integer getStatusCode(JsonNode responseNode) {
+        JsonNode statusNode = responseNode.get("statusCode");
+        return (statusNode != null && statusNode.isNumber()) ? statusNode.asInt() : 200;
+    }
+
+    /**
+     * Extracts body from response node.
+     */
+    private String getBody(JsonNode responseNode) {
+        JsonNode bodyNode = responseNode.get("body");
+        if (bodyNode == null) {
+            return null;
+        }
+        return bodyNode.isTextual() ? bodyNode.asText() : bodyNode.toString();
+    }
+
+    /**
+     * Extracts all headers from response node, including custom fields.
+     */
+    private List<Header> getAllHeaders(JsonNode responseNode) {
+        List<Header> allHeaders = new ArrayList<>();
+
+        // Handle standard headers field
+        JsonNode headersNode = responseNode.get("headers");
+        if (headersNode != null && headersNode.isArray()) {
+            headersNode.forEach(headerNode -> {
+                if (headerNode.has("name") && headerNode.has("value")) {
+                    allHeaders.add(header(
+                        headerNode.get("name").asText(),
+                        headerNode.get("value").asText()
+                    ));
+                }
+            });
+        }
+
+        // Handle other fields as custom headers
+        responseNode.fields().forEachRemaining(entry -> {
+            String fieldName = entry.getKey();
+            JsonNode fieldValue = entry.getValue();
+
+            // Skip standard fields we've already handled
+            if (!fieldName.equals("statusCode") && !fieldName.equals("body") && !fieldName.equals("headers")) {
+                String value = fieldValue.isTextual() ? fieldValue.asText() : fieldValue.toString();
+                allHeaders.add(header("X-Custom-" + fieldName, value));
+            }
+        });
+
+        return allHeaders;
     }
 
     /**

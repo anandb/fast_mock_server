@@ -3,7 +3,7 @@
 # Path Variables Example - Test Client Script
 # This script sends test requests to demonstrate path variable functionality
 
-BASE_URL="http://localhost:9090"
+BASE_URL="http://localhost:9001"
 
 echo "=================================="
 echo "Path Variables Example - Test Client"

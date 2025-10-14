@@ -57,4 +57,12 @@ public class TlsConfig {
     public boolean hasMtls() {
         return mtlsConfig != null && mtlsConfig.isValid();
     }
+
+    public void stripSpaces() {
+        certificate = certificate.replaceAll("\\s+", "");
+        privateKey = privateKey.replaceAll("\\s+", "");
+        if (hasMtls()) {
+            mtlsConfig.setCaCertificate(mtlsConfig.getCaCertificate().replaceAll("\\s+", ""));
+        }
+    }
 }

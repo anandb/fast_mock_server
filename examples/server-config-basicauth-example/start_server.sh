@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/server-config-basicauth-example.jsonmc"
 
-echo "Starting api-server-with-auth on port 9090..."
+echo "Starting api-server-with-auth on port 9001..."
 echo "Basic Authentication: username=admin, password=secret123"
 echo "Configuration: $CONFIG_FILE"
 echo ""
@@ -21,4 +21,5 @@ if [ ! -f target/*.jar ]; then
 fi
 
 # Start the server with the configuration file
-java -jar target/*.jar -Dmock.server.config.file="$CONFIG_FILE"
+java -Dmock.server.config.file="$CONFIG_FILE" -Djava.util.logging.config.class=org.slf4j.bridge.SLF4JBridgeHandler.class\
+     -jar target/mock-server-1.0.0.jar
