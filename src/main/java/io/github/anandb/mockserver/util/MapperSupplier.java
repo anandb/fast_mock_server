@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 /**
  * Singleton supplier for JsonMapper instances.
  * <p>
@@ -13,20 +16,14 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  * JSON processing configuration.
  * </p>
  */
-public class MapperSupplier {
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class MapperSupplier {
 
     private static final JsonMapper INSTANCE = JsonMapper.builder()
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
             .addModule(new JavaTimeModule())
             .build();
-
-    /**
-     * Private constructor to prevent instantiation.
-     */
-    private MapperSupplier() {
-        throw new UnsupportedOperationException("Utility class cannot be instantiated");
-    }
 
     /**
      * Returns the singleton JsonMapper instance.

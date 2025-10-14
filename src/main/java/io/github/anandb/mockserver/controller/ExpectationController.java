@@ -421,11 +421,18 @@ public class ExpectationController {
             HttpResponse response,
             String templateString) {
 
-        // Create callback with template service
+        // Extract path pattern from request for path variable matching
+        String pathPattern = null;
+        if (request instanceof HttpRequest httpRequest && httpRequest.getPath() != null) {
+            pathPattern = httpRequest.getPath().getValue();
+        }
+
+        // Create callback with template service and path pattern
         FreemarkerResponseCallback callback = new FreemarkerResponseCallback(
             freemarkerTemplateService,
             templateString,
-            response
+            response,
+            pathPattern
         );
 
         // Configure expectation with callback

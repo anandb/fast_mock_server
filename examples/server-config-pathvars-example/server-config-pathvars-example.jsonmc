@@ -1,0 +1,148 @@
+/*
+ * Example configuration demonstrating path variable support in Freemarker templates
+ *
+ * This example shows how to use path variables extracted from the request URL
+ * in Freemarker templates along with headers, body, and cookies.
+ */
+[
+  {
+    "server": {
+      "serverId": "pathvars-demo",
+      "port": 9090,
+      "description": "Demo server for path variables in Freemarker templates"
+    },
+    "expectations": [
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/users/{id}"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": /*{
+            "userId": "${pathVariables.id}",
+            "message": "User details retrieved",
+            "requestedBy": "${headers['X-User-Name']!"anonymous"}"
+          }*/
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/users/{userId}/posts/{postId}"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": /*{
+            "userId": "${pathVariables.userId}",
+            "postId": "${pathVariables.postId}",
+            "title": "Post ${pathVariables.postId} by user ${pathVariables.userId}",
+            "author": "${headers['X-Author-Name']!"Unknown"}",
+            "timestamp": "${.now?iso_utc}"
+          }*/
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/api/v1/organizations/{orgId}/projects/{projectId}/tasks"
+        },
+        "httpResponse": {
+          "statusCode": 201,
+          "headers": {
+            "Content-Type": ["application/json"],
+            "Location": ["/api/v1/organizations/${pathVariables.orgId}/projects/${pathVariables.projectId}/tasks/new-task-123"]
+          },
+          "body": /*{
+            "id": "new-task-123",
+            "organizationId": "${pathVariables.orgId}",
+            "projectId": "${pathVariables.projectId}",
+            "title": "${body.title}",
+            "description": "${body.description!"No description provided"}",
+            "assignee": "${body.assignee!"Unassigned"}",
+            "priority": "${body.priority!"medium"}",
+            "createdBy": "${headers['X-User-Id']!"system"}",
+            "createdAt": "${.now?iso_utc}"
+          }*/
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "PUT",
+          "path": "/users/{id}/profile"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": /*{
+            "userId": "${pathVariables.id}",
+            "updatedFields": {
+              "name": "${body.name}",
+              "email": "${body.email}",
+              "age": ${body.age}
+            },
+            "updatedBy": "${headers['X-Admin-Id']!"self"}",
+            "timestamp": "${.now?iso_utc}"
+          }*/
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "DELETE",
+          "path": "/users/{userId}/comments/{commentId}"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": /*{
+            "message": "Comment deleted successfully",
+            "deletedCommentId": "${pathVariables.commentId}",
+            "belongsToUserId": "${pathVariables.userId}",
+            "deletedBy": "${headers['X-User-Id']!"unknown"}",
+            "timestamp": "${.now?iso_utc}"
+          }*/
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/v2/products/{category}/{productId}/reviews"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": /*{
+            "category": "${pathVariables.category}",
+            "productId": "${pathVariables.productId}",
+            "reviews": [
+              {
+                "id": "review-1",
+                "rating": 5,
+                "comment": "Great ${pathVariables.category} product!"
+              },
+              {
+                "id": "review-2",
+                "rating": 4,
+                "comment": "Good value for product ${pathVariables.productId}"
+              }
+            ],
+            "totalReviews": 2,
+            "requestedBy": "${headers['User-Agent']!"Unknown Client"}"
+          }*/
+        }
+      }
+    ]
+  }
+]

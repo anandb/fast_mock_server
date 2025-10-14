@@ -117,7 +117,7 @@ public class FileResponseCallback implements ExpectationResponseCallback {
      * Evaluates a file path as a FreeMarker template and strips whitespace.
      * <p>
      * If the file path contains FreeMarker expressions, they will be evaluated
-     * using the request context (headers, body, cookies). After evaluation,
+     * using the request context (headers, body, cookies, path variables). After evaluation,
      * all leading and trailing whitespace and newlines are stripped.
      * </p>
      *
@@ -130,8 +130,9 @@ public class FileResponseCallback implements ExpectationResponseCallback {
             // Check if the path contains FreeMarker template expressions
             if (FreemarkerTemplateDetector.isFreemarkerTemplate(filePathTemplate)) {
                 // Process as FreeMarker template
+                // Note: Pass null for pathPattern since file paths don't have path variables
                 String evaluatedPath = templateService.processTemplateWithRequest(
-                    filePathTemplate, httpRequest);
+                    filePathTemplate, httpRequest, null);
                 // Strip all leading and trailing whitespace and newlines
                 return evaluatedPath.strip();
             }

@@ -11,6 +11,7 @@ When a response body contains Freemarker template syntax, the mock server will a
    - `headers` - Map of HTTP headers (String → String)
    - `body` - Parsed JSON body (Map of String → Object)
    - `cookies` - Map of cookies (String → String)
+   - `pathVariables` - Map of path variables extracted from the URL (String → String)
 2. Evaluate the Freemarker template using this context
 3. Return the rendered result as the response body
 
@@ -216,6 +217,33 @@ Example:
 ${cookies['sessionId']}
 ${cookies['theme']!('default')}
 ```
+
+### pathVariables
+Type: `Map<String, String>`
+
+Access path variables extracted from the request URL. Path variables are defined in the expectation's path using curly braces `{variableName}`.
+
+Example configuration:
+```json
+{
+  "httpRequest": {
+    "method": "GET",
+    "path": "/users/{id}"
+  },
+  "httpResponse": {
+    "body": "{\"userId\": \"${pathVariables.id}\"}"
+  }
+}
+```
+
+Example usage:
+```freemarker
+${pathVariables.id}
+${pathVariables.userId}
+${pathVariables.category}
+```
+
+For more examples, see the [Path Variables Example](../examples/server-config-pathvars-example/README.md).
 
 ## Freemarker Tips
 

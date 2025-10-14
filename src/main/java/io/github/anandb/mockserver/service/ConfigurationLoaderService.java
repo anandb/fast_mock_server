@@ -507,10 +507,17 @@ public class ConfigurationLoaderService {
             org.mockserver.model.HttpResponse response,
             String templateString) {
 
+        // Extract path pattern from request for path variable matching
+        String pathPattern = null;
+        if (request instanceof org.mockserver.model.HttpRequest httpRequest && httpRequest.getPath() != null) {
+            pathPattern = httpRequest.getPath().getValue();
+        }
+
         FreemarkerResponseCallback callback = new FreemarkerResponseCallback(
             freemarkerTemplateService,
             templateString,
-            response
+            response,
+            pathPattern
         );
         server.when(request).respond(callback);
     }

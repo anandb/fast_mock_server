@@ -11,7 +11,7 @@ import org.mockserver.model.HttpResponse;
  * <p>
  * This callback is invoked by MockServer when a request matches an expectation
  * configured with a Freemarker template. It processes the template with the
- * incoming request context (headers, body, cookies) and returns the rendered response.
+ * incoming request context (headers, body, cookies, path variables) and returns the rendered response.
  * </p>
  */
 @Slf4j
@@ -20,21 +20,28 @@ public class FreemarkerResponseCallback implements ExpectationResponseCallback {
     private final FreemarkerTemplateService templateService;
     private final String templateString;
     private final HttpResponse baseResponse;
+    private final String pathPattern;
 
     public FreemarkerResponseCallback(
             FreemarkerTemplateService templateService,
             String templateString,
-            HttpResponse baseResponse) {
+            HttpResponse baseResponse,
+            String pathPattern) {
         this.templateService = templateService;
         this.templateString = templateString;
         this.baseResponse = baseResponse;
+        this.pathPattern = pathPattern;
     }
 
     @Override
     public HttpResponse handle(HttpRequest httpRequest) {
         try {
-            // Process the template with the incoming request
-            String processedBody = templateService.processTemplateWithRequest(templateString, httpRequest);
+            // Process the template with the incoming request and path pattern
+            String processedBody = templateService.processTemplateWithRequest(
+                templateString,
+                httpRequest,
+                pathPattern
+            );
 
             // Return response with processed body and original headers/status
             return HttpResponse.response()

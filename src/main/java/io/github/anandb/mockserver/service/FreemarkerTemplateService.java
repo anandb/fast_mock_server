@@ -47,9 +47,10 @@ public class FreemarkerTemplateService {
      * Parses an HTTP request into a context object for template evaluation.
      *
      * @param httpRequest the incoming HTTP request
-     * @return HttpRequestContext containing headers, body, and cookies
+     * @param pathPattern the expectation path pattern (e.g., "/users/{id}") for extracting path variables
+     * @return HttpRequestContext containing headers, body, cookies, and path variables
      */
-    public HttpRequestContext parseHttpRequest(HttpRequest httpRequest) {
+    public HttpRequestContext parseHttpRequest(HttpRequest httpRequest, String pathPattern) {
         // Parse headers - assuming one value per header
         Map<String, String> headers = new HashMap<>();
         if (httpRequest.getHeaderList() != null) {
@@ -83,11 +84,65 @@ public class FreemarkerTemplateService {
             }
         }
 
+        // Extract path variables
+        Map<String, String> pathVariables = extractPathVariables(
+            httpRequest.getPath().getValue(),
+            pathPattern
+        );
+
         return HttpRequestContext.builder()
                 .headers(headers)
                 .body(body)
                 .cookies(cookies)
+                .pathVariables(pathVariables)
                 .build();
+    }
+
+    /**
+     * Extracts path variables from a request path based on a path pattern.
+     * <p>
+     * For example, given pattern "/users/{id}/posts/{postId}" and path "/users/123/posts/456",
+     * this will return a map: {"id": "123", "postId": "456"}
+     * </p>
+     *
+     * @param requestPath the actual request path
+     * @param pathPattern the expectation path pattern with variables in {brackets}
+     * @return map of path variable names to values
+     */
+    private Map<String, String> extractPathVariables(String requestPath, String pathPattern) {
+        Map<String, String> pathVariables = new HashMap<>();
+
+        if (pathPattern == null || requestPath == null) {
+            return pathVariables;
+        }
+
+        // Split both paths into segments
+        String[] patternSegments = pathPattern.split("/");
+        String[] pathSegments = requestPath.split("/");
+
+        // Must have same number of segments
+        if (patternSegments.length != pathSegments.length) {
+            log.debug("Path segment count mismatch: pattern has {} segments, request has {}",
+                     patternSegments.length, pathSegments.length);
+            return pathVariables;
+        }
+
+        // Match segments and extract variables
+        for (int i = 0; i < patternSegments.length; i++) {
+            String patternSegment = patternSegments[i];
+            String pathSegment = pathSegments[i];
+
+            // Check if this segment is a variable (enclosed in curly braces)
+            if (patternSegment.startsWith("{") && patternSegment.endsWith("}")) {
+                // Extract variable name (remove braces)
+                String variableName = patternSegment.substring(1, patternSegment.length() - 1);
+                pathVariables.put(variableName, pathSegment);
+                log.trace("Extracted path variable: {} = {}", variableName, pathSegment);
+            }
+        }
+
+        log.debug("Extracted {} path variable(s) from path", pathVariables.size());
+        return pathVariables;
     }
 
     /**
@@ -114,6 +169,7 @@ public class FreemarkerTemplateService {
         dataModel.put("headers", context.getHeaders());
         dataModel.put("body", objectMapper.convertValue(context.getBody(), Map.class));
         dataModel.put("cookies", context.getCookies());
+        dataModel.put("pathVariables", context.getPathVariables() != null ? context.getPathVariables() : new HashMap<>());
 
         // Process template
         StringWriter writer = new StringWriter();
@@ -130,13 +186,14 @@ public class FreemarkerTemplateService {
      *
      * @param templateString the Freemarker template string
      * @param httpRequest the incoming HTTP request
+     * @param pathPattern the expectation path pattern for extracting path variables
      * @return the processed template result
      * @throws IOException if template processing fails
      * @throws TemplateException if template evaluation fails
      */
-    public String processTemplateWithRequest(String templateString, HttpRequest httpRequest)
+    public String processTemplateWithRequest(String templateString, HttpRequest httpRequest, String pathPattern)
             throws IOException, TemplateException {
-        HttpRequestContext context = parseHttpRequest(httpRequest);
+        HttpRequestContext context = parseHttpRequest(httpRequest, pathPattern);
         return processTemplate(templateString, context);
     }
 }

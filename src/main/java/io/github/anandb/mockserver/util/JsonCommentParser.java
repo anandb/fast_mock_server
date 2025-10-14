@@ -3,12 +3,16 @@ package io.github.anandb.mockserver.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 /**
  * Parser for JSON documents with extended syntax support:
  * - C++ style comments: // and /* *\/
  * - Multiline strings using backticks (`)
  */
-public class JsonCommentParser {
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class JsonCommentParser {
 
     private static final JsonMapper objectMapper = MapperSupplier.getMapper();
 

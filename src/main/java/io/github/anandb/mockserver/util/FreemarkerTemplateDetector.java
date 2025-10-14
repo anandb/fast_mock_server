@@ -1,13 +1,13 @@
 package io.github.anandb.mockserver.util;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 /**
  * Utility class for detecting FreeMarker template syntax in strings.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FreemarkerTemplateDetector {
-
-    private FreemarkerTemplateDetector() {
-        // Private constructor to prevent instantiation
-    }
 
     /**
      * Checks if a string contains FreeMarker template syntax.

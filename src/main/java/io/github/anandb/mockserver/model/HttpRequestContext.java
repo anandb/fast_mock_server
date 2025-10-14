@@ -11,7 +11,7 @@ import java.util.Map;
 /**
  * Context object containing parsed HTTP request data for Freemarker template evaluation.
  * <p>
- * This model is used to pass HTTP request information (headers, body, cookies) as data
+ * This model is used to pass HTTP request information (headers, body, cookies, path variables) as data
  * to Freemarker templates when processing dynamic response bodies.
  * </p>
  */
@@ -40,4 +40,11 @@ public class HttpRequestContext {
      * Value: cookie value (String)
      */
     private Map<String, String> cookies;
+
+    /**
+     * Map of path variables from the request path.
+     * Key: path variable name (String)
+     * Value: path variable value (String)
+     */
+    private Map<String, String> pathVariables;
 }
