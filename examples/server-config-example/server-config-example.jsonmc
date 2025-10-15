@@ -2,7 +2,7 @@
   {
     "server": {
       "serverId": "api-server",
-      "port": 8081,
+      "port": 9001,
       "description": "API Mock Server with sample expectations",
       "globalHeaders": [
         {

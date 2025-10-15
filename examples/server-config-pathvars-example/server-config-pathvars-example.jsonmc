@@ -15,7 +15,10 @@
       {
         "httpRequest": {
           "method": "GET",
-          "path": "/users/{id}"
+          "path": "/users/{id}",
+          "pathParameters": {
+            "id": "[a-zA-Z0-9\\-]+"
+           }
         },
         "httpResponse": {
           "statusCode": 200,
@@ -25,14 +28,18 @@
           "body": {
             "userId": "${pathVariables.id}",
             "message": "User details retrieved",
-            "requestedBy": "${headers['X-User-Name']!\"anonymous\"}"
+            "requestedBy": "${headers['X-User-Name']!'anonymous'}"
           }
         }
       },
       {
         "httpRequest": {
           "method": "GET",
-          "path": "/users/{userId}/posts/{postId}"
+          "path": "/users/{userId}/posts/{postId}",
+          "pathParameters": {
+            "userId": "[a-zA-Z0-9\\-]+",
+            "postId": "[a-zA-Z0-9\\-]+"
+           }
         },
         "httpResponse": {
           "statusCode": 200,
@@ -43,7 +50,7 @@
             "userId": "${pathVariables.userId}",
             "postId": "${pathVariables.postId}",
             "title": "Post ${pathVariables.postId} by user ${pathVariables.userId}",
-            "author": "${headers['X-Author-Name']!\"Unknown\"}",
+            "author": "${headers['X-Author-Name']!'Unknown'}",
             "timestamp": "${.now?iso_utc}"
           }
         }
@@ -51,7 +58,11 @@
       {
         "httpRequest": {
           "method": "POST",
-          "path": "/api/v1/organizations/{orgId}/projects/{projectId}/tasks"
+          "path": "/api/v1/organizations/{orgId}/projects/{projectId}/tasks",
+          "pathParameters":{
+            "orgId": "[a-zA-Z0-9\\-]+",
+            "projectId": "[a-zA-Z0-9\\-]+"
+          }
         },
         "httpResponse": {
           "statusCode": 201,
@@ -64,10 +75,10 @@
             "organizationId": "${pathVariables.orgId}",
             "projectId": "${pathVariables.projectId}",
             "title": "${body.title}",
-            "description": "${body.description!\"No description provided\"}",
-            "assignee": "${body.assignee!\"Unassigned\"}",
-            "priority": "${body.priority!\"medium\"}",
-            "createdBy": "${headers['X-User-Id']!\"system\"}",
+            "description": "${body.description!'No description provided'}",
+            "assignee": "${body.assignee!'Unassigned'}",
+            "priority": "${body.priority!'medium'}",
+            "createdBy": "${headers['X-User-Id']!'system'}",
             "createdAt": "${.now?iso_utc}"
           }
         }
@@ -75,7 +86,10 @@
       {
         "httpRequest": {
           "method": "PUT",
-          "path": "/users/{id}/profile"
+          "path": "/users/{id}/profile",
+          "pathParameters":{
+            "id": "[a-zA-Z0-9\\-]+"
+          }
         },
         "httpResponse": {
           "statusCode": 200,
@@ -89,7 +103,7 @@
               "email": "${body.email}",
               "age": "${body.age}"
             },
-            "updatedBy": "${headers['X-Admin-Id']!\"self\"}",
+            "updatedBy": "${headers['X-Admin-Id']!'self'}",
             "timestamp": "${.now?iso_utc}"
           }
         }
@@ -97,7 +111,11 @@
       {
         "httpRequest": {
           "method": "DELETE",
-          "path": "/users/{userId}/comments/{commentId}"
+          "path": "/users/{userId}/comments/{commentId}",
+          "pathParameters":{
+            "userId": "[a-zA-Z0-9\\-]+",
+            "commentId": "[a-zA-Z0-9\\-]+"
+          }
         },
         "httpResponse": {
           "statusCode": 200,
@@ -108,7 +126,7 @@
             "message": "Comment deleted successfully",
             "deletedCommentId": "${pathVariables.commentId}",
             "belongsToUserId": "${pathVariables.userId}",
-            "deletedBy": "${headers['X-User-Id']!\"unknown\"}",
+            "deletedBy": "${headers['X-User-Id']!'unknown'}",
             "timestamp": "${.now?iso_utc}"
           }
         }
@@ -116,7 +134,11 @@
       {
         "httpRequest": {
           "method": "GET",
-          "path": "/api/v2/products/{category}/{productId}/reviews"
+          "path": "/api/v2/products/{category}/{productId}/reviews",
+          "pathParameters":{
+            "category": "[a-z]+",
+            "productId": "[a-zA-Z0-9\\-]+"
+          }
         },
         "httpResponse": {
           "statusCode": 200,
@@ -139,7 +161,7 @@
               }
             ],
             "totalReviews": 2,
-            "requestedBy": "${headers['User-Agent']!\"Unknown Client\"}"
+            "requestedBy": "${headers['User-Agent']!'Unknown Client'}"
           }
         }
       }

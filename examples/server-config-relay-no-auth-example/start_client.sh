@@ -3,6 +3,8 @@
 # Test client script for server-config-relay-no-auth-example
 # This script demonstrates calling the relay server (without OAuth2)
 
+set -eo pipefail
+
 BASE_URL="http://localhost:8090"
 
 echo "======================================"
@@ -18,7 +20,7 @@ echo ""
 # Test 1: GET request through relay
 echo "Test 1: GET /api/users - Relayed to remote server"
 echo "Request: curl -X GET $BASE_URL/api/users"
-curl -X GET "$BASE_URL/api/users" \
+curl -f -X GET "$BASE_URL/api/users" \
   -w "\nStatus Code: %{http_code}\n" -s
 echo ""
 echo "--------------------------------------"
@@ -27,7 +29,7 @@ echo ""
 # Test 2: POST request through relay
 echo "Test 2: POST /api/users - Create user via relay"
 echo "Request: curl -X POST $BASE_URL/api/users -H 'Content-Type: application/json' -d '{...}'"
-curl -X POST "$BASE_URL/api/users" \
+curl -f -X POST "$BASE_URL/api/users" \
   -H "Content-Type: application/json" \
   -d '{"name":"Test User","email":"test@example.com"}' \
   -w "\nStatus Code: %{http_code}\n" -s
@@ -38,7 +40,7 @@ echo ""
 # Test 3: Custom endpoint through relay
 echo "Test 3: GET /api/data - Custom endpoint via relay"
 echo "Request: curl -X GET $BASE_URL/api/data"
-curl -X GET "$BASE_URL/api/data" \
+curl -f -X GET "$BASE_URL/api/data" \
   -w "\nStatus Code: %{http_code}\n" -s
 echo ""
 echo "--------------------------------------"
@@ -47,7 +49,7 @@ echo ""
 # Test 4: DELETE request through relay
 echo "Test 4: DELETE /api/users/123 - Delete user via relay"
 echo "Request: curl -X DELETE $BASE_URL/api/users/123"
-curl -X DELETE "$BASE_URL/api/users/123" \
+curl -f -X DELETE "$BASE_URL/api/users/123" \
   -w "\nStatus Code: %{http_code}\n" -s
 echo ""
 echo "--------------------------------------"

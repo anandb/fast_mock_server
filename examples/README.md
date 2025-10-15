@@ -15,7 +15,7 @@ Basic test server configuration demonstrating a simple API endpoint.
 ### 2. server-config-example/
 Multi-server configuration with both HTTP and HTTPS servers.
 - **Servers:**
-  - api-server (HTTP on port 8081)
+  - api-server (HTTP on port 9001)
   - secure-server (HTTPS on port 8443)
 - **Features:** Multiple endpoints, TLS/SSL configuration, global headers
 

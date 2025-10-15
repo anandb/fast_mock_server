@@ -2,6 +2,7 @@
 
 # Test client script for server-config-mtls-example
 # This script demonstrates calling mTLS endpoints with client certificates
+set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_URL="https://localhost:8443"
@@ -25,7 +26,7 @@ fi
 # Test 1: GET /secure/api/account with mTLS
 echo "Test 1: GET /secure/api/account - Get account details (with client cert)"
 echo "Request: curl -X GET $BASE_URL/secure/api/account --cert $CLIENT_CERT --key $CLIENT_KEY --cacert $CA_CERT"
-curl -X GET "$BASE_URL/secure/api/account" \
+curl -f -X GET "$BASE_URL/secure/api/account" \
   --cert "$CLIENT_CERT" \
   --key "$CLIENT_KEY" \
   --cacert "$CA_CERT" \
@@ -37,7 +38,7 @@ echo ""
 # Test 2: POST /secure/api/transaction with mTLS
 echo "Test 2: POST /secure/api/transaction - Create transaction (with client cert)"
 echo "Request: curl -X POST $BASE_URL/secure/api/transaction --cert $CLIENT_CERT --key $CLIENT_KEY --cacert $CA_CERT -H 'Content-Type: application/json' -d '{...}'"
-curl -X POST "$BASE_URL/secure/api/transaction" \
+curl -f -X POST "$BASE_URL/secure/api/transaction" \
   --cert "$CLIENT_CERT" \
   --key "$CLIENT_KEY" \
   --cacert "$CA_CERT" \
@@ -51,7 +52,7 @@ echo ""
 # Test 3: GET /secure/api/health with mTLS
 echo "Test 3: GET /secure/api/health - Health check (with client cert)"
 echo "Request: curl -X GET $BASE_URL/secure/api/health --cert $CLIENT_CERT --key $CLIENT_KEY --cacert $CA_CERT"
-curl -X GET "$BASE_URL/secure/api/health" \
+curl -f -X GET "$BASE_URL/secure/api/health" \
   --cert "$CLIENT_CERT" \
   --key "$CLIENT_KEY" \
   --cacert "$CA_CERT" \
@@ -63,7 +64,7 @@ echo ""
 # Test 4: Attempt connection without client certificate (should fail)
 echo "Test 4: GET /secure/api/account - Without client certificate (should fail)"
 echo "Request: curl -X GET $BASE_URL/secure/api/account -k"
-curl -X GET "$BASE_URL/secure/api/account" -k \
+curl -f -X GET "$BASE_URL/secure/api/account" -k \
   -w "\nStatus Code: %{http_code}\n" -s 2>/dev/null || echo "Connection failed as expected (no client certificate)."
 echo ""
 echo "--------------------------------------"

@@ -1,4 +1,4 @@
-{
+[{
   /* Example server configuration with relay to a remote server with OAuth2 authentication
    *
    * This example demonstrates how to configure a mock server that relays all requests
@@ -15,10 +15,10 @@
     /* Relay configuration for forwarding requests to a remote server */
     "relayConfig": {
       /* The remote URL to relay requests to (base URL) */
-      "remoteUrl": "https://api.example.com",
+      "remoteUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
 
       /* OAuth2 token endpoint for obtaining access tokens */
-      "tokenUrl": "https://auth.example.com/oauth/token",
+      "tokenUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
 
       /* OAuth2 client credentials */
       "clientId": "your-client-id",
@@ -53,4 +53,4 @@
    */
 
   "expectations": []
-}
+}]
