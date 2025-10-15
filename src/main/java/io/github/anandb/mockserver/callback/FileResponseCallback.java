@@ -3,6 +3,8 @@ package io.github.anandb.mockserver.callback;
 import io.github.anandb.mockserver.service.FreemarkerTemplateService;
 import io.github.anandb.mockserver.util.FreemarkerTemplateDetector;
 import lombok.extern.slf4j.Slf4j;
+
+import org.apache.commons.lang3.ObjectUtils;
 import org.mockserver.mock.action.ExpectationResponseCallback;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
@@ -13,8 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.FileSystems;
-import java.nio.file.PathMatcher;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -33,12 +33,14 @@ public class FileResponseCallback implements ExpectationResponseCallback {
     private final List<String> filePaths;
     private final HttpResponse baseResponse;
     private final FreemarkerTemplateService templateService;
+    private final String pathPattern;
 
     public FileResponseCallback(List<String> filePaths, HttpResponse baseResponse,
-                               FreemarkerTemplateService templateService) {
+                               FreemarkerTemplateService templateService, String pathPattern) {
         this.filePaths = filePaths;
         this.baseResponse = baseResponse;
         this.templateService = templateService;
+        this.pathPattern = pathPattern;
     }
 
     @Override
@@ -126,18 +128,17 @@ public class FileResponseCallback implements ExpectationResponseCallback {
      */
     private File findFirstFileWithPrefix(String filePathPrefix) {
         try {
-            // Convert the file path prefix to a glob pattern
-            // Escape special regex characters and convert to glob syntax
-            String escapedPrefix = filePathPrefix.replaceAll("([\\[\\]{}()*+?.\\\\^$|])", "\\\\$1");
-            String globPattern = "glob:**/" + escapedPrefix + "*";
-
-            PathMatcher matcher = FileSystems.getDefault().getPathMatcher(globPattern);
+            String baseDir = filePathPrefix.substring(0, filePathPrefix.lastIndexOf('/'));
+            String fileName = filePathPrefix.substring(filePathPrefix.lastIndexOf('/') + 1);
 
             // Search from current directory recursively
-            try (Stream<Path> paths = Files.walk(Paths.get("."))) {
+            try (Stream<Path> paths = Files.walk(Paths.get(baseDir))) {
                 return paths
                     .filter(Files::isRegularFile)
-                    .filter(path -> matcher.matches(path))
+                    .filter(path -> {
+                        String name = ObjectUtils.getIfNull(path.getFileName(), () -> "").toString();
+                        return name.startsWith(fileName);
+                    })
                     .map(Path::toFile)
                     .findFirst()
                     .orElse(null);
@@ -163,9 +164,8 @@ public class FileResponseCallback implements ExpectationResponseCallback {
     private String evaluateFilePathTemplate(String filePathTemplate, HttpRequest httpRequest) {
         try {
             if (FreemarkerTemplateDetector.isFreemarkerTemplate(filePathTemplate)) {
-                // Process as FreeMarker template. Note: Pass null for pathPattern since file paths don't have path variables
                 String evaluatedPath = templateService.processTemplateWithRequest(
-                    filePathTemplate, httpRequest, null
+                    filePathTemplate, httpRequest, pathPattern
                 );
 
                 // Strip all leading and trailing whitespace and newlines

@@ -42,7 +42,7 @@ class TlsConfigurationServiceTest {
     private TlsConfigurationService tlsConfigService;
 
     @TempDir
-    Path tempDir;
+    private Path tempDir;
 
     private static final String VALID_CERTIFICATE = """
         -----BEGIN CERTIFICATE-----

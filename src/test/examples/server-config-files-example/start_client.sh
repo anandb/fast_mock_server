@@ -17,8 +17,8 @@ echo ""
 
 # Test 1: GET /api/download/documents
 echo "Test 1: GET /api/download/documents - Multi-part document download (2 PDFs)"
-echo "Request: curl -X GET $API_BASE_URL/api/download/documents"
-curl -f -X GET "$API_BASE_URL/api/download/documents" -w "\nStatus Code: %{http_code}\n" -s
+echo "Request: curl -X GET $API_BASE_URL/api/download/documents/{id}"
+curl -f -X GET "$API_BASE_URL/api/download/documents/Fibre" -w "\nStatus Code: %{http_code}\n" -s
 echo ""
 echo "--------------------------------------"
 echo ""

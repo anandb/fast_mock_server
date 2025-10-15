@@ -171,6 +171,8 @@ public class FreemarkerTemplateService {
         dataModel.put("cookies", context.getCookies());
         dataModel.put("pathVariables", context.getPathVariables() != null ? context.getPathVariables() : new HashMap<>());
 
+        System.out.println(dataModel.get("pathVariables"));
+
         // Process template
         StringWriter writer = new StringWriter();
         template.process(dataModel, writer);

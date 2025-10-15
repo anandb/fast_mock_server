@@ -4,7 +4,7 @@
 # This example demonstrates a server protected by basic auth
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/server-config-basicauth-example.jsonmc"
 
 echo "Starting api-server-with-auth on port 9001..."

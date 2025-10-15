@@ -1,19 +1,18 @@
 #!/bin/bash
 
-# Start the mock server with relay configuration (OAuth2)
-# This example demonstrates a server that relays requests to a remote API with OAuth2 authentication
+# Start the mock server with relay configuration (no authentication)
+# This example demonstrates a server that relays requests to a remote API without OAuth2
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/server-config-relay-example.jsonmc"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/server-config-relay-no-auth-example.jsonmc"
 
-echo "Starting relay-server on port 8090..."
+echo "Starting relay-server-no-auth on port 8090..."
 echo "This server relays all requests to https://api.example.com"
-echo "Authentication: OAuth2 client credentials"
+echo "Authentication: None (simple proxy)"
 echo "Configuration: $CONFIG_FILE"
 echo ""
-echo "NOTE: Update the configuration file with real OAuth2 credentials and remote URL"
-echo "      before using in production."
+echo "NOTE: Update the configuration file with the real remote URL before using."
 echo ""
 
 cd "$PROJECT_ROOT"

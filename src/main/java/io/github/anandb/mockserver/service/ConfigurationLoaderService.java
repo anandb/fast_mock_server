@@ -519,11 +519,16 @@ public class ConfigurationLoaderService {
             org.mockserver.model.RequestDefinition request,
             org.mockserver.model.HttpResponse response,
             List<String> filePaths) {
+        String pathPattern = null;
+        if (request instanceof org.mockserver.model.HttpRequest httpRequest && httpRequest.getPath() != null) {
+            pathPattern = httpRequest.getPath().getValue();
+        }
 
         FileResponseCallback callback = new FileResponseCallback(
             filePaths,
             response,
-            freemarkerTemplateService
+            freemarkerTemplateService,
+            pathPattern
         );
         server.when(request).respond(callback);
     }

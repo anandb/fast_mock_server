@@ -5,7 +5,7 @@
 # - file-server on port 8082
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/server-config-files-example.jsonmc"
 
 echo "Starting mock server from server-config-files-example.jsonmc..."
@@ -17,6 +17,7 @@ echo "Update the file paths in the configuration to point to actual files on you
 echo ""
 
 cd "$PROJECT_ROOT"
+pwd
 
 # Check if the JAR file exists
 if [ ! -f target/*.jar ]; then

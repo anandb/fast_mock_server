@@ -330,7 +330,7 @@ public class ExpectationController {
                 expectations.add(new Expectation(request).thenRespond(response));
             }
 
-            return expectations.toArray(new Expectation[0]);
+            return expectations.toArray(Expectation[]::new);
         } catch (Exception e) {
             log.error("Failed to parse expectations with custom parser", e);
             throw new InvalidExpectationException("Failed to parse expectations: " + e.getMessage(), e);
@@ -385,7 +385,7 @@ public class ExpectationController {
         }
 
         if (!allHeaders.isEmpty()) {
-            response = response.withHeaders(allHeaders.toArray(new Header[0]));
+            response = response.withHeaders(allHeaders.toArray(Header[]::new));
         }
 
         return response;
@@ -553,12 +553,16 @@ public class ExpectationController {
             org.mockserver.model.RequestDefinition request,
             HttpResponse response,
             List<String> filePaths) {
-
+        String pathPattern = null;
+        if (request instanceof org.mockserver.model.HttpRequest httpRequest && httpRequest.getPath() != null) {
+            pathPattern = httpRequest.getPath().getValue();
+        }
         // Create callback with file paths and template service for dynamic file paths
         FileResponseCallback callback = new FileResponseCallback(
             filePaths,
             response,
-            freemarkerTemplateService
+            freemarkerTemplateService,
+            pathPattern
         );
 
         // Configure expectation with callback

@@ -9,7 +9,10 @@
       {
         "httpRequest": {
           "method": "GET",
-          "path": "/api/download/documents"
+          "path": "/api/download/documents/{id}",
+          "pathParameters":{
+            "id": "[a-zA-Z0-9-]+"
+          }
         },
         "httpResponse": {
           "statusCode": 200,
@@ -19,8 +22,7 @@
            * the "body" field should be omitted.
            */
           "files": [
-            "/path/to/document1.pdf",
-            "/path/to/document2.pdf"
+            "/home/anand/Documents/${pathVariables.id}"
           ],
           "headers": [
             {

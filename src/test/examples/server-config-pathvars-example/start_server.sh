@@ -4,7 +4,7 @@
 # This script starts the mock server with path variable support examples
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
 echo "Starting Mock Server with Path Variables example configuration..."
 echo "Configuration: $SCRIPT_DIR/server-config-pathvars-example.jsonmc"
