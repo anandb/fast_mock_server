@@ -186,7 +186,7 @@ When configuring expectations with file responses, you can use glob patterns to 
   },
   "httpResponse": {
     "statusCode": 200,
-    "files": ["/path/to/documents/report"]
+    "file": "/path/to/documents/report"
   }
 }
 ```
@@ -441,10 +441,7 @@ For serving file downloads, use the `files` field in `httpResponse` instead of `
   },
   "httpResponse": {
     "statusCode": 200,
-    "files": [
-      "/absolute/path/to/document1.pdf",
-      "/absolute/path/to/document2.pdf"
-    ],
+    "file": "/absolute/path/to/document1.pdf",
     "headers": {
       "X-Download-Type": ["multi-part"]
     }
@@ -476,7 +473,7 @@ Supported file types (auto-detected):
   },
   "httpResponse": {
     "statusCode": 200,
-    "files": ["/path/to/report.pdf"]
+    "file": "/path/to/report.pdf"
   }
 }
 ```
@@ -490,11 +487,7 @@ Supported file types (auto-detected):
   },
   "httpResponse": {
     "statusCode": 200,
-    "files": [
-      "/path/to/data.csv",
-      "/path/to/summary.json",
-      "/path/to/archive.zip"
-    ]
+    "file":  "/path/to/data.csv"
   }
 }
 ```

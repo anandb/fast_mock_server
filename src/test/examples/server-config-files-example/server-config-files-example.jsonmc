@@ -17,13 +17,11 @@
         "httpResponse": {
           "statusCode": 200,
           /*
-           * The "files" field contains an array of absolute file paths
-           * to serve as a multi-part response. When this field is present,
+           * The "file" field contains an absolute file path
+           * to serve as a download. When this field is present,
            * the "body" field should be omitted.
            */
-          "files": [
-            "/home/anand/Documents/${pathVariables.id}"
-          ],
+          "file": "/path/to/${pathVariables.id}",
           "headers": [
             {
               "name": "X-Download-Type",
@@ -39,11 +37,7 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "files": [
-            "/path/to/image1.png",
-            "/path/to/image2.jpg",
-            "/path/to/image3.gif"
-          ]
+          "file": "/path/to/image1.png"
         }
       },
       {
@@ -57,11 +51,7 @@
            * Files can be of different types - the callback will
            * automatically detect the content type based on file extensions
            */
-          "files": [
-            "/path/to/report1.csv",
-            "/path/to/report2.xlsx",
-            "/path/to/summary.json"
-          ],
+          "file": "/path/to/report1.csv",
           "headers": [
             {
               "name": "X-Report-Count",
@@ -80,9 +70,7 @@
           /*
            * Single file downloads also work with the files array
            */
-          "files": [
-            "/path/to/archive.zip"
-          ]
+          "file": "/path/to/archive.zip"
         }
       },
       {
@@ -94,7 +82,7 @@
           "statusCode": 200,
           /*
            * Regular responses with body continue to work as before
-           * Only use "files" for multi-part file downloads
+           * Only use "file" for multi-part file downloads
            */
           "body": `{"message": "This is a regular JSON response"}`
         }

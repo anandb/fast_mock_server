@@ -8,15 +8,13 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.mockserver.mock.action.ExpectationResponseCallback;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
-import java.io.ByteArrayOutputStream;
+import org.mockserver.model.MediaType;
+
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -30,14 +28,14 @@ import java.util.stream.Stream;
 @Slf4j
 public class FileResponseCallback implements ExpectationResponseCallback {
 
-    private final List<String> filePaths;
+    private final String filePathTemplate;
     private final HttpResponse baseResponse;
     private final FreemarkerTemplateService templateService;
     private final String pathPattern;
 
-    public FileResponseCallback(List<String> filePaths, HttpResponse baseResponse,
+    public FileResponseCallback(String filePath, HttpResponse baseResponse,
                                FreemarkerTemplateService templateService, String pathPattern) {
-        this.filePaths = filePaths;
+        this.filePathTemplate = filePath;
         this.baseResponse = baseResponse;
         this.templateService = templateService;
         this.pathPattern = pathPattern;
@@ -46,69 +44,40 @@ public class FileResponseCallback implements ExpectationResponseCallback {
     @Override
     public HttpResponse handle(HttpRequest httpRequest) {
         try {
-            // Generate a boundary for multipart response
-            String boundary = "----WebKitFormBoundary" + UUID.randomUUID().toString().replace("-", "");
+            // Process file path as FreeMarker template and strip whitespace
+            String filePath = evaluateFilePathTemplate(filePathTemplate, httpRequest);
 
-            // Build multipart body using ByteArrayOutputStream to handle binary data safely
-            ByteArrayOutputStream multipartBody = new ByteArrayOutputStream();
-
-            for (String filePathTemplate : filePaths) {
-                // Process file path as FreeMarker template and strip whitespace
-                String filePath = evaluateFilePathTemplate(filePathTemplate, httpRequest);
-
-                // Use file glob to find the first file that starts with the given path as prefix
-                File file = findFirstFileWithPrefix(filePath);
-                if (file == null) {
-                    log.error("File not found using prefix: {}", filePath);
-                    return HttpResponse.response()
-                            .withStatusCode(404)
-                            .withBody("File not found: " + filePath);
-                }
-
-                if (!file.isFile()) {
-                    log.error("Path is not a file: {}", file.getAbsolutePath());
-                    return HttpResponse.response()
-                            .withStatusCode(400)
-                            .withBody("Path is not a file: " + file.getAbsolutePath());
-                }
-
-                try {
-                    // Read file content
-                    byte[] fileContent = Files.readAllBytes(file.toPath());
-                    String fileName = file.getName();
-                    String contentType = determineContentType(file.toPath());
-
-                    // Add multipart section - write headers as text
-                    multipartBody.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
-                    multipartBody.write(("Content-Disposition: form-data; name=\"file\"; filename=\"" +
-                            fileName + "\"\r\n").getBytes(StandardCharsets.UTF_8));
-                    multipartBody.write(("Content-Type: " + contentType + "\r\n").getBytes(StandardCharsets.UTF_8));
-                    multipartBody.write("\r\n".getBytes(StandardCharsets.UTF_8));
-
-                    // Write binary file content directly without String conversion
-                    multipartBody.write(fileContent);
-                    multipartBody.write("\r\n".getBytes(StandardCharsets.UTF_8));
-
-                    log.debug("Added file to multipart response: {} ({} bytes)", fileName, fileContent.length);
-                } catch (IOException e) {
-                    log.error("Error reading file: {}", filePath, e);
-                    return HttpResponse.response()
-                            .withStatusCode(500)
-                            .withBody("Error reading file: " + filePath + " - " + e.getMessage());
-                }
+            // Use file glob to find the first file that starts with the given path as prefix
+            File file = findFirstFileWithPrefix(filePath);
+            if (file == null) {
+                log.error("File not found using prefix: {}", filePath);
+                return HttpResponse.response()
+                        .withStatusCode(404)
+                        .withBody("File not found: " + filePath);
             }
 
-            // Add final boundary
-            multipartBody.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+            if (!file.isFile()) {
+                log.error("Path is not a file: {}", file.getAbsolutePath());
+                return HttpResponse.response()
+                        .withStatusCode(400)
+                        .withBody("Path is not a file: " + file.getAbsolutePath());
+            }
+
+            // Read file content
+            byte[] fileContent = Files.readAllBytes(file.toPath());
+            String fileName = file.getName();
+            String contentType = determineContentType(file.toPath());
+            log.debug("Added file {] to response: {} ({} bytes)", fileName, fileContent.length);
 
             // Return response with multipart body as binary data
             HttpResponse response = HttpResponse.response()
                     .withStatusCode(baseResponse.getStatusCode())
                     .withHeaders(baseResponse.getHeaderList())
-                    .withHeader("Content-Type", "multipart/form-data; boundary=" + boundary)
-                    .withBody(multipartBody.toByteArray());
+                    .withContentType(MediaType.parse(contentType))
+                    .withHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+                    .withBody(fileContent);
 
-            log.info("Served multipart response with {} file(s)", filePaths.size());
+            log.info("Served file downoad {}", filePath);
             return response;
 
         } catch (Exception e) {

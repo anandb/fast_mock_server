@@ -93,7 +93,7 @@ public class ExpectationController {
             log.debug("Parsed {} expectations", expectations.length);
 
             // Extract files information before parsing (since MockServer doesn't know about files field)
-            Map<String, List<String>> filesMap = extractFilesFromJson(expectationsJson);
+            Map<String, String> filesMap = extractFilesFromJson(expectationsJson);
 
             // Apply global headers and basic auth to each expectation and configure
             for (Expectation expectation : expectations) {
@@ -118,15 +118,15 @@ public class ExpectationController {
 
                 // Check if this expectation has files field (for multi-part file downloads)
                 String expectationKey = generateExpectationKey(processedExpectation.getHttpRequest());
-                List<String> filePaths = filesMap.get(expectationKey);
+                String filePath = filesMap.get(expectationKey);
 
-                if (filePaths != null && !filePaths.isEmpty()) {
+                if (filePath != null && !filePath.isEmpty()) {
                     log.debug("Detected files field in expectation, configuring file callback");
                     configureFileExpectation(
                         server,
                         processedExpectation.getHttpRequest(),
                         processedExpectation.getHttpResponse(),
-                        filePaths
+                        filePath
                     );
                 } else {
                     // Check if response body contains Freemarker template
@@ -467,13 +467,13 @@ public class ExpectationController {
 
     /**
      * Extracts files information from expectation JSON before parsing.
-     * This is necessary because MockServer's serializer doesn't know about our custom "files" field.
+     * This is necessary because MockServer's serializer doesn't know about our custom "file" field.
      *
      * @param json the raw JSON string
      * @return map of expectation keys to file path lists
      */
-    private Map<String, List<String>> extractFilesFromJson(String json) {
-        Map<String, List<String>> filesMap = new HashMap<>();
+    private Map<String, String> extractFilesFromJson(String json) {
+        Map<String, String> filesMap = new HashMap<>();
 
         try {
             JsonNode rootNode = objectMapper.readTree(json);
@@ -492,17 +492,11 @@ public class ExpectationController {
                 JsonNode httpResponse = expectationNode.get("httpResponse");
 
                 if (httpRequest != null && httpResponse != null) {
-                    JsonNode filesNode = httpResponse.get("files");
+                    JsonNode fileNode = httpResponse.get("file");
 
-                    if (filesNode != null && filesNode.isArray()) {
-                        List<String> filePaths = new ArrayList<>();
-                        filesNode.forEach(fileNode -> {
-                            if (fileNode.isTextual()) {
-                                filePaths.add(fileNode.asText());
-                            }
-                        });
-
-                        if (!filePaths.isEmpty()) {
+                    if (fileNode != null && fileNode.isTextual()) {
+                        String filePath = fileNode.asText();
+                        if (filePath != null) {
                             // Generate key from request method and path
                             String method = httpRequest.has("method") ?
                                 httpRequest.get("method").asText() : "GET";
@@ -510,8 +504,8 @@ public class ExpectationController {
                                 httpRequest.get("path").asText() : "/";
                             String key = method + ":" + path;
 
-                            filesMap.put(key, filePaths);
-                            log.debug("Extracted {} file(s) for {} {}", filePaths.size(), method, path);
+                            filesMap.put(key, filePath);
+                            log.debug("Extracted file(s) for {} {}", method, path);
                         }
                     }
                 }
@@ -552,14 +546,14 @@ public class ExpectationController {
             ClientAndServer server,
             org.mockserver.model.RequestDefinition request,
             HttpResponse response,
-            List<String> filePaths) {
+            String filePath) {
         String pathPattern = null;
         if (request instanceof org.mockserver.model.HttpRequest httpRequest && httpRequest.getPath() != null) {
             pathPattern = httpRequest.getPath().getValue();
         }
         // Create callback with file paths and template service for dynamic file paths
         FileResponseCallback callback = new FileResponseCallback(
-            filePaths,
+            filePath,
             response,
             freemarkerTemplateService,
             pathPattern

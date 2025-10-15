@@ -273,7 +273,7 @@ public class ConfigurationLoaderService {
 
         // Extract files information before parsing (following ExpectationController logic)
         JsonNode rootNode = objectMapper.readTree(expectationsJson);
-        java.util.Map<String, List<String>> filesMap = extractFilesFromJson(rootNode);
+        java.util.Map<String, String> filesMap = extractFilesFromJson(rootNode);
 
         // Parse expectations from JSON
         org.mockserver.serialization.ExpectationSerializer serializer =
@@ -305,15 +305,15 @@ public class ConfigurationLoaderService {
 
             // Check if this expectation has files field
             String expectationKey = generateExpectationKey(processedExpectation.getHttpRequest());
-            List<String> filePaths = filesMap.get(expectationKey);
+            String filePath = filesMap.get(expectationKey);
 
-            if (filePaths != null && !filePaths.isEmpty()) {
+            if (filePath != null && !filePath.isEmpty()) {
                 log.debug("Detected files field in expectation, configuring file callback");
                 configureFileExpectation(
                     serverInstance.getServer(),
                     processedExpectation.getHttpRequest(),
                     processedExpectation.getHttpResponse(),
-                    filePaths
+                    filePath
                 );
             } else {
                 // Check if response body contains Freemarker template
@@ -405,8 +405,8 @@ public class ConfigurationLoaderService {
      * @param json the raw JSON string
      * @return map of expectation keys to file path lists
      */
-    private java.util.Map<String, List<String>> extractFilesFromJson(JsonNode rootNode) {
-        java.util.Map<String, List<String>> filesMap = new java.util.HashMap<>();
+    private java.util.Map<String, String> extractFilesFromJson(JsonNode rootNode) {
+        java.util.Map<String, String> filesMap = new java.util.HashMap<>();
 
         try {
             // Handle array of expectations
@@ -430,35 +430,28 @@ public class ConfigurationLoaderService {
      */
     private void extractFilesFromExpectationNode(
         JsonNode expectationNode,
-        java.util.Map<String, List<String>> filesMap
+        java.util.Map<String, String> filesMap
     ) {
         JsonNode httpRequest = expectationNode.get("httpRequest");
         JsonNode httpResponse = expectationNode.get("httpResponse");
 
         if (httpRequest != null && httpResponse != null) {
-            JsonNode filesNode = httpResponse.get("files");
+            JsonNode fileNode = httpResponse.get("file");
 
-            if (filesNode != null && filesNode.isArray()) {
-                List<String> filePaths = new java.util.ArrayList<>();
-                filesNode.forEach(fileNode -> {
-                    if (fileNode.isTextual()) {
-                        filePaths.add(fileNode.asText());
-                    }
-                });
+            if (fileNode != null && fileNode.isTextual()) {
+                String filePath = fileNode.asText();
 
-                if (!filePaths.isEmpty()) {
-                    // Generate key from request method and path
-                    String method = httpRequest.has("method") ?
-                        httpRequest.get("method").asText() : "GET";
-                    String path = httpRequest.has("path") ?
-                        httpRequest.get("path").asText() : "/";
-                    String key = method + ":" + path;
+                // Generate key from request method and path
+                String method = httpRequest.has("method") ?
+                    httpRequest.get("method").asText() : "GET";
+                String path = httpRequest.has("path") ?
+                    httpRequest.get("path").asText() : "/";
+                String key = method + ":" + path;
 
-                    filesMap.put(key, filePaths);
-                    log.debug("Extracted {} file(s) for {} {}", filePaths.size(), method, path);
-                }
+                filesMap.put(key, filePath);
+                log.debug("Extracted file {} for {} {}", filePath, method, path);
 
-                ((ObjectNode)httpResponse).remove("files");
+                ((ObjectNode)httpResponse).remove("file");
             }
         }
     }
@@ -493,7 +486,7 @@ public class ConfigurationLoaderService {
      */
     private void addFilesToExpectations(
         org.mockserver.mock.Expectation[] expectations,
-        java.util.Map<String, List<String>> filesMap
+        java.util.Map<String, String> filesMap
     ) {
         // The files information is already available in the filesMap
         // and will be used when configuring each expectation.
@@ -518,14 +511,14 @@ public class ConfigurationLoaderService {
             org.mockserver.integration.ClientAndServer server,
             org.mockserver.model.RequestDefinition request,
             org.mockserver.model.HttpResponse response,
-            List<String> filePaths) {
+            String filePath) {
         String pathPattern = null;
         if (request instanceof org.mockserver.model.HttpRequest httpRequest && httpRequest.getPath() != null) {
             pathPattern = httpRequest.getPath().getValue();
         }
 
         FileResponseCallback callback = new FileResponseCallback(
-            filePaths,
+            filePath,
             response,
             freemarkerTemplateService,
             pathPattern
