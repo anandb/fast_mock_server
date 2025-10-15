@@ -1,8 +1,7 @@
 package io.github.anandb.mockserver;
 
-import java.util.logging.LogManager;
+import java.io.File;
 
-import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -22,11 +21,15 @@ public class MockServerApplication {
      * @param args command-line arguments passed to the application
      */
     public static void main(String[] args) {
-        // Remove existing JUL Handlers to prevent duplicate logging
-        LogManager.getLogManager().reset();
 
-        // Install the SLF4JBridgeHandler
-        SLF4JBridgeHandler.install();
+        // If running as a container, see if a configuration has been copied/mounted
+        if ("/home/cnb".equals(System.getProperty("user.home"))) {
+            String filePath = "/home/cnb/server.jsonmc";
+            File file = new File(filePath);
+            if (file.exists()) {
+                System.setProperty("mock.server.config.file", filePath);
+            }
+        }
 
         SpringApplication.run(MockServerApplication.class, args);
     }

@@ -430,7 +430,7 @@ public class ExpectationController {
         }
 
         // Handle other fields as custom headers
-        responseNode.fields().forEachRemaining(entry -> {
+        responseNode.properties().forEach(entry -> {
             String fieldName = entry.getKey();
             JsonNode fieldValue = entry.getValue();
 

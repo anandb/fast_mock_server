@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -54,13 +54,13 @@ class ExpectationControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private MockServerManager mockServerManager;
 
-    @MockBean
+    @MockitoBean
     private MockServerOperations mockServerOperations;
 
-    @MockBean
+    @MockitoBean
     private FreemarkerTemplateService mockTemplateService;
 
     @Mock

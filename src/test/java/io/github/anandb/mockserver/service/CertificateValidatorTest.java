@@ -84,9 +84,7 @@ class CertificateValidatorTest {
         -----BEGIN RSA PRIVATE KEY-----
         MIIEpAIBAAKCAQEAtjr4+zolMjAllzeNlvo15jGqCCxR9jLZckq0ayX/YiA/5juE
         cvynoK11m1+q7866dMyyo9AjinWQgPCCiY942VDl6EN44mQs5KZuTkEhpDgOm/D6
-        iHkQ8vQroIRMOOvVmwMI2oydYpMDcJhab3x7dOLvEN7d+T4TqbpRPpC4YGE
-
-BT9fvR
+        iHkQ8vQroIRMOOvVmwMI2oydYpMDcJhab3x7dOLvEN7d+T4TqbpRPpC4YGEBT9fvR
         lTKv59YOAvEpWlH7w4TGkYp/0DmAeixilAfRS2DNRB2lIRHC4183n3ku7C2+oqRF
         WV+IXAcC3H3HlZvWO0i64H0nALRZPkqGqREEyOenDLvgEvWC5J4JybRZ7vQzqOft
         iPdEEYJqBLnSL/AfRxOZNHhjcUllS3cy7DjSQIDAQABAoIBACigfy/rZ62HxGmxL

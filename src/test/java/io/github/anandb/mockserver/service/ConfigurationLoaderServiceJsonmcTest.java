@@ -85,7 +85,7 @@ and should be properly parsed
             ]
           }
         ]
-        """;
+""";
 
         // Write the content to a .jsonmc file
         Path configFile = tempDir.resolve("test-config.jsonmc");
@@ -239,13 +239,12 @@ and should be properly parsed
               /* This is a multiline comment
                  in a base64-encoded config */
               "description": `
-Multiline description
-from base64-encoded JSONMC
-`
+               Multiline description
+               from base64-encoded JSONMC`
             }
           }
         ]
-        """;
+""";
 
         // Encode the content to base64
         String base64Content = Base64.getEncoder().encodeToString(jsonmcContent.getBytes(StandardCharsets.UTF_8));

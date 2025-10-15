@@ -273,7 +273,7 @@ void testExample() {
 
 ### 3. Mocking Strategy
 - Use `@Mock` for dependencies
-- Use `@MockBean` in Spring context tests
+- Use `@MockitoBean` in Spring context tests
 - Verify interactions with `verify()`
 - Stub behavior with `when().thenReturn()`
 
