@@ -3,7 +3,9 @@ package io.github.anandb.mockserver.callback;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.service.RelayService;
 import io.github.anandb.mockserver.service.RelayService.RelayResponse;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.mockserver.mock.action.ExpectationResponseCallback;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
@@ -11,6 +13,7 @@ import org.mockserver.model.HttpResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 
 /**
  * Callback for relaying HTTP requests to a remote server with optional OAuth2 authentication.
@@ -33,7 +36,7 @@ public class RelayResponseCallback implements ExpectationResponseCallback {
     @Override
     public HttpResponse handle(HttpRequest httpRequest) {
         try {
-            log.debug("Relaying request: {} {}", httpRequest.getMethod().getValue(), httpRequest.getPath().getValue());
+            log.debug("Relaying request: {} {}", httpRequest);
 
             // Extract request details
             String method = httpRequest.getMethod().getValue();
@@ -83,7 +86,7 @@ public class RelayResponseCallback implements ExpectationResponseCallback {
             // Build MockServer HttpResponse from relay response
             HttpResponse response = HttpResponse.response()
                 .withStatusCode(relayResponse.getStatusCode());
-
+            log.debug("Request: {} {}", response);
             // Add response headers
             if (relayResponse.getHeaders() != null) {
                 for (Map.Entry<String, List<String>> header : relayResponse.getHeaders().entrySet()) {
