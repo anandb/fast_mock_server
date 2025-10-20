@@ -9,9 +9,11 @@ import io.github.anandb.mockserver.service.MockServerOperationsImpl;
 import io.github.anandb.mockserver.service.FreemarkerTemplateService;
 import io.github.anandb.mockserver.callback.FreemarkerResponseCallback;
 import io.github.anandb.mockserver.callback.FileResponseCallback;
+import io.github.anandb.mockserver.callback.SSEResponseCallback;
 import io.github.anandb.mockserver.model.GlobalHeader;
 import io.github.anandb.mockserver.util.FreemarkerTemplateDetector;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
@@ -95,6 +97,9 @@ public class ExpectationController {
             // Extract files information before parsing (since MockServer doesn't know about files field)
             Map<String, String> filesMap = extractFilesFromJson(expectationsJson);
 
+            // Extract SSE information before parsing (since MockServer doesn't know about SSE fields)
+            Map<String, SSEConfig> sseConfigMap = extractSSEFromJson(expectationsJson);
+
             // Apply global headers and basic auth to each expectation and configure
             for (Expectation expectation : expectations) {
                 // Apply global headers if present
@@ -119,8 +124,17 @@ public class ExpectationController {
                 // Check if this expectation has files field (for multi-part file downloads)
                 String expectationKey = generateExpectationKey(processedExpectation.getHttpRequest());
                 String filePath = filesMap.get(expectationKey);
+                SSEConfig sseConfig = sseConfigMap.get(expectationKey);
 
-                if (filePath != null && !filePath.isEmpty()) {
+                if (sseConfig != null) {
+                    log.debug("Detected SSE configuration in expectation, configuring SSE callback");
+                    configureSSEExpectation(
+                        server,
+                        processedExpectation.getHttpRequest(),
+                        processedExpectation.getHttpResponse(),
+                        sseConfig
+                    );
+                } else if (filePath != null && !filePath.isEmpty()) {
                     log.debug("Detected files field in expectation, configuring file callback");
                     configureFileExpectation(
                         server,
@@ -341,7 +355,8 @@ public class ExpectationController {
      * Creates a minimal HttpRequest from JSON node.
      * <p>
      * Only extracts method and path for basic matching. Additional request
-     * properties can be added as needed.
+     * properties can be added as needed. SSE-specific fields are excluded
+     * as they are not part of the standard MockServer HttpRequest.
      * </p>
      *
      * @param requestNode the JSON node containing request information
@@ -358,6 +373,8 @@ public class ExpectationController {
             path = requestNode.get("path").asText();
         }
 
+        // Note: SSE flag is intentionally not included in the HttpRequest
+        // as it's only used for configuration and not for request matching
         return request().withMethod(method).withPath(path);
     }
 
@@ -434,8 +451,10 @@ public class ExpectationController {
             String fieldName = entry.getKey();
             JsonNode fieldValue = entry.getValue();
 
-            // Skip standard fields we've already handled
-            if (!fieldName.equals("statusCode") && !fieldName.equals("body") && !fieldName.equals("headers")) {
+            // Skip standard fields and SSE-specific fields we've already handled
+            if (!fieldName.equals("statusCode") && !fieldName.equals("body") &&
+                !fieldName.equals("headers") && !fieldName.equals("file") &&
+                !fieldName.equals("interval") && !fieldName.equals("messages")) {
                 String value = fieldValue.isTextual() ? fieldValue.asText() : fieldValue.toString();
                 allHeaders.add(header("X-Custom-" + fieldName, value));
             }
@@ -463,6 +482,97 @@ public class ExpectationController {
             log.debug("Cleared existing expectations for {} {}",
                      httpRequest.getMethod(), httpRequest.getPath());
         }
+    }
+
+    /**
+     * Helper class to hold SSE configuration extracted from JSON.
+     */
+    private static class SSEConfig {
+        List<String> messages;
+        int intervalMs;
+
+        SSEConfig(List<String> messages, int intervalMs) {
+            this.messages = messages;
+            this.intervalMs = intervalMs;
+        }
+    }
+
+    /**
+     * Extracts SSE information from expectation JSON before parsing.
+     * This is necessary because MockServer's serializer doesn't know about our custom SSE fields.
+     *
+     * @param json the raw JSON string
+     * @return map of expectation keys to SSE configuration
+     */
+    private Map<String, SSEConfig> extractSSEFromJson(String json) {
+        Map<String, SSEConfig> sseConfigMap = new HashMap<>();
+
+        try {
+            JsonNode rootNode = objectMapper.readTree(json);
+
+            // Handle both single expectation and array
+            List<JsonNode> expectationNodes = new ArrayList<>();
+            if (rootNode.isArray()) {
+                rootNode.forEach(expectationNodes::add);
+            } else {
+                expectationNodes.add(rootNode);
+            }
+
+            // Extract SSE config from each expectation
+            for (JsonNode expectationNode : expectationNodes) {
+                JsonNode httpRequest = expectationNode.get("httpRequest");
+                JsonNode httpResponse = expectationNode.get("httpResponse");
+
+                if (httpRequest != null && httpResponse != null) {
+                    // Check if request has sse flag set to true
+                    JsonNode sseNode = httpRequest.get("sse");
+                    boolean isSse = sseNode != null && sseNode.isBoolean() && sseNode.asBoolean();
+
+                    if (isSse) {
+                        // Extract interval and messages from response
+                        JsonNode intervalNode = httpResponse.get("interval");
+                        JsonNode messagesNode = httpResponse.get("messages");
+
+                        if (intervalNode != null && intervalNode.isNumber() &&
+                            messagesNode != null && messagesNode.isArray()) {
+
+                            int interval = intervalNode.asInt();
+                            List<String> messages = new ArrayList<>();
+
+                            messagesNode.forEach(msgNode -> {
+                                if (msgNode.isTextual()) {
+                                    messages.add(msgNode.asText());
+                                } else {
+                                    messages.add(msgNode.toString());
+                                }
+                            });
+
+                            if (!messages.isEmpty()) {
+                                // Generate key from request method and path
+                                String method = httpRequest.has("method") ?
+                                    httpRequest.get("method").asText() : "GET";
+                                String path = httpRequest.has("path") ?
+                                    httpRequest.get("path").asText() : "/";
+                                String key = method + ":" + path;
+
+                                sseConfigMap.put(key, new SSEConfig(messages, interval));
+                                log.debug("Extracted SSE config for {} {}: {} messages with {}ms interval",
+                                    method, path, messages.size(), interval);
+
+                                 // Remove SSE-specific fields from the JSON before MockServer parsing
+                                ((ObjectNode)httpRequest).remove("sse");
+                                ((ObjectNode)httpResponse).remove("interval");
+                                ((ObjectNode)httpResponse).remove("messages");
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error extracting SSE config from JSON", e);
+        }
+
+        return sseConfigMap;
     }
 
     /**
@@ -506,6 +616,7 @@ public class ExpectationController {
 
                             filesMap.put(key, filePath);
                             log.debug("Extracted file(s) for {} {}", method, path);
+                            ((ObjectNode)httpResponse).remove("file");
                         }
                     }
                 }
@@ -532,6 +643,31 @@ public class ExpectationController {
             return method + ":" + path;
         }
         return "UNKNOWN";
+    }
+
+    /**
+     * Configures an expectation with an SSE response callback.
+     *
+     * @param server the MockServer instance
+     * @param request the HTTP request matcher
+     * @param response the base HTTP response (contains headers and status)
+     * @param sseConfig the SSE configuration with messages and interval
+     */
+    private void configureSSEExpectation(
+            ClientAndServer server,
+            org.mockserver.model.RequestDefinition request,
+            HttpResponse response,
+            SSEConfig sseConfig) {
+
+        // Create callback with SSE configuration
+        SSEResponseCallback callback = new SSEResponseCallback(
+            sseConfig.messages,
+            sseConfig.intervalMs,
+            response
+        );
+
+        // Configure expectation with callback
+        server.when(request).respond(callback);
     }
 
     /**

@@ -429,6 +429,69 @@ See `server-config-example.json` for a complete example with multiple servers an
 Successfully configured 2 expectation(s) for server: simple-service
 ```
 
+**Server-Sent Events (SSE) Expectations**:
+
+For streaming events to clients using Server-Sent Events, set the `sse` flag to `true` in the `httpRequest` and provide `interval` and `messages` in the `httpResponse`:
+
+```json
+{
+  "httpRequest": {
+    "method": "GET",
+    "path": "/api/stream",
+    "sse": true
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "interval": 1000,
+    "messages": [
+      "Event 1: Server started",
+      "Event 2: Processing data",
+      "Event 3: Task completed"
+    ]
+  }
+}
+```
+
+SSE Configuration:
+- `sse`: Boolean flag in `httpRequest` to enable SSE mode (required)
+- `interval`: Time in milliseconds between messages (informational, for documentation purposes)
+- `messages`: Array of strings to send as SSE events (can be plain text or JSON strings)
+
+**Example with JSON messages**:
+```json
+{
+  "httpRequest": {
+    "method": "GET",
+    "path": "/api/notifications",
+    "sse": true
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "interval": 500,
+    "messages": [
+      "{\"type\":\"info\",\"message\":\"Welcome\"}",
+      "{\"type\":\"update\",\"message\":\"New data available\"}",
+      "{\"type\":\"success\",\"message\":\"Process completed\"}"
+    ]
+  }
+}
+```
+
+SSE Response Format:
+- Content-Type: `text/event-stream`
+- Each message is formatted as: `data: <message>\n\n`
+- Messages are sent immediately (no actual delay between events)
+- Compatible with standard SSE clients and EventSource API
+
+**Important Notes:**
+- The `interval` field is informational only and documents the intended delay
+- MockServer's callback model doesn't support streaming with actual delays
+- All messages are sent immediately but formatted as separate SSE events
+- Clients should parse them correctly as individual SSE events
+- When `sse: true` is set, the response `body` field is ignored
+
+See `examples/server-config-sse-example.jsonmc` for complete SSE examples.
+
 **Multi-Part File Download Expectations**:
 
 For serving file downloads, use the `files` field in `httpResponse` instead of `body`:
