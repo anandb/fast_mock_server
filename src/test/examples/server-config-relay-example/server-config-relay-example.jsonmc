@@ -16,7 +16,7 @@
     "relays": [
       {
         /* Match all paths by default */
-        "prefix": "/**",
+        "prefixes": ["/**"],
         /* The remote URL to relay requests to (base URL) */
         "remoteUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
 
@@ -57,7 +57,7 @@
    * 6. Forward the request (method, path, headers, body) to the remote URL
    * 7. Return the response from the remote server
    *
-   * Multiple relays can be configured with different prefixes. The first matching
+   * Multiple relays can be configured with different prefixes. The longest matching
    * prefix will be used.
    */
 

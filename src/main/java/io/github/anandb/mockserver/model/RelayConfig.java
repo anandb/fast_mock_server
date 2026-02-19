@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.NotBlank;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,9 +30,13 @@ public class RelayConfig {
     @JsonProperty("remoteUrl")
     private String remoteUrl;
 
-    /** The prefix to match against the request path (ant pattern) */
-    @JsonProperty("prefix")
-    private String prefix = "/**";
+    /** The prefixes to match against the request path (ant patterns) */
+    @JsonProperty("prefixes")
+    private List<String> prefixes = new ArrayList<>(List.of("/**"));
+
+    public List<String> getAllPrefixes() {
+        return (prefixes != null && !prefixes.isEmpty()) ? prefixes : List.of("/**");
+    }
 
     /**
      * The OAuth2 token endpoint URL (optional - only required if using OAuth2

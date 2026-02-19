@@ -30,9 +30,9 @@ The simplest relay configuration only requires a remote URL:
   "server": {
     "serverId": "simple-relay-server",
     "port": 8080,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com"
-    }
+    }]
   }
 }
 ```
@@ -46,12 +46,12 @@ To add OAuth2 authentication, include the token endpoint and client credentials:
   "server": {
     "serverId": "oauth-relay-server",
     "port": 8080,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "your-client-id",
       "clientSecret": "your-client-secret"
-    }
+    }]
   }
 }
 ```
@@ -64,7 +64,7 @@ To add OAuth2 authentication, include the token endpoint and client credentials:
     "serverId": "advanced-relay-server",
     "port": 8080,
     "description": "Relay server with full configuration",
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "your-client-id",
@@ -75,7 +75,7 @@ To add OAuth2 authentication, include the token endpoint and client credentials:
         "X-Custom-Header": "custom-value",
         "X-API-Version": "v1"
       }
-    }
+    }]
   }
 }
 ```
@@ -102,9 +102,36 @@ To enable OAuth2 authentication, you must provide all three of these parameters.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
+| `prefixes` | List<String> | `["/**"]` | List of path prefixes to match (ant patterns). When multiple relays match, the longest matching prefix is selected |
 | `scope` | String | null | OAuth2 scope to request (space-separated list) |
 | `grantType` | String | "client_credentials" | OAuth2 grant type |
 | `headers` | Map<String, String> | null | Custom headers to add to all relayed requests |
+
+### Multiple Prefixes and Longest Match
+
+Each relay configuration can have multiple prefixes. When a request comes in, the server checks all configured prefixes across all relays and selects the **longest matching prefix**.
+
+Example:
+```json
+{
+  "relays": [
+    {
+      "prefixes": ["/api/v1", "/api"],
+      "remoteUrl": "https://api-v1.example.com"
+    },
+    {
+      "prefixes": ["/images"],
+      "remoteUrl": "https://images.example.com"
+    }
+  ]
+}
+```
+
+- Request to `/api/users` → matches `/api` → forwards to `https://api-v1.example.com`
+- Request to `/api/v1/users` → matches `/api/v1` (longer) → forwards to `https://api-v1.example.com`
+- Request to `/images/logo.png` → matches `/images` → forwards to `https://images.example.com`
+
+If no prefixes are specified, defaults to `["/**"]` (matches all paths).
 
 ## How It Works
 
@@ -142,7 +169,7 @@ To enable OAuth2 authentication, you must provide all three of these parameters.
 #### Headers Added to Relayed Requests
 
 1. `Authorization: Bearer <access_token>` (automatically added when OAuth2 is configured)
-2. Custom headers from `relayConfig.headers`
+2. Custom headers from `relays[].headers`
 3. Original request headers (with some exclusions)
 
 #### Headers Excluded from Relaying
@@ -166,9 +193,9 @@ Create a server configuration file `relay-no-auth-config.jsonmc`:
   "server": {
     "serverId": "simple-relay",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com"
-    }
+    }]
   }
 }
 ```
@@ -195,12 +222,12 @@ Create a server configuration file `relay-oauth-config.jsonmc`:
   "server": {
     "serverId": "api-relay",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "my-client-id",
       "clientSecret": "my-client-secret"
-    }
+    }]
   }
 }
 ```
@@ -225,13 +252,13 @@ curl http://localhost:8090/users/123
   "server": {
     "serverId": "relay-custom-headers",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "headers": {
         "X-API-Version": "v2",
         "X-Client-App": "test-suite"
       }
-    }
+    }]
   }
 }
 ```
@@ -243,7 +270,7 @@ curl http://localhost:8090/users/123
   "server": {
     "serverId": "api-relay-custom",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "my-client-id",
@@ -252,7 +279,7 @@ curl http://localhost:8090/users/123
         "X-API-Version": "v2",
         "X-Client-App": "test-suite"
       }
-    }
+    }]
   }
 }
 ```
@@ -264,13 +291,13 @@ curl http://localhost:8090/users/123
   "server": {
     "serverId": "api-relay-scoped",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "my-client-id",
       "clientSecret": "my-client-secret",
       "scope": "read:users write:users admin:all"
-    }
+    }]
   }
 }
 ```
@@ -285,9 +312,9 @@ curl -X POST http://localhost:8080/api/servers \
   -d '{
     "serverId": "simple-relay",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com"
-    }
+    }]
   }'
 ```
 
@@ -299,12 +326,12 @@ curl -X POST http://localhost:8080/api/servers \
   -d '{
     "serverId": "oauth-relay",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "client-id",
       "clientSecret": "client-secret"
-    }
+    }]
   }'
 ```
 
@@ -330,7 +357,11 @@ Response will include `"relayEnabled": true`:
 
 1. **Expectations are Ignored**: When relay is enabled, any expectations configured for the server are ignored. ALL requests are forwarded to the remote server.
 
-2. **OAuth2 is Optional**: OAuth2 authentication is completely optional. You can create a relay without any authentication by only providing the `remoteUrl`.
+2. **Multiple Prefixes**: Each relay can have multiple prefixes. The **longest matching prefix** is selected when multiple relays match.
+
+3. **Default Prefix**: If no prefixes are specified, defaults to `["/**"]` which matches all paths.
+
+4. **OAuth2 is Optional**: OAuth2 authentication is completely optional. You can create a relay without any authentication by only providing the `remoteUrl`.
 
 3. **Partial OAuth2 Config Not Allowed**: If you provide any OAuth2 parameter (`tokenUrl`, `clientId`, or `clientSecret`), you must provide all three. Partial configuration will result in a validation error.
 
@@ -360,7 +391,7 @@ Response will include `"relayEnabled": true`:
 
 ### Issue: Custom Headers Not Being Forwarded
 
-**Solution:** Verify that the headers are correctly specified in the `relayConfig.headers` object. Note that certain system headers (Host, Connection, etc.) are intentionally excluded.
+**Solution:** Verify that the headers are correctly specified in the `relays[].headers` object. Note that certain system headers (Host, Connection, etc.) are intentionally excluded.
 
 ## Advanced Topics
 
@@ -368,7 +399,7 @@ Response will include `"relayEnabled": true`:
 
 Relay configuration can be combined with:
 - **TLS/HTTPS**: The mock server can accept HTTPS connections while relaying to HTTP or HTTPS
-- **Global Headers**: Global headers configured on the server are NOT added to relayed requests (only custom headers from relayConfig are added)
+- **Global Headers**: Global headers configured on the server are NOT added to relayed requests (only custom headers from relays are added)
 - **Basic Auth**: The mock server can require basic auth for incoming requests, separate from the OAuth2 used for the remote server
 
 Example with TLS:
@@ -381,12 +412,12 @@ Example with TLS:
       "keystore": "path/to/keystore.jks",
       "keystorePassword": "password"
     },
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "client-id",
       "clientSecret": "client-secret"
-    }
+    }]
   }
 }
 ```

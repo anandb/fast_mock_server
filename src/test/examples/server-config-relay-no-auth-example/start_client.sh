@@ -57,7 +57,7 @@ echo ""
 
 echo "The relay server will:"
 echo "1. Forward the request to the remote API as-is"
-echo "2. Add any custom headers configured in relayConfig.headers"
+echo "2. Add any custom headers configured in relays[].headers"
 echo "3. Return the response from the remote API"
 echo ""
 echo "No authentication is added by the relay server."

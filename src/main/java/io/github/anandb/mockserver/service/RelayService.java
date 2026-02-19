@@ -48,7 +48,14 @@ public class RelayService {
         }
 
         return relays.stream()
-                .filter(relay -> relay.getPrefix() != null && pathMatcher.match(relay.getPrefix(), path))
+                .flatMap(relay -> relay.getAllPrefixes().stream()
+                        .filter(prefix -> pathMatcher.match(prefix, path))
+                        .map(prefix -> new Object() {
+                            final RelayConfig config = relay;
+                            final String matchedPrefix = prefix;
+                        }))
+                .sorted((a, b) -> b.matchedPrefix.length() - a.matchedPrefix.length())
+                .map(a -> a.config)
                 .findFirst();
     }
 

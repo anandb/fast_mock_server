@@ -902,9 +902,9 @@ curl -X POST http://localhost:8080/api/servers \
     "serverId": "simple-relay",
     "port": 8090,
     "description": "Simple relay to remote API",
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com"
-    }
+    }]
   }'
 ```
 
@@ -929,13 +929,13 @@ curl -X POST http://localhost:8080/api/servers \
     "serverId": "oauth-relay",
     "port": 8090,
     "description": "Relay with OAuth2 authentication",
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "your-client-id",
       "clientSecret": "your-client-secret",
       "scope": "api:read api:write"
-    }
+    }]
   }'
 ```
 
@@ -947,13 +947,13 @@ curl -X POST http://localhost:8080/api/servers \
   -d '{
     "serverId": "custom-relay",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "headers": {
         "X-API-Version": "v2",
         "X-Client-App": "test-suite"
       }
-    }
+    }]
   }'
 ```
 
@@ -980,6 +980,7 @@ curl http://localhost:8090/users/123
 - `clientSecret`: OAuth2 client secret
 
 **Optional:**
+- `prefixes`: List of path prefixes to match (default: `["/**"]`)
 - `scope`: OAuth2 scope to request
 - `grantType`: OAuth2 grant type (default: "client_credentials")
 - `headers`: Custom headers to add to all relayed requests
@@ -987,6 +988,7 @@ curl http://localhost:8090/users/123
 ### Important Notes
 
 - When relay is enabled, **expectations are ignored** - all requests are forwarded
+- Multiple relays can be configured with different prefixes. The **longest matching prefix** is selected
 - OAuth2 is completely optional - omit token parameters for no authentication
 - If providing OAuth2 config, all three parameters (`tokenUrl`, `clientId`, `clientSecret`) must be provided
 - Tokens are automatically cached and refreshed when expired
@@ -1000,9 +1002,9 @@ curl http://localhost:8090/users/123
   "server": {
     "serverId": "simple-relay",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com"
-    }
+    }]
   }
 }
 ```
@@ -1013,12 +1015,12 @@ curl http://localhost:8090/users/123
   "server": {
     "serverId": "oauth-relay",
     "port": 8090,
-    "relayConfig": {
+    "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
       "clientId": "client-id",
       "clientSecret": "client-secret"
-    }
+    }]
   }
 }
 ```

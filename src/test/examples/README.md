@@ -35,13 +35,13 @@ Server with mutual TLS (mTLS) authentication.
 ### 5. server-config-relay-example/
 Relay server that forwards requests to a remote API with OAuth2 authentication.
 - **Port:** 8090
-- **Features:** OAuth2 token acquisition, request forwarding
+- **Features:** OAuth2 token acquisition, request forwarding, multiple prefixes support
 - **Note:** Update configuration with real OAuth2 credentials and remote URL
 
 ### 6. server-config-relay-no-auth-example/
 Relay server that forwards requests to a remote API without authentication.
 - **Port:** 8090
-- **Features:** Simple proxying, custom header injection
+- **Features:** Simple proxying, custom header injection, multiple prefixes support
 - **Note:** Update configuration with real remote URL
 
 ### 7. server-config-files-example/

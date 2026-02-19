@@ -169,11 +169,11 @@ class MockServerManagerTest {
     @DisplayName("Should create server with multiple relays successfully")
     void testCreateServerWithRelays() {
         RelayConfig relay1 = new RelayConfig();
-        relay1.setPrefix("/api");
+        relay1.setPrefixes(List.of("/api"));
         relay1.setRemoteUrl("http://api.example.com");
 
         RelayConfig relay2 = new RelayConfig();
-        relay2.setPrefix("/service");
+        relay2.setPrefixes(List.of("/service"));
         relay2.setRemoteUrl("http://service.example.com");
 
         List<RelayConfig> relays = List.of(relay1, relay2);
@@ -196,7 +196,7 @@ class MockServerManagerTest {
         ServerInstance instance = mockServerManager.getServerInstance("relay-server");
         assertNotNull(instance.relays());
         assertEquals(2, instance.relays().size());
-        assertEquals("/api", instance.relays().get(0).getPrefix());
-        assertEquals("/service", instance.relays().get(1).getPrefix());
+        assertEquals(List.of("/api"), instance.relays().get(0).getPrefixes());
+        assertEquals(List.of("/service"), instance.relays().get(1).getPrefixes());
     }
 }

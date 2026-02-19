@@ -15,14 +15,14 @@
     /* Relay configuration for forwarding requests to a remote server without OAuth2 */
     "relays": [
       {
-        "prefix": "/api/**",
+        "prefixes": ["/api/**"],
         "remoteUrl": "https://api.webhook.site/v1",
         "headers": {
           "X-Service-Name": "api-service"
         }
       },
       {
-        "prefix": "/images/**",
+        "prefixes": ["/images/**"],
         "remoteUrl": "https://assets.webhook.site/images",
         "headers": {
           "X-Service-Name": "image-service"
@@ -41,7 +41,7 @@
    * 3. Add any custom headers from the matching relay's headers
    * 4. Return the response from the remote server
    *
-   * Multiple relays can be configured with different prefixes. The first matching
+   * Multiple relays can be configured with different prefixes. The longest matching
    * prefix will be used.
    *
    * No OAuth2 authentication will be performed since tokenUrl, clientId, and
