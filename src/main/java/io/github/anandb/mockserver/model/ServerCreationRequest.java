@@ -50,19 +50,19 @@ public class ServerCreationRequest {
 
     /** Optional relay configuration for forwarding requests to a remote server */
     @Valid
-    @JsonProperty("relayConfig")
-    private RelayConfig relayConfig;
+    @JsonProperty("relays")
+    private List<RelayConfig> relays;
 
     public ServerCreationRequest() {}
 
-    public ServerCreationRequest(String serverId, Integer port, String description, TlsConfig tlsConfig, List<GlobalHeader> globalHeaders, BasicAuthConfig basicAuthConfig, RelayConfig relayConfig) {
+    public ServerCreationRequest(String serverId, Integer port, String description, TlsConfig tlsConfig, List<GlobalHeader> globalHeaders, BasicAuthConfig basicAuthConfig, List<RelayConfig> relays) {
         this.serverId = serverId;
         this.port = port;
         this.description = description;
         this.tlsConfig = tlsConfig;
         this.globalHeaders = globalHeaders;
         this.basicAuthConfig = basicAuthConfig;
-        this.relayConfig = relayConfig;
+        this.relays = relays;
     }
 
     public String getServerId() { return serverId; }
@@ -77,8 +77,8 @@ public class ServerCreationRequest {
     public void setGlobalHeaders(List<GlobalHeader> globalHeaders) { this.globalHeaders = globalHeaders; }
     public BasicAuthConfig getBasicAuthConfig() { return basicAuthConfig; }
     public void setBasicAuthConfig(BasicAuthConfig basicAuthConfig) { this.basicAuthConfig = basicAuthConfig; }
-    public RelayConfig getRelayConfig() { return relayConfig; }
-    public void setRelayConfig(RelayConfig relayConfig) { this.relayConfig = relayConfig; }
+    public List<RelayConfig> getRelays() { return relays; }
+    public void setRelays(List<RelayConfig> relays) { this.relays = relays; }
 
     /**
      * Checks if TLS is enabled and properly configured for this server.
@@ -113,6 +113,6 @@ public class ServerCreationRequest {
      * @return true if relay configuration is present and valid, false otherwise
      */
     public boolean isRelayEnabled() {
-        return relayConfig != null && relayConfig.isValid();
+        return relays != null && !relays.isEmpty() && relays.stream().allMatch(RelayConfig::isValid);
     }
 }

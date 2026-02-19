@@ -13,27 +13,36 @@
     "description": "Mock server that relays requests to a remote API without authentication",
 
     /* Relay configuration for forwarding requests to a remote server without OAuth2 */
-    "relayConfig": {
-      /* The remote URL to relay requests to (base URL) - this is the only required field */
-      "remoteUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
-
-      /* Optional: Additional headers to include when relaying requests
-       * These headers will be added to all relayed requests
-       */
-      "headers": {
-        "X-Custom-Header": "custom-value",
-        "X-API-Version": "v1"
+    "relays": [
+      {
+        "prefix": "/api/**",
+        "remoteUrl": "https://api.webhook.site/v1",
+        "headers": {
+          "X-Service-Name": "api-service"
+        }
+      },
+      {
+        "prefix": "/images/**",
+        "remoteUrl": "https://assets.webhook.site/images",
+        "headers": {
+          "X-Service-Name": "image-service"
+        }
       }
-    }
+    ]
   },
 
-  /* Note: When relay is configured, the server will forward ALL incoming requests
-   * to the remote URL. Any expectations configured below will be ignored.
+  /* Note: When relay is configured, the server will forward matching requests
+   * to the remote URL based on prefix match. Any expectations configured 
+   * below will be ignored for paths that match a relay prefix.
    *
    * The relay will:
-   * 1. Forward the request (method, path, headers, body) to the remote URL
-   * 2. Add any custom headers from relayConfig.headers
-   * 3. Return the response from the remote server
+   * 1. Match the incoming request path against relay prefixes
+   * 2. Forward the request (method, path, headers, body) to the matching relay's remote URL
+   * 3. Add any custom headers from the matching relay's headers
+   * 4. Return the response from the remote server
+   *
+   * Multiple relays can be configured with different prefixes. The first matching
+   * prefix will be used.
    *
    * No OAuth2 authentication will be performed since tokenUrl, clientId, and
    * clientSecret are not provided.

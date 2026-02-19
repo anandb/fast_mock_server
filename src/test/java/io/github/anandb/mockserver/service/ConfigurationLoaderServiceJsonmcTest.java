@@ -3,6 +3,7 @@ package io.github.anandb.mockserver.service;
 import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +24,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;

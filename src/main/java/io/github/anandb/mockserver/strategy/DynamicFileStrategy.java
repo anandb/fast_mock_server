@@ -145,20 +145,40 @@ public class DynamicFileStrategy implements ResponseStrategy {
     private String determineContentType(Path filePath) {
         try {
             String contentType = Files.probeContentType(filePath);
-            if (contentType != null) return contentType;
+            if (contentType != null) {
+                return contentType;
+            }
         } catch (IOException e) {
             log.warn("Could not probe content type for file: {}", filePath, e);
         }
         String fileName = filePath.getFileName().toString().toLowerCase();
-        if (fileName.endsWith(".pdf")) return "application/pdf";
-        if (fileName.endsWith(".zip")) return "application/zip";
-        if (fileName.endsWith(".json")) return "application/json";
-        if (fileName.endsWith(".xml")) return "application/xml";
-        if (fileName.endsWith(".txt")) return "text/plain";
-        if (fileName.endsWith(".csv")) return "text/csv";
-        if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) return "image/jpeg";
-        if (fileName.endsWith(".png")) return "image/png";
-        if (fileName.endsWith(".gif")) return "image/gif";
+        if (fileName.endsWith(".pdf")) {
+            return "application/pdf";
+        }
+        if (fileName.endsWith(".zip")) {
+            return "application/zip";
+        }
+        if (fileName.endsWith(".json")) {
+            return "application/json";
+        }
+        if (fileName.endsWith(".xml")) {
+            return "application/xml";
+        }
+        if (fileName.endsWith(".txt")) {
+            return "text/plain";
+        }
+        if (fileName.endsWith(".csv")) {
+            return "text/csv";
+        }
+        if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        if (fileName.endsWith(".png")) {
+            return "image/png";
+        }
+        if (fileName.endsWith(".gif")) {
+            return "image/gif";
+        }
         return "application/octet-stream";
     }
 }

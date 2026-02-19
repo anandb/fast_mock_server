@@ -13,43 +13,52 @@
     "description": "Mock server that relays requests to a remote API with OAuth2",
 
     /* Relay configuration for forwarding requests to a remote server */
-    "relayConfig": {
-      /* The remote URL to relay requests to (base URL) */
-      "remoteUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
+    "relays": [
+      {
+        /* Match all paths by default */
+        "prefix": "/**",
+        /* The remote URL to relay requests to (base URL) */
+        "remoteUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
 
-      /* OAuth2 token endpoint for obtaining access tokens */
-      "tokenUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
+        /* OAuth2 token endpoint for obtaining access tokens */
+        "tokenUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
 
-      /* OAuth2 client credentials */
-      "clientId": "your-client-id",
-      "clientSecret": "your-client-secret",
+        /* OAuth2 client credentials */
+        "clientId": "your-client-id",
+        "clientSecret": "your-client-secret",
 
-      /* Optional: OAuth2 scope (if required by the token endpoint) */
-      "scope": "api:read api:write",
+        /* Optional: OAuth2 scope (if required by the token endpoint) */
+        "scope": "api:read api:write",
 
-      /* Optional: OAuth2 grant type (defaults to "client_credentials") */
-      "grantType": "client_credentials",
+        /* Optional: OAuth2 grant type (defaults to "client_credentials") */
+        "grantType": "client_credentials",
 
-      /* Optional: Additional headers to include when relaying requests
-       * These headers will be added to all relayed requests
-       */
-      "headers": {
-        "X-Custom-Header": "custom-value",
-        "X-API-Version": "v1"
+        /* Optional: Additional headers to include when relaying requests
+         * These headers will be added to all relayed requests
+         */
+        "headers": {
+          "X-Custom-Header": "custom-value",
+          "X-API-Version": "v1"
+        }
       }
-    }
+    ]
   },
 
-  /* Note: When relay is configured, the server will forward ALL incoming requests
-   * to the remote URL. Any expectations configured below will be ignored.
+  /* Note: When relay is configured, the server will forward matching requests
+   * to the remote URL based on the prefix match. Any expectations configured 
+   * below will be ignored for paths that match a relay prefix.
    *
    * The relay will:
-   * 1. Obtain an OAuth2 access token using the client credentials
-   * 2. Cache the token to avoid unnecessary token requests
-   * 3. Add the token as "Authorization: Bearer <token>" header
-   * 4. Add any custom headers from relayConfig.headers
-   * 5. Forward the request (method, path, headers, body) to the remote URL
-   * 6. Return the response from the remote server
+   * 1. Match the incoming request path against relay prefixes
+   * 2. Obtain an OAuth2 access token using the client credentials (if configured)
+   * 3. Cache the token to avoid unnecessary token requests
+   * 4. Add the token as "Authorization: Bearer <token>" header
+   * 5. Add any custom headers from the matching relay's headers
+   * 6. Forward the request (method, path, headers, body) to the remote URL
+   * 7. Return the response from the remote server
+   *
+   * Multiple relays can be configured with different prefixes. The first matching
+   * prefix will be used.
    */
 
   "expectations": []

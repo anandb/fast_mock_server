@@ -34,10 +34,11 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
     @Test
     void testCreateServerWithJsonmcContentType() throws Exception {
         // Prepare mock response
-        ServerInfo mockServerInfo = new ServerInfo();
-        mockServerInfo.setServerId("test-server-1");
-        mockServerInfo.setPort(8080);
-        mockServerInfo.setStatus("running");
+        ServerInfo mockServerInfo = ServerInfo.builder()
+            .serverId("test-server-1")
+            .port(8080)
+            .status("running")
+            .build();
 
         when(mockServerManager.createServer(any(ServerCreationRequest.class)))
                 .thenReturn(mockServerInfo);
@@ -75,10 +76,11 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
     @Test
     void testCreateServerWithComplexJsonmc() throws Exception {
         // Prepare mock response
-        ServerInfo mockServerInfo = new ServerInfo();
-        mockServerInfo.setServerId("complex-server");
-        mockServerInfo.setPort(9090);
-        mockServerInfo.setStatus("running");
+        ServerInfo mockServerInfo = ServerInfo.builder()
+            .serverId("complex-server")
+            .port(9090)
+            .status("running")
+            .build();
 
         when(mockServerManager.createServer(any(ServerCreationRequest.class)))
                 .thenReturn(mockServerInfo);

@@ -1,9 +1,5 @@
 package io.github.anandb.mockserver.model;
 
-import io.github.anandb.mockserver.model.BasicAuthConfig;
-import io.github.anandb.mockserver.model.GlobalHeader;
-import io.github.anandb.mockserver.model.RelayConfig;
-import io.github.anandb.mockserver.model.TlsConfig;
 import org.mockserver.integration.ClientAndServer;
 
 import java.time.LocalDateTime;
@@ -19,7 +15,7 @@ public record ServerInstance(
     TlsConfig tlsConfig,
     List<GlobalHeader> globalHeaders,
     BasicAuthConfig basicAuthConfig,
-    RelayConfig relayConfig,
+    List<RelayConfig> relays,
     LocalDateTime createdAt,
     String description
 ) {
@@ -74,7 +70,7 @@ public record ServerInstance(
      * @return true if relay is configured and valid, false otherwise
      */
     public boolean isRelayEnabled() {
-        return relayConfig != null && relayConfig.isValid();
+        return relays != null && !relays.isEmpty() && relays.stream().allMatch(RelayConfig::isValid);
     }
 
     /**

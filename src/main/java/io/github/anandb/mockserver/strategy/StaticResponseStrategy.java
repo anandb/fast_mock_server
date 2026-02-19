@@ -21,7 +21,7 @@ public class StaticResponseStrategy implements ResponseStrategy {
     @Override
     public boolean supports(EnhancedExpectationDTO config) {
         // Support if no other enhancement is present
-        return !config.isSse() && !config.isFileResponse() && !config.isRelay();
+        return !config.isSse() && !config.isFileResponse();
     }
 
     @Override

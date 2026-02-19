@@ -1,17 +1,21 @@
 package io.github.anandb.mockserver.strategy;
 
 import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.service.RelayService;
 import io.github.anandb.mockserver.service.RelayService.RelayResponse;
 import io.github.anandb.mockserver.util.RequestUtils;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Strategy for relaying HTTP requests to a remote server.
@@ -51,8 +55,27 @@ public class RelayResponseStrategy implements ResponseStrategy {
                 }
             }
 
+            // Get relays from context (server-level configuration)
+            @SuppressWarnings("unchecked")
+            List<RelayConfig> relays = (List<RelayConfig>) context.get("relays");
+
+            Optional<RelayConfig> matchingRelay = relayService.findMatchingRelay(relays, path);
+
+            if (matchingRelay.isEmpty()) {
+                log.warn("No matching relay found for path: {}", path);
+                return HttpResponse.response()
+                    .withStatusCode(404)
+                    .withBody(
+                        """
+                        {
+                            "errorCode": "NO_MATCHING_RELAY",
+                            "message": "No matching relay configuration found for path: %s"
+                        }
+                        """.formatted(path));
+            }
+
             RelayResponse relayResponse = relayService.relayRequest(
-                config.getRelay(),
+                matchingRelay.get(),
                 method,
                 path,
                 headers,
@@ -81,18 +104,19 @@ public class RelayResponseStrategy implements ResponseStrategy {
             log.error("Error relaying request", e);
             return HttpResponse.response()
                 .withStatusCode(502)
-                .withBody("""
-                        {
-                          "errorCode": "RELAY_ERROR",
-                          "message": "Error relaying request to remote server: %s"
-                        }
-                        """.formatted(e.getMessage()));
+                .withBody(
+                    """
+                    {
+                        "errorCode": "RELAY_ERROR",
+                        "message": "Error relaying request to remote server: %s"
+                    }
+                    """.formatted(e.getMessage()));
         }
     }
 
     @Override
     public boolean supports(EnhancedExpectationDTO config) {
-        return config.isRelay();
+        return false;
     }
 
     @Override

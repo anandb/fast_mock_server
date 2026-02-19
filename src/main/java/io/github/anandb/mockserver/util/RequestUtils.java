@@ -2,7 +2,7 @@ package io.github.anandb.mockserver.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.mockserver.model.Header;
+
 import org.mockserver.model.HttpRequest;
 
 import java.util.HashMap;
@@ -54,7 +54,7 @@ public class RequestUtils {
     }
 
     /**
-     * Converts MockServer headers to a Map<String, List<String>>.
+     * Converts MockServer headers to a {@code Map<String, List<String>>}
      *
      * @param request the MockServer HttpRequest
      * @return map of header names to list of values

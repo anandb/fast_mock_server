@@ -28,6 +28,10 @@ public class RelayConfig {
     @JsonProperty("remoteUrl")
     private String remoteUrl;
 
+    /** The prefix to match against the request path (ant pattern) */
+    @JsonProperty("prefix")
+    private String prefix = "/**";
+
     /**
      * The OAuth2 token endpoint URL (optional - only required if using OAuth2
      * authentication)

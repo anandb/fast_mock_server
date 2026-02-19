@@ -1,8 +1,6 @@
 package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
-import io.github.anandb.mockserver.exception.ServerCreationException;
-import io.github.anandb.mockserver.exception.ServerNotFoundException;
 import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.GlobalHeader;
 import io.github.anandb.mockserver.model.ServerInfo;
@@ -22,15 +20,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+
+import io.github.anandb.mockserver.model.RelayConfig;
 
 /**
  * Unit tests for MockServerManager.
@@ -51,7 +49,7 @@ class MockServerManagerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mockServerManager = new MockServerManager(tlsConfigService, relayService, strategies);
+        mockServerManager = new MockServerManager(tlsConfigService, strategies);
     }
 
     @Test
@@ -168,10 +166,37 @@ class MockServerManagerTest {
     }
 
     @Test
-    @DisplayName("Should shutdown all servers on service shutdown")
-    void testShutdown() {
-        mockServerManager.createServer(new ServerCreationRequest("server1", 9017, "S1", null, null, null, null));
-        mockServerManager.shutdown();
-        assertEquals(0, mockServerManager.getServerCount());
+    @DisplayName("Should create server with multiple relays successfully")
+    void testCreateServerWithRelays() {
+        RelayConfig relay1 = new RelayConfig();
+        relay1.setPrefix("/api");
+        relay1.setRemoteUrl("http://api.example.com");
+
+        RelayConfig relay2 = new RelayConfig();
+        relay2.setPrefix("/service");
+        relay2.setRemoteUrl("http://service.example.com");
+
+        List<RelayConfig> relays = List.of(relay1, relay2);
+
+        ServerCreationRequest request = new ServerCreationRequest(
+            "relay-server",
+            9020,
+            "Relay Server",
+            null,
+            null,
+            null,
+            relays
+        );
+
+        ServerInfo serverInfo = mockServerManager.createServer(request);
+
+        assertNotNull(serverInfo);
+        assertTrue(serverInfo.isRelayEnabled());
+
+        ServerInstance instance = mockServerManager.getServerInstance("relay-server");
+        assertNotNull(instance.relays());
+        assertEquals(2, instance.relays().size());
+        assertEquals("/api", instance.relays().get(0).getPrefix());
+        assertEquals("/service", instance.relays().get(1).getPrefix());
     }
 }

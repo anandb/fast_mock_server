@@ -87,7 +87,9 @@ public class ConfigurationLoaderService {
         String jsonToParse = isJsonmc ? JsonCommentParser.clean(configContent) : configContent;
         ServerConfiguration[] configurations = objectMapper.readValue(jsonToParse, ServerConfiguration[].class);
 
-        if (configurations == null) return;
+        if (configurations == null) {
+            return;
+        }
 
         for (ServerConfiguration config : configurations) {
             try {

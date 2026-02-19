@@ -6,6 +6,7 @@ import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.service.FreemarkerTemplateService;
 import io.github.anandb.mockserver.service.MockServerManager;
 import io.github.anandb.mockserver.service.MockServerOperations;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.mockserver.mock.Expectation;
@@ -23,7 +24,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;

@@ -1,11 +1,7 @@
 package io.github.anandb.mockserver.controller;
 
-import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
-import io.github.anandb.mockserver.exception.ServerCreationException;
-import io.github.anandb.mockserver.exception.ServerNotFoundException;
 import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.ServerInfo;
-import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.service.MockServerManager;
 
 import lombok.RequiredArgsConstructor;

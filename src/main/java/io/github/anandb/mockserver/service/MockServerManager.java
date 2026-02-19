@@ -1,25 +1,25 @@
 package io.github.anandb.mockserver.service;
 
-import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
-import io.github.anandb.mockserver.exception.ServerCreationException;
-import io.github.anandb.mockserver.exception.ServerNotFoundException;
-import io.github.anandb.mockserver.model.ServerCreationRequest;
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
-import io.github.anandb.mockserver.model.RelayConfig;
-import io.github.anandb.mockserver.model.ServerInfo;
-import io.github.anandb.mockserver.model.ServerInstance;
-import io.github.anandb.mockserver.strategy.ResponseStrategy;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.mockserver.integration.ClientAndServer;
-import org.springframework.stereotype.Service;
-
-import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.mockserver.integration.ClientAndServer;
+import org.springframework.stereotype.Service;
+
+import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
+import io.github.anandb.mockserver.exception.ServerCreationException;
+import io.github.anandb.mockserver.exception.ServerNotFoundException;
+import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
+import io.github.anandb.mockserver.model.ServerInfo;
+import io.github.anandb.mockserver.model.ServerInstance;
+import io.github.anandb.mockserver.strategy.ResponseStrategy;
+import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service for managing multiple MockServer instances.
@@ -30,10 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MockServerManager {
 
     private final TlsConfigurationService tlsConfigService;
-    private final RelayService relayService;
     private final List<ResponseStrategy> strategies;
-
-    private final Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
+    private Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
 
     public ServerInfo createServer(ServerCreationRequest request) {
         String serverId = request.getServerId();
@@ -58,7 +56,7 @@ public class MockServerManager {
                 request.getTlsConfig(),
                 request.getGlobalHeaders(),
                 request.getBasicAuthConfig(),
-                request.getRelayConfig(),
+                request.getRelays(),
                 LocalDateTime.now(),
                 request.getDescription()
             );
@@ -154,7 +152,6 @@ public class MockServerManager {
 
     private void configureRelay(ServerInstance instance) {
         EnhancedExpectationDTO relayDto = EnhancedExpectationDTO.builder()
-                .relay(instance.relayConfig())
                 .build();
 
         MockServerOperations operations = new MockServerOperationsImpl(instance.server());

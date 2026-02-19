@@ -1,24 +1,33 @@
 package io.github.anandb.mockserver.controller;
 
 import io.github.anandb.mockserver.exception.InvalidExpectationException;
-import io.github.anandb.mockserver.exception.ServerNotFoundException;
 import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
 import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.service.MockServerManager;
 import io.github.anandb.mockserver.service.MockServerOperations;
 import io.github.anandb.mockserver.service.MockServerOperationsImpl;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.mockserver.mock.Expectation;
 import org.mockserver.model.HttpRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import static org.mockserver.model.HttpRequest.request;
 
@@ -59,7 +68,7 @@ public class ExpectationController {
             for (EnhancedExpectationDTO dto : dtos) {
                 // Clear existing expectations for same method/path if needed (optional, keeping current behavior)
                 clearMatchingExpectation(serverInstance, dto.getHttpRequest());
-                
+
                 // Configure enhanced expectation
                 operations.configureEnhancedExpectation(
                         dto,

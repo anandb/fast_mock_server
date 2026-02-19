@@ -2,6 +2,7 @@ package io.github.anandb.mockserver.callback;
 
 import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
 import io.github.anandb.mockserver.model.GlobalHeader;
+import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
 import io.github.anandb.mockserver.util.RequestUtils;
 import io.github.anandb.mockserver.util.ResponseUtils;
@@ -27,18 +28,29 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
     private final List<GlobalHeader> globalHeaders;
     private final List<ResponseStrategy> strategies;
     private final String pathPattern;
+    private final List<RelayConfig> relays;
 
     public EnhancedResponseCallback(
             EnhancedExpectationDTO config,
             List<GlobalHeader> globalHeaders,
             List<ResponseStrategy> strategies,
             String pathPattern) {
+        this(config, globalHeaders, strategies, pathPattern, null);
+    }
+
+    public EnhancedResponseCallback(
+            EnhancedExpectationDTO config,
+            List<GlobalHeader> globalHeaders,
+            List<ResponseStrategy> strategies,
+            String pathPattern,
+            List<RelayConfig> relays) {
         this.config = config;
         this.globalHeaders = globalHeaders;
         this.strategies = strategies.stream()
                 .sorted(Comparator.comparingInt(ResponseStrategy::getPriority).reversed())
                 .collect(Collectors.toList());
         this.pathPattern = pathPattern;
+        this.relays = relays;
     }
 
     @Override
@@ -48,13 +60,17 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
 
             Map<String, Object> context = new HashMap<>();
             context.put("pathPattern", pathPattern);
-            
+
             // Extract path variables for all strategies
             Map<String, String> pathVars = RequestUtils.extractPathVariables(
-                httpRequest.getPath().getValue(),
-                pathPattern
-            );
+                    httpRequest.getPath().getValue(),
+                    pathPattern);
             context.put("pathVariables", pathVars);
+
+            // Pass relays to context if available
+            if (relays != null) {
+                context.put("relays", relays);
+            }
 
             ResponseStrategy strategy = strategies.stream()
                     .filter(s -> s.supports(config))

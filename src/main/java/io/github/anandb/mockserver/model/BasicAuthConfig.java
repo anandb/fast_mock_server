@@ -1,9 +1,11 @@
 package io.github.anandb.mockserver.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import jakarta.validation.constraints.NotBlank;
 
@@ -18,6 +20,7 @@ import jakarta.validation.constraints.NotBlank;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"password"})
 public class BasicAuthConfig {
 
     /** Username for basic authentication */

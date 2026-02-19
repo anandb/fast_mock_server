@@ -360,13 +360,44 @@ class ServerControllerTest {
     }
 
     @Test
-    @DisplayName("Should handle malformed JSON gracefully")
-    void testCreateServerWithMalformedJson() throws Exception {
-        String malformedJson = "{ invalid json }";
+    @DisplayName("Should create server with multiple relays")
+    void testCreateServerWithRelays() throws Exception {
+        String requestJson = """
+            {
+                "serverId": "relay-server",
+                "port": 8080,
+                "description": "Server with multiple relays",
+                "relays": [
+                    {
+                        "prefix": "/api",
+                        "remoteUrl": "https://api.example.com"
+                    },
+                    {
+                        "prefix": "/service",
+                        "remoteUrl": "https://service.example.com"
+                    }
+                ]
+            }
+            """;
+
+        ServerInfo serverInfo = ServerInfo.builder()
+            .serverId("relay-server")
+            .port(8080)
+            .description("Server with multiple relays")
+            .protocol("http")
+            .baseUrl("http://localhost:8080")
+            .relayEnabled(true)
+            .status("running")
+            .build();
+
+        when(mockServerManager.createServer(any(ServerCreationRequest.class)))
+            .thenReturn(serverInfo);
 
         mockMvc.perform(post("/api/servers")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(malformedJson))
-            .andExpect(status().isBadRequest());
+                .content(requestJson))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.serverId").value("relay-server"))
+            .andExpect(jsonPath("$.relayEnabled").value(true));
     }
 }

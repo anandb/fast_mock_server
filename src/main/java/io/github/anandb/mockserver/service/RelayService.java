@@ -1,12 +1,5 @@
 package io.github.anandb.mockserver.service;
 
-import io.github.anandb.mockserver.model.RelayConfig;
-import io.github.anandb.mockserver.util.MapperSupplier;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -15,6 +8,13 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.util.AntPathMatcher;
+
+import io.github.anandb.mockserver.model.RelayConfig;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service for relaying requests to remote servers with OAuth2 support.
@@ -25,17 +25,34 @@ public class RelayService {
 
     private final HttpClient httpClient;
     private final OAuth2TokenService tokenService;
-    private final ObjectMapper objectMapper;
+    private final AntPathMatcher pathMatcher;
 
     public RelayService(OAuth2TokenService tokenService) {
         this.tokenService = tokenService;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
-        this.objectMapper = MapperSupplier.getMapper();
+        this.pathMatcher = new AntPathMatcher();
     }
 
     /**
+     * Finds a matching relay configuration based on the request path.
+     *
+     * @param relays the list of relay configurations
+     * @param path   the request path
+     * @return an Optional containing the matching RelayConfig, or empty if no match
+     */
+    public Optional<RelayConfig> findMatchingRelay(List<RelayConfig> relays, String path) {
+        if (relays == null || relays.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return relays.stream()
+                .filter(relay -> relay.getPrefix() != null && pathMatcher.match(relay.getPrefix(), path))
+                .findFirst();
+    }
+
+    /*
      * Relays an HTTP request to a remote server.
      */
     public RelayResponse relayRequest(
