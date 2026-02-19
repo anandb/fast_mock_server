@@ -13,20 +13,57 @@ A Spring Boot application for managing multiple MockServer instances with suppor
 - **Global Headers**: Apply headers to all responses from a server
 - **Header Merging**: Intelligent merge of global and expectation-specific headers
 
+## Request Handling Flow
+
+The following call tree illustrates how a typical HTTP request is processed by the MockServer Manager when an enhanced expectation is matched:
+
+```text
+Incoming HTTP Request (MockServer Port)
+│
+└── EnhancedResponseCallback.handle(HttpRequest)
+    │
+    ├── Extract context (path variables, cookies, params)
+    │
+    ├── Find matching Strategy (supports(config) == true)
+    │   │
+    │   ├── StaticResponseStrategy.handle(...)
+    │   │   └── Return pre-configured HttpResponse
+    │   │
+    │   ├── DynamicFileStrategy.handle(...)
+    │   │   ├── evaluateFilePathTemplate()
+    │   │   ├── findFirstFileWithPrefix() (Glob search)
+    │   │   └── Process via FreemarkerTemplateService (if template)
+    │   │
+    │   ├── SSEResponseStrategy.handle(...)
+    │   │   └── Format messages into text/event-stream
+    │   │
+    │   └── RelayResponseStrategy.handle(...)
+    │       └── RelayService.relayRequest()
+    │           └── OAuth2TokenService.getAccessToken() (if configured)
+    │
+    ├── mergeGlobalHeaders(response)
+    │   └── Apply server-level global headers
+    │
+    └── Return final HttpResponse to Client
+```
+
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│          Spring Boot Management App (Port 8080)        │
+│       Spring Boot Management App (Control Port 8080)   │
 ├─────────────────────────────────────────────────────────┤
 │  ServerController     │  ExpectationController          │
-│  - Create servers     │  - Configure expectations       │
-│  - List servers       │  - Merge global headers         │
-│  - Delete servers     │  - Clear expectations           │
+│  - Create servers     │  - EnhancedExpectationDTO       │
+│  - List servers       │  - Strategy selection           │
+│  - Delete servers     │  - Unified Error Handling       │
 ├─────────────────────────────────────────────────────────┤
-│  MockServerManager    │  TlsConfigurationService        │
-│  - Server registry    │  - Certificate validation       │
-│  - Lifecycle mgmt     │  - Temp file management         │
+│  MockServerManager    │  EnhancedResponseCallback       │
+│  - Server registry    │  - Strategy Router              │
+│  - Lifecycle mgmt     │  - Global Header Merging        │
+├─────────────────────────────────────────────────────────┤
+│                  Response Strategies                    │
+│  - Static  - Dynamic File  - SSE  - Relay               │
 └─────────────────────────────────────────────────────────┘
            │                          │
            ▼                          ▼
@@ -1049,10 +1086,8 @@ mock_server/
 │   ├── main/
 │   │   ├── java/io/github/anandb/mockserver/
 │   │   │   ├── MockServerApplication.java   # Main application entry point
-│   │   │   ├── callback/                    # Response callback implementations
-│   │   │   │   ├── FileResponseCallback.java
-│   │   │   │   ├── FreemarkerResponseCallback.java
-│   │   │   │   └── RelayResponseCallback.java
+│   │   │   ├── callback/                    # Unified Response Callback
+│   │   │   │   └── EnhancedResponseCallback.java
 │   │   │   ├── config/                      # Configuration classes
 │   │   │   │   ├── JsonMultilineCommentHttpMessageConverter.java
 │   │   │   │   └── WebConfig.java
@@ -1066,15 +1101,17 @@ mock_server/
 │   │   │   │   ├── ServerAlreadyExistsException.java
 │   │   │   │   ├── ServerCreationException.java
 │   │   │   │   └── ServerNotFoundException.java
-│   │   │   ├── model/                       # Domain models
+│   │   │   ├── model/                       # Domain models & Records
 │   │   │   │   ├── BasicAuthConfig.java
 │   │   │   │   ├── CreateServerRequest.java
+│   │   │   │   ├── EnhancedExpectationDTO.java
 │   │   │   │   ├── GlobalHeader.java
 │   │   │   │   ├── HttpRequestContext.java
 │   │   │   │   ├── MtlsConfig.java
 │   │   │   │   ├── RelayConfig.java
 │   │   │   │   ├── ServerConfiguration.java
 │   │   │   │   ├── ServerInfo.java
+│   │   │   │   ├── ServerInstance.java
 │   │   │   │   └── TlsConfig.java
 │   │   │   ├── service/                     # Business logic services
 │   │   │   │   ├── CertificateValidator.java
@@ -1086,6 +1123,11 @@ mock_server/
 │   │   │   │   ├── OAuth2TokenService.java
 │   │   │   │   ├── RelayService.java
 │   │   │   │   └── TlsConfigurationService.java
+│   │   │   ├── strategy/                    # Response Generation Strategies
+│   │   │   │   ├── DynamicFileStrategy.java
+│   │   │   │   ├── RelayResponseStrategy.java
+│   │   │   │   ├── SSEResponseStrategy.java
+│   │   │   │   └── StaticResponseStrategy.java
 │   │   │   └── util/                        # Utility classes
 │   │   │       ├── FreemarkerTemplateDetector.java
 │   │   │       ├── JsonCommentParser.java
@@ -1122,10 +1164,11 @@ mock_server/
 
 ## Dependencies
 
-- Spring Boot 3.2.0
+- Spring Boot 3.5.3
 - MockServer Netty (no-dependencies) 5.15.0
-- Lombok (optional)
+- Lombok
 - Jackson (JSON processing)
+- FreeMarker (Templating engine)
 
 ## License
 

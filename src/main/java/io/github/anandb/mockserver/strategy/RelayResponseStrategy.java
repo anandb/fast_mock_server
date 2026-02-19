@@ -1,43 +1,31 @@
-package io.github.anandb.mockserver.callback;
+package io.github.anandb.mockserver.strategy;
 
-import io.github.anandb.mockserver.model.RelayConfig;
+import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
 import io.github.anandb.mockserver.service.RelayService;
 import io.github.anandb.mockserver.service.RelayService.RelayResponse;
-
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.mockserver.mock.action.ExpectationResponseCallback;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-
 /**
- * Callback for relaying HTTP requests to a remote server with optional OAuth2 authentication.
- * <p>
- * This callback intercepts all requests to the mock server and forwards them to the
- * configured remote URL, including optional OAuth2 token acquisition and custom headers.
- * </p>
+ * Strategy for relaying HTTP requests to a remote server.
  */
 @Slf4j
-public class RelayResponseCallback implements ExpectationResponseCallback {
+@Component
+@RequiredArgsConstructor
+public class RelayResponseStrategy implements ResponseStrategy {
 
     private final RelayService relayService;
-    private final RelayConfig relayConfig;
-
-    public RelayResponseCallback(RelayService relayService, RelayConfig relayConfig) {
-        this.relayService = relayService;
-        this.relayConfig = relayConfig;
-    }
 
     @Override
-    public HttpResponse handle(HttpRequest httpRequest) {
+    public HttpResponse handle(HttpRequest httpRequest, EnhancedExpectationDTO config, Map<String, Object> context) {
         try {
-            log.debug("Relaying request: {} {}", httpRequest);
-
             // Extract request details
             String method = httpRequest.getMethod().getValue();
             String path = httpRequest.getPath().getValue();
@@ -61,7 +49,8 @@ public class RelayResponseCallback implements ExpectationResponseCallback {
                         header -> header.getName().getValue(),
                         header -> header.getValues().stream()
                             .map(val -> val.getValue())
-                            .collect(Collectors.toList())
+                            .collect(Collectors.toList()),
+                        (v1, v2) -> v1 // handle duplicates
                     ));
             }
 
@@ -76,7 +65,7 @@ public class RelayResponseCallback implements ExpectationResponseCallback {
 
             // Relay the request
             RelayResponse relayResponse = relayService.relayRequest(
-                relayConfig,
+                config.getRelay(),
                 method,
                 path,
                 headers,
@@ -86,7 +75,7 @@ public class RelayResponseCallback implements ExpectationResponseCallback {
             // Build MockServer HttpResponse from relay response
             HttpResponse response = HttpResponse.response()
                 .withStatusCode(relayResponse.getStatusCode());
-            log.debug("Request: {} {}", response);
+
             // Add response headers
             if (relayResponse.getHeaders() != null) {
                 for (Map.Entry<String, List<String>> header : relayResponse.getHeaders().entrySet()) {
@@ -105,13 +94,20 @@ public class RelayResponseCallback implements ExpectationResponseCallback {
             return response;
 
         } catch (Exception e) {
-            log.error("Error relaying request: {} {}", httpRequest.getMethod().getValue(),
-                     httpRequest.getPath().getValue(), e);
-
-            // Return error response
+            log.error("Error relaying request", e);
             return HttpResponse.response()
                 .withStatusCode(502)
                 .withBody("Error relaying request to remote server: " + e.getMessage());
         }
+    }
+
+    @Override
+    public boolean supports(EnhancedExpectationDTO config) {
+        return config.isRelay();
+    }
+
+    @Override
+    public int getPriority() {
+        return 30; // High priority, as relay usually overrides everything
     }
 }

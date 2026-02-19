@@ -1,9 +1,6 @@
 package io.github.anandb.mockserver.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -15,9 +12,6 @@ import java.util.List;
  * This model is used when loading server configurations from a JSON file at startup.
  * </p>
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class ServerConfiguration {
 
     /** Server creation parameters */
@@ -28,7 +22,19 @@ public class ServerConfiguration {
 
     /** Optional list of expectations to configure on this server at startup */
     @JsonProperty("expectations")
-    private List<Object> expectations;
+    private List<EnhancedExpectationDTO> expectations;
+
+    public ServerConfiguration() {}
+
+    public ServerConfiguration(CreateServerRequest server, List<EnhancedExpectationDTO> expectations) {
+        this.server = server;
+        this.expectations = expectations;
+    }
+
+    public CreateServerRequest getServer() { return server; }
+    public void setServer(CreateServerRequest server) { this.server = server; }
+    public List<EnhancedExpectationDTO> getExpectations() { return expectations; }
+    public void setExpectations(List<EnhancedExpectationDTO> expectations) { this.expectations = expectations; }
 
     /**
      * Checks if this server has any expectations configured.

@@ -1,9 +1,6 @@
 package io.github.anandb.mockserver.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -19,9 +16,6 @@ import java.util.List;
  * including server identification, network settings, TLS configuration, and global headers.
  * </p>
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class CreateServerRequest {
 
     /** Unique identifier for the server instance */
@@ -58,6 +52,33 @@ public class CreateServerRequest {
     @Valid
     @JsonProperty("relayConfig")
     private RelayConfig relayConfig;
+
+    public CreateServerRequest() {}
+
+    public CreateServerRequest(String serverId, Integer port, String description, TlsConfig tlsConfig, List<GlobalHeader> globalHeaders, BasicAuthConfig basicAuthConfig, RelayConfig relayConfig) {
+        this.serverId = serverId;
+        this.port = port;
+        this.description = description;
+        this.tlsConfig = tlsConfig;
+        this.globalHeaders = globalHeaders;
+        this.basicAuthConfig = basicAuthConfig;
+        this.relayConfig = relayConfig;
+    }
+
+    public String getServerId() { return serverId; }
+    public void setServerId(String serverId) { this.serverId = serverId; }
+    public Integer getPort() { return port; }
+    public void setPort(Integer port) { this.port = port; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public TlsConfig getTlsConfig() { return tlsConfig; }
+    public void setTlsConfig(TlsConfig tlsConfig) { this.tlsConfig = tlsConfig; }
+    public List<GlobalHeader> getGlobalHeaders() { return globalHeaders; }
+    public void setGlobalHeaders(List<GlobalHeader> globalHeaders) { this.globalHeaders = globalHeaders; }
+    public BasicAuthConfig getBasicAuthConfig() { return basicAuthConfig; }
+    public void setBasicAuthConfig(BasicAuthConfig basicAuthConfig) { this.basicAuthConfig = basicAuthConfig; }
+    public RelayConfig getRelayConfig() { return relayConfig; }
+    public void setRelayConfig(RelayConfig relayConfig) { this.relayConfig = relayConfig; }
 
     /**
      * Checks if TLS is enabled and properly configured for this server.

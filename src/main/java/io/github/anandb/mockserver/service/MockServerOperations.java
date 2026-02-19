@@ -1,33 +1,46 @@
 package io.github.anandb.mockserver.service;
 
+import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.GlobalHeader;
+import io.github.anandb.mockserver.strategy.ResponseStrategy;
 import org.mockserver.mock.Expectation;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.model.RequestDefinition;
 
+import java.util.List;
+
 /**
- * Interface for MockServer operations to enable better testability.
- * This abstraction layer makes it easier to mock MockServer functionality in tests.
+ * Interface defining operations that can be performed on a MockServer instance.
  */
 public interface MockServerOperations {
 
     /**
-     * Configure an expectation on the mock server.
+     * Configures a standard expectation on the mock server.
      *
-     * @param request the HTTP request to match
-     * @param response the HTTP response to return
+     * @param request the request matcher
+     * @param response the response to return
      */
     void configureExpectation(RequestDefinition request, HttpResponse response);
 
     /**
-     * Reset the mock server, clearing all expectations.
+     * Configures an enhanced expectation using the universal callback and strategies.
+     *
+     * @param config the enhanced expectation configuration
+     * @param globalHeaders global headers to apply
+     * @param strategies list of available response strategies
+     */
+    void configureEnhancedExpectation(EnhancedExpectationDTO config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies);
+
+    /**
+     * Resets the mock server, clearing all expectations.
      */
     void reset();
 
     /**
-     * Retrieve all active expectations.
+     * Retrieves all active expectations matching the given request.
      *
-     * @param request the request definition to match (can be null for all)
-     * @return array of active expectations
+     * @param request the request matcher
+     * @return an array of active expectations
      */
     Expectation[] retrieveActiveExpectations(RequestDefinition request);
 }

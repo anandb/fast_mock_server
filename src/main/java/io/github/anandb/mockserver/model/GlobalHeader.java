@@ -2,8 +2,6 @@ package io.github.anandb.mockserver.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.NotBlank;
 
@@ -15,8 +13,6 @@ import jakarta.validation.constraints.NotBlank;
  * takes precedence over the global header.
  * </p>
  */
-@Data
-@NoArgsConstructor
 public class GlobalHeader {
 
     /** The name of the header (e.g., "Content-Type", "X-Custom-Header") */
@@ -26,6 +22,8 @@ public class GlobalHeader {
     /** The value of the header */
     @NotBlank(message = "Header value is required")
     private String value;
+
+    public GlobalHeader() {}
 
     /**
      * Constructs a new GlobalHeader with the specified name and value.
@@ -41,4 +39,9 @@ public class GlobalHeader {
         this.name = name;
         this.value = value;
     }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getValue() { return value; }
+    public void setValue(String value) { this.value = value; }
 }

@@ -1,4 +1,4 @@
-# Compiled class files
+ Compiled class files
 *.class
 
 # Log files
@@ -27,6 +27,7 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 
 # Eclipse
+.factorypath
 .classpath
 .project
 .settings/
@@ -44,6 +45,7 @@ buildNumber.properties
 /nbdist/
 /.nb-gradle/
 build/
+nb-configuration.xml
 
 # VS Code
 .vscode/
