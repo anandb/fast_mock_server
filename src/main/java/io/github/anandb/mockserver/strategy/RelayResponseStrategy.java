@@ -3,6 +3,7 @@ package io.github.anandb.mockserver.strategy;
 import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
 import io.github.anandb.mockserver.service.RelayService;
 import io.github.anandb.mockserver.service.RelayService.RelayResponse;
+import io.github.anandb.mockserver.util.RequestUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mockserver.model.HttpRequest;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Strategy for relaying HTTP requests to a remote server.
@@ -26,7 +26,7 @@ public class RelayResponseStrategy implements ResponseStrategy {
     @Override
     public HttpResponse handle(HttpRequest httpRequest, EnhancedExpectationDTO config, Map<String, Object> context) {
         try {
-            // Extract request details
+            // Extract request details using centralized utility
             String method = httpRequest.getMethod().getValue();
             String path = httpRequest.getPath().getValue();
 
@@ -36,25 +36,13 @@ public class RelayResponseStrategy implements ResponseStrategy {
                     .map(param -> param.getName().getValue() + "=" +
                          String.join(",", param.getValues().stream()
                              .map(val -> val.getValue())
-                             .collect(Collectors.toList())))
-                    .collect(Collectors.joining("&"));
+                             .toList()))
+                    .collect(java.util.stream.Collectors.joining("&"));
                 path = path + "?" + queryString;
             }
 
-            // Convert headers to Map<String, List<String>>
-            Map<String, List<String>> headers = null;
-            if (httpRequest.getHeaders() != null && !httpRequest.getHeaders().isEmpty()) {
-                headers = httpRequest.getHeaders().getEntries().stream()
-                    .collect(Collectors.toMap(
-                        header -> header.getName().getValue(),
-                        header -> header.getValues().stream()
-                            .map(val -> val.getValue())
-                            .collect(Collectors.toList()),
-                        (v1, v2) -> v1 // handle duplicates
-                    ));
-            }
+            Map<String, List<String>> headers = RequestUtils.headersToMap(httpRequest);
 
-            // Get request body
             byte[] body = null;
             if (httpRequest.getBody() != null) {
                 String bodyString = httpRequest.getBodyAsString();
@@ -63,7 +51,6 @@ public class RelayResponseStrategy implements ResponseStrategy {
                 }
             }
 
-            // Relay the request
             RelayResponse relayResponse = relayService.relayRequest(
                 config.getRelay(),
                 method,
@@ -72,13 +59,11 @@ public class RelayResponseStrategy implements ResponseStrategy {
                 body
             );
 
-            // Build MockServer HttpResponse from relay response
             HttpResponse response = HttpResponse.response()
-                .withStatusCode(relayResponse.getStatusCode());
+                .withStatusCode(relayResponse.statusCode());
 
-            // Add response headers
-            if (relayResponse.getHeaders() != null) {
-                for (Map.Entry<String, List<String>> header : relayResponse.getHeaders().entrySet()) {
+            if (relayResponse.headers() != null) {
+                for (Map.Entry<String, List<String>> header : relayResponse.headers().entrySet()) {
                     if (header.getValue() != null && !header.getValue().isEmpty()) {
                         response = response.withHeader(header.getKey(),
                             header.getValue().toArray(String[]::new));
@@ -86,9 +71,8 @@ public class RelayResponseStrategy implements ResponseStrategy {
                 }
             }
 
-            // Add response body
-            if (relayResponse.getBody() != null && relayResponse.getBody().length > 0) {
-                response = response.withBody(relayResponse.getBody());
+            if (relayResponse.body() != null && relayResponse.body().length > 0) {
+                response = response.withBody(relayResponse.body());
             }
 
             return response;
@@ -97,7 +81,12 @@ public class RelayResponseStrategy implements ResponseStrategy {
             log.error("Error relaying request", e);
             return HttpResponse.response()
                 .withStatusCode(502)
-                .withBody("Error relaying request to remote server: " + e.getMessage());
+                .withBody("""
+                        {
+                          "errorCode": "RELAY_ERROR",
+                          "message": "Error relaying request to remote server: %s"
+                        }
+                        """.formatted(e.getMessage()));
         }
     }
 
@@ -108,6 +97,6 @@ public class RelayResponseStrategy implements ResponseStrategy {
 
     @Override
     public int getPriority() {
-        return 30; // High priority, as relay usually overrides everything
+        return 30;
     }
 }

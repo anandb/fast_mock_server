@@ -27,16 +27,12 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.github.anandb.mockserver.model.CreateServerRequest;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.GlobalHeader;
 import io.github.anandb.mockserver.model.ServerInfo;
 
 /**
  * Integration tests for the MockServer application.
- * <p>
- * Tests the entire application stack including REST endpoints, services,
- * and MockServer lifecycle management in a real Spring Boot context.
- * </p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -67,7 +63,7 @@ class MockServerIntegrationTest {
         @DisplayName("Should create, retrieve, and delete HTTP server successfully")
         void testHttpServerLifecycle() {
                 // Create server
-                CreateServerRequest request = new CreateServerRequest(
+                ServerCreationRequest request = new ServerCreationRequest(
                                 "integration-test-server",
                                 9100,
                                 "Integration Test Server",
@@ -117,7 +113,7 @@ class MockServerIntegrationTest {
                 globalHeaders.add(new GlobalHeader("X-Service-Name", "test-service"));
                 globalHeaders.add(new GlobalHeader("X-Version", "1.0"));
 
-                CreateServerRequest request = new CreateServerRequest(
+                ServerCreationRequest request = new ServerCreationRequest(
                                 "headers-test-server",
                                 9101,
                                 "Server with Headers",
@@ -170,9 +166,9 @@ class MockServerIntegrationTest {
         @DisplayName("Should list multiple servers")
         void testListMultipleServers() {
                 // Create multiple servers
-                CreateServerRequest request1 = new CreateServerRequest("server1", 9102, "Server 1", null, null, null, null);
-                CreateServerRequest request2 = new CreateServerRequest("server2", 9103, "Server 2", null, null, null, null);
-                CreateServerRequest request3 = new CreateServerRequest("server3", 9104, "Server 3", null, null, null, null);
+                ServerCreationRequest request1 = new ServerCreationRequest("server1", 9102, "Server 1", null, null, null, null);
+                ServerCreationRequest request2 = new ServerCreationRequest("server2", 9103, "Server 2", null, null, null, null);
+                ServerCreationRequest request3 = new ServerCreationRequest("server3", 9104, "Server 3", null, null, null, null);
 
                 restTemplate.postForEntity(baseUrl, request1, ServerInfo.class);
                 restTemplate.postForEntity(baseUrl, request2, ServerInfo.class);
@@ -198,7 +194,7 @@ class MockServerIntegrationTest {
         @DisplayName("Should handle duplicate server creation error")
         void testDuplicateServerError() {
                 // Create first server
-                CreateServerRequest request = new CreateServerRequest(
+                ServerCreationRequest request = new ServerCreationRequest(
                                 "duplicate-test",
                                 9105,
                                 "Original Server",
@@ -232,7 +228,7 @@ class MockServerIntegrationTest {
         @DisplayName("Should validate port range")
         void testPortValidation() {
                 // Test invalid port (too low)
-                CreateServerRequest invalidRequest1 = new CreateServerRequest(
+                ServerCreationRequest invalidRequest1 = new ServerCreationRequest(
                                 "invalid-port-1",
                                 100,
                                 "Invalid Port",
@@ -249,7 +245,7 @@ class MockServerIntegrationTest {
                 assertEquals(HttpStatus.BAD_REQUEST, response1.getStatusCode());
 
                 // Test invalid port (too high)
-                CreateServerRequest invalidRequest2 = new CreateServerRequest(
+                ServerCreationRequest invalidRequest2 = new ServerCreationRequest(
                                 "invalid-port-2",
                                 70000,
                                 "Invalid Port",
@@ -271,7 +267,7 @@ class MockServerIntegrationTest {
         @DisplayName("Should check server existence")
         void testServerExistence() {
                 // Create a server
-                CreateServerRequest request = new CreateServerRequest(
+                ServerCreationRequest request = new ServerCreationRequest(
                                 "exists-test",
                                 9106,
                                 "Existence Test",
@@ -307,7 +303,7 @@ class MockServerIntegrationTest {
         @DisplayName("Should clear expectations successfully")
         void testClearExpectations() {
                 // Create server
-                CreateServerRequest request = new CreateServerRequest(
+                ServerCreationRequest request = new ServerCreationRequest(
                                 "clear-test",
                                 9107,
                                 "Clear Test",
@@ -395,7 +391,7 @@ class MockServerIntegrationTest {
         @DisplayName("Should validate request body fields")
         void testRequestValidation() {
                 // Missing serverId
-                CreateServerRequest invalidRequest1 = new CreateServerRequest(
+                ServerCreationRequest invalidRequest1 = new ServerCreationRequest(
                                 null,
                                 9108,
                                 "Missing ID",
@@ -412,7 +408,7 @@ class MockServerIntegrationTest {
                 assertEquals(HttpStatus.BAD_REQUEST, response1.getStatusCode());
 
                 // Missing port
-                CreateServerRequest invalidRequest2 = new CreateServerRequest(
+                ServerCreationRequest invalidRequest2 = new ServerCreationRequest(
                                 "missing-port",
                                 null,
                                 "Missing Port",
@@ -434,7 +430,7 @@ class MockServerIntegrationTest {
         @DisplayName("Should configure multiple expectations")
         void testMultipleExpectations() {
                 // Create server
-                CreateServerRequest request = new CreateServerRequest(
+                ServerCreationRequest request = new ServerCreationRequest(
                                 "multi-exp-test",
                                 9109,
                                 "Multiple Expectations Test",

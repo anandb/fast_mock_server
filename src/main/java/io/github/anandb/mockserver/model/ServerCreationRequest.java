@@ -16,7 +16,7 @@ import java.util.List;
  * including server identification, network settings, TLS configuration, and global headers.
  * </p>
  */
-public class CreateServerRequest {
+public class ServerCreationRequest {
 
     /** Unique identifier for the server instance */
     @NotBlank(message = "Server ID is required")
@@ -53,9 +53,9 @@ public class CreateServerRequest {
     @JsonProperty("relayConfig")
     private RelayConfig relayConfig;
 
-    public CreateServerRequest() {}
+    public ServerCreationRequest() {}
 
-    public CreateServerRequest(String serverId, Integer port, String description, TlsConfig tlsConfig, List<GlobalHeader> globalHeaders, BasicAuthConfig basicAuthConfig, RelayConfig relayConfig) {
+    public ServerCreationRequest(String serverId, Integer port, String description, TlsConfig tlsConfig, List<GlobalHeader> globalHeaders, BasicAuthConfig basicAuthConfig, RelayConfig relayConfig) {
         this.serverId = serverId;
         this.port = port;
         this.description = description;

@@ -1,10 +1,12 @@
 package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.model.RelayConfig;
+import io.github.anandb.mockserver.util.MapperSupplier;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -15,83 +17,69 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Service for relaying HTTP requests to remote servers with optional OAuth2 authentication.
- * <p>
- * This service handles forwarding incoming requests to remote endpoints, including
- * optional OAuth2 token acquisition and custom header management.
- * </p>
+ * Service for relaying requests to remote servers with OAuth2 support.
  */
-@Service
 @Slf4j
+@Service
 public class RelayService {
 
-    private final OAuth2TokenService tokenService;
     private final HttpClient httpClient;
+    private final OAuth2TokenService tokenService;
+    private final ObjectMapper objectMapper;
 
     public RelayService(OAuth2TokenService tokenService) {
         this.tokenService = tokenService;
         this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(10))
                 .build();
+        this.objectMapper = MapperSupplier.getMapper();
     }
 
     /**
-     * Relays an HTTP request to the remote server configured in the relay config.
-     *
-     * @param relayConfig the relay configuration
-     * @param method the HTTP method
-     * @param path the request path
-     * @param headers the request headers
-     * @param body the request body (can be null)
-     * @return the relay response containing status code, headers, and body
-     * @throws Exception if the relay fails
+     * Relays an HTTP request to a remote server.
      */
-    public RelayResponse relayRequest(RelayConfig relayConfig, String method, String path,
-                                       Map<String, List<String>> headers, byte[] body) throws Exception {
-        // Build target URL
-        String targetUrl = buildTargetUrl(relayConfig.getRemoteUrl(), path);
-        log.info("Relaying {} request to: {}", method, targetUrl);
+    public RelayResponse relayRequest(
+            RelayConfig config,
+            String method,
+            String path,
+            Map<String, List<String>> headers,
+            byte[] body) throws Exception {
 
-        // Build HTTP request
+        String remoteUrl = config.getRemoteUrl();
+        if (remoteUrl.endsWith("/") && path.startsWith("/")) {
+            remoteUrl = remoteUrl.substring(0, remoteUrl.length() - 1);
+        }
+        String targetUrl = remoteUrl + path;
+
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(targetUrl))
-                .timeout(Duration.ofSeconds(60));
+                .timeout(Duration.ofSeconds(30));
 
-        // Add Authorization header with Bearer token if OAuth2 is enabled
-        if (relayConfig.isOAuth2Enabled()) {
-            String accessToken = tokenService.getAccessToken(relayConfig);
-            requestBuilder.header("Authorization", "Bearer " + accessToken);
-            log.debug("Added OAuth2 Bearer token to request");
-        } else {
-            log.debug("OAuth2 not configured, relaying without authentication");
-        }
-
-        // Add custom headers from relay config
-        if (relayConfig.hasHeaders()) {
-            for (Map.Entry<String, String> header : relayConfig.getHeaders().entrySet()) {
-                requestBuilder.header(header.getKey(), header.getValue());
-            }
-        }
-
-        // Add original request headers (excluding host, connection, etc.)
+        // Apply original headers
         if (headers != null) {
-            for (Map.Entry<String, List<String>> header : headers.entrySet()) {
-                String headerName = header.getKey();
-                // Skip certain headers that shouldn't be forwarded
-                if (shouldForwardHeader(headerName)) {
-                    for (String value : header.getValue()) {
-                        requestBuilder.header(headerName, value);
-                    }
+            headers.forEach((name, values) -> {
+                if (!isRestrictedHeader(name)) {
+                    values.forEach(value -> requestBuilder.header(name, value));
                 }
-            }
+            });
         }
 
-        // Set HTTP method and body
-        HttpRequest.BodyPublisher bodyPublisher = body != null && body.length > 0
+        // Apply custom relay headers
+        if (config.getHeaders() != null) {
+            config.getHeaders().forEach(requestBuilder::header);
+        }
+
+        // Apply OAuth2 token if configured
+        if (config.isValid() && config.getTokenUrl() != null) {
+            String token = tokenService.getAccessToken(config);
+            requestBuilder.header("Authorization", "Bearer " + token);
+        }
+
+        HttpRequest.BodyPublisher bodyPublisher = (body != null && body.length > 0)
                 ? HttpRequest.BodyPublishers.ofByteArray(body)
                 : HttpRequest.BodyPublishers.noBody();
 
+        // Modern switch expression for HTTP methods
         switch (method.toUpperCase()) {
             case "GET" -> requestBuilder.GET();
             case "POST" -> requestBuilder.POST(bodyPublisher);
@@ -100,93 +88,26 @@ public class RelayService {
             case "PATCH" -> requestBuilder.method("PATCH", bodyPublisher);
             case "HEAD" -> requestBuilder.method("HEAD", HttpRequest.BodyPublishers.noBody());
             case "OPTIONS" -> requestBuilder.method("OPTIONS", HttpRequest.BodyPublishers.noBody());
-            default -> requestBuilder.method(method, bodyPublisher);
+            default -> requestBuilder.method(method.toUpperCase(), bodyPublisher);
         }
 
-        HttpRequest request = requestBuilder.build();
+        HttpResponse<InputStream> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
 
-        // Send request
-        HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        Map<String, List<String>> responseHeaders = response.headers().map();
+        byte[] responseBody;
+        try (InputStream is = response.body()) {
+            responseBody = is.readAllBytes();
+        }
 
-        // Read response body
-        byte[] responseBody = readAllBytes(response.body());
-
-        log.info("Relay response status: {}", response.statusCode());
-
-        return new RelayResponse(response.statusCode(), response.headers().map(), responseBody);
+        return new RelayResponse(response.statusCode(), responseHeaders, responseBody);
     }
 
-    /**
-     * Builds the target URL by combining the remote URL with the request path.
-     *
-     * @param remoteUrl the base remote URL
-     * @param path the request path
-     * @return the complete target URL
-     */
-    private String buildTargetUrl(String remoteUrl, String path) {
-        String baseUrl = remoteUrl.endsWith("/") ? remoteUrl.substring(0, remoteUrl.length() - 1) : remoteUrl;
-        String requestPath = path.startsWith("/") ? path : "/" + path;
-        return baseUrl + requestPath;
+    private boolean isRestrictedHeader(String name) {
+        return name.equalsIgnoreCase("Host") ||
+               name.equalsIgnoreCase("Content-Length") ||
+               name.equalsIgnoreCase("Connection") ||
+               name.equalsIgnoreCase("Upgrade");
     }
 
-    /**
-     * Determines if a header should be forwarded to the remote server.
-     *
-     * @param headerName the header name
-     * @return true if the header should be forwarded, false otherwise
-     */
-    private boolean shouldForwardHeader(String headerName) {
-        String lowerCaseName = headerName.toLowerCase();
-        // Skip headers that shouldn't be forwarded
-        return !lowerCaseName.equals("host") &&
-               !lowerCaseName.equals("connection") &&
-               !lowerCaseName.equals("content-length") &&
-               !lowerCaseName.equals("transfer-encoding") &&
-               !lowerCaseName.equals("authorization"); // We set our own Authorization header
-    }
-
-    /**
-     * Reads all bytes from an InputStream.
-     *
-     * @param inputStream the input stream
-     * @return the byte array
-     * @throws Exception if reading fails
-     */
-    private byte[] readAllBytes(InputStream inputStream) throws Exception {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] data = new byte[8192];
-        int nRead;
-        while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
-            buffer.write(data, 0, nRead);
-        }
-        buffer.flush();
-        return buffer.toByteArray();
-    }
-
-    /**
-     * Represents a relay response from the remote server.
-     */
-    public static class RelayResponse {
-        private final int statusCode;
-        private final Map<String, List<String>> headers;
-        private final byte[] body;
-
-        public RelayResponse(int statusCode, Map<String, List<String>> headers, byte[] body) {
-            this.statusCode = statusCode;
-            this.headers = headers;
-            this.body = body;
-        }
-
-        public int getStatusCode() {
-            return statusCode;
-        }
-
-        public Map<String, List<String>> getHeaders() {
-            return headers;
-        }
-
-        public byte[] getBody() {
-            return body;
-        }
-    }
+    public record RelayResponse(int statusCode, Map<String, List<String>> headers, byte[] body) {}
 }

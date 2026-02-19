@@ -3,7 +3,7 @@ package io.github.anandb.mockserver.service;
 import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
 import io.github.anandb.mockserver.exception.ServerCreationException;
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
-import io.github.anandb.mockserver.model.CreateServerRequest;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.GlobalHeader;
 import io.github.anandb.mockserver.model.ServerInfo;
 import io.github.anandb.mockserver.model.ServerInstance;
@@ -57,7 +57,7 @@ class MockServerManagerTest {
     @Test
     @DisplayName("Should create HTTP server successfully")
     void testCreateHttpServer() {
-        CreateServerRequest request = new CreateServerRequest(
+        ServerCreationRequest request = new ServerCreationRequest(
             "test-server",
             9001,
             "Test HTTP Server",
@@ -82,7 +82,7 @@ class MockServerManagerTest {
         List<GlobalHeader> headers = new ArrayList<>();
         headers.add(new GlobalHeader("X-Custom-Header", "CustomValue"));
 
-        CreateServerRequest request = new CreateServerRequest(
+        ServerCreationRequest request = new ServerCreationRequest(
             "test-server",
             9002,
             "Test Server with Headers",
@@ -102,10 +102,10 @@ class MockServerManagerTest {
     @Test
     @DisplayName("Should reject duplicate server ID")
     void testCreateDuplicateServer() {
-        CreateServerRequest request1 = new CreateServerRequest("test-server", 9003, "First", null, null, null, null);
+        ServerCreationRequest request1 = new ServerCreationRequest("test-server", 9003, "First", null, null, null, null);
         mockServerManager.createServer(request1);
 
-        CreateServerRequest request2 = new CreateServerRequest("test-server", 9004, "Duplicate", null, null, null, null);
+        ServerCreationRequest request2 = new ServerCreationRequest("test-server", 9004, "Duplicate", null, null, null, null);
 
         assertThrows(ServerAlreadyExistsException.class, () -> mockServerManager.createServer(request2));
     }
@@ -117,7 +117,7 @@ class MockServerManagerTest {
         tlsConfig.setCertificate("cert-content");
         tlsConfig.setPrivateKey("key-content");
 
-        CreateServerRequest request = new CreateServerRequest("tls-server", 9005, "TLS Server", tlsConfig, null, null, null);
+        ServerCreationRequest request = new ServerCreationRequest("tls-server", 9005, "TLS Server", tlsConfig, null, null, null);
 
         doNothing().when(tlsConfigService).configureTls(anyString(), any(TlsConfig.class));
 
@@ -128,7 +128,7 @@ class MockServerManagerTest {
     @Test
     @DisplayName("Should retrieve server instance successfully")
     void testGetServerInstance() {
-        CreateServerRequest request = new CreateServerRequest("test-server", 9008, "Test", null, null, null, null);
+        ServerCreationRequest request = new ServerCreationRequest("test-server", 9008, "Test", null, null, null, null);
         mockServerManager.createServer(request);
         ServerInstance instance = mockServerManager.getServerInstance("test-server");
 
@@ -139,8 +139,8 @@ class MockServerManagerTest {
     @Test
     @DisplayName("Should list all servers")
     void testListServers() {
-        mockServerManager.createServer(new CreateServerRequest("server1", 9009, "S1", null, null, null, null));
-        mockServerManager.createServer(new CreateServerRequest("server2", 9010, "S2", null, null, null, null));
+        mockServerManager.createServer(new ServerCreationRequest("server1", 9009, "S1", null, null, null, null));
+        mockServerManager.createServer(new ServerCreationRequest("server2", 9010, "S2", null, null, null, null));
 
         List<ServerInfo> servers = mockServerManager.listServers();
         assertEquals(2, servers.size());
@@ -149,7 +149,7 @@ class MockServerManagerTest {
     @Test
     @DisplayName("Should delete server successfully")
     void testDeleteServer() {
-        mockServerManager.createServer(new CreateServerRequest("test-server", 9012, "Test", null, null, null, null));
+        mockServerManager.createServer(new ServerCreationRequest("test-server", 9012, "Test", null, null, null, null));
         assertTrue(mockServerManager.serverExists("test-server"));
 
         boolean deleted = mockServerManager.deleteServer("test-server");
@@ -163,14 +163,14 @@ class MockServerManagerTest {
     @DisplayName("Should return correct server count")
     void testGetServerCount() {
         assertEquals(0, mockServerManager.getServerCount());
-        mockServerManager.createServer(new CreateServerRequest("server1", 9015, "S1", null, null, null, null));
+        mockServerManager.createServer(new ServerCreationRequest("server1", 9015, "S1", null, null, null, null));
         assertEquals(1, mockServerManager.getServerCount());
     }
 
     @Test
     @DisplayName("Should shutdown all servers on service shutdown")
     void testShutdown() {
-        mockServerManager.createServer(new CreateServerRequest("server1", 9017, "S1", null, null, null, null));
+        mockServerManager.createServer(new ServerCreationRequest("server1", 9017, "S1", null, null, null, null));
         mockServerManager.shutdown();
         assertEquals(0, mockServerManager.getServerCount());
     }

@@ -1,23 +1,60 @@
-# application/jsonmc MIME Type Usage Guide
+# JSONMC (JSON with Multiline strings and Comments) Usage Guide
 
 ## Overview
 
-The Mock Server now supports a custom MIME type `application/jsonmc` (JSON with Multi-line strings and Comments) that allows you to send HTTP requests with JSON containing:
+The Mock Server supports a custom format called **JSONMC** (JSON with Multiline strings and Comments). This is a custom extension of JSON designed to make configuration files more human-readable and maintainable.
 
-- **C++ style comments**: Both single-line (`//`) and multi-line (`/* */`) comments
-- **Multiline strings**: Using backticks (`` ` ``) for strings that span multiple lines
+It solves two major pain points of standard JSON: **lack of comments** and **difficult-to-read multiline strings**.
+
+### Key Features
+
+- **Standard Comments**: Supports both single-line (`//`) and multi-line (`/* ... */`) comments, identical to Java or JavaScript.
+- **Backtick Multiline Strings**: Uses backticks (`` ` ``) for strings that span multiple lines (similar to JavaScript template literals). This eliminates the need for escaping newlines (`\n`) or manually escaping double quotes within large blocks of text like JSON bodies or certificates.
+- **Strict JSON Compatibility**: Before being parsed by the application, the system pre-processes the content to strip comments and convert backtick strings into standard escaped JSON strings.
 
 ## How It Works
 
-When a client sends an HTTP request with `Content-Type: application/jsonmc`, the server:
+The system handles JSONMC in two primary ways:
 
-1. Parses the JSON with comments and multiline strings using `JsonCommentParser`
-2. Converts it to standard JSON
-3. Processes it through the normal Spring MVC pipeline (validation, deserialization, etc.)
+1.  **File Loading**: The `ConfigurationLoaderService` automatically detects the format. If a filename ends in `.jsonmc` or if the content contains comment markers (`//` or `/*`), it triggers the enhanced parser.
+2.  **API Requests**: When a client sends an HTTP request with `Content-Type: application/jsonmc`, the server:
+    - Parses the content using `JsonCommentParser`
+    - Converts it to standard JSON
+    - Processes it through the normal Spring MVC pipeline (validation, deserialization, etc.)
 
 ## Usage Example
 
-### Sending a Request
+### Comparison
+
+#### Standard JSON (Difficult to maintain)
+```json
+{
+  "description": "Line 1\nLine 2\nLine 3 with \"quotes\"",
+  "certificate": "-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----"
+}
+```
+
+#### JSONMC (Easy to read)
+```javascript
+{
+  // This is a single-line comment
+  "description": `
+    Line 1
+    Line 2
+    Line 3 with "quotes"
+  `,
+  
+  /* 
+     Multi-line comments are great 
+     for certificates 
+  */
+  "certificate": `-----BEGIN CERTIFICATE-----
+MIID...
+-----END CERTIFICATE-----`
+}
+```
+
+### Sending an API Request
 
 ```bash
 curl -X POST http://localhost:8080/api/servers \
@@ -38,45 +75,9 @@ curl -X POST http://localhost:8080/api/servers \
   }'
 ```
 
-### More Complex Example
-
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/jsonmc" \
-  -d '{
-    // Basic server settings
-    "serverId": "secure-server",
-    "port": 8443,
-
-    /* TLS Configuration
-     * Enable TLS for secure communication
-     * This requires valid certificates */
-    "tlsConfig": {
-      "enabled": true,
-      "keyStorePath": "/path/to/keystore.p12",
-      "keyStorePassword": "secret"
-    },
-
-    // Global headers for all responses
-    "globalHeaders": [
-      {
-        "name": "X-Server-ID",
-        "value": "secure-server"
-      }
-    ],
-
-    // Multiline description
-    "description": `Production server with:
-    - TLS enabled
-    - Custom headers
-    - High security settings`
-  }'
-```
-
 ## Syntax Reference
 
 ### Single-Line Comments
-
 ```json
 {
   // This is a single-line comment
@@ -85,7 +86,6 @@ curl -X POST http://localhost:8080/api/servers \
 ```
 
 ### Multi-Line Comments
-
 ```json
 {
   /* This is a
@@ -96,7 +96,6 @@ curl -X POST http://localhost:8080/api/servers \
 ```
 
 ### Multiline Strings
-
 ```json
 {
   "description": `This is a multiline string.
@@ -107,28 +106,22 @@ curl -X POST http://localhost:8080/api/servers \
 
 ## Important Notes
 
-1. **Content-Type Header**: You must set `Content-Type: application/jsonmc` for the server to use this parser
-2. **Response Format**: Responses are still sent as regular `application/json`
-3. **Validation**: All Spring validation annotations still apply after parsing
-4. **Error Handling**: Invalid JSONMC syntax will return a 400 Bad Request error
-5. **Escape Sequences**: Multiline strings automatically escape:
-   - Newlines (`\n`)
-   - Double quotes (`\"`)
-   - Backslashes (`\\`)
-   - Other standard JSON escape sequences
+1.  **Content-Type Header**: You must set `Content-Type: application/jsonmc` for the API to use this parser.
+2.  **Response Format**: Responses are still sent as regular `application/json`.
+3.  **Validation**: All Spring validation annotations still apply after parsing.
+4.  **Error Handling**: Invalid JSONMC syntax will return a 400 Bad Request error.
+5.  **Escape Sequences**: Multiline strings automatically escape newlines (`\n`), double quotes (`\"`), and backslashes (`\\`).
 
 ## Implementation Details
 
 The implementation consists of three main components:
 
-1. **JsonCommentParser** (`src/main/java/io/github/anandb/mockserver/util/JsonCommentParser.java`)
-   - Core parser that removes comments and converts multiline strings
-
-2. **JsonMultilineCommentHttpMessageConverter** (`src/main/java/io/github/anandb/mockserver/config/JsonMultilineCommentHttpMessageConverter.java`)
-   - Spring HTTP message converter that handles `application/jsonmc` content type
-
-3. **WebConfig** (`src/main/java/io/github/anandb/mockserver/config/WebConfig.java`)
-   - Registers the custom converter with Spring MVC
+1.  **JsonCommentParser** (`src/main/java/io/github/anandb/mockserver/util/JsonCommentParser.java`)
+    - Core utility that uses regex to strip comments and escape content between backticks.
+2.  **JsonMultilineCommentHttpMessageConverter** (`src/main/java/io/github/anandb/mockserver/config/JsonMultilineCommentHttpMessageConverter.java`)
+    - Spring HTTP message converter that handles the `application/jsonmc` content type.
+3.  **WebConfig** (`src/main/java/io/github/anandb/mockserver/config/WebConfig.java`)
+    - Registers the custom converter with Spring MVC.
 
 ## Testing
 
@@ -142,7 +135,7 @@ mvn test -Dtest=JsonMultilineCommentHttpMessageConverterIntegrationTest
 
 ## Benefits
 
-- **Better Readability**: Add comments to document your JSON configurations
-- **Easier Maintenance**: Explain complex configurations inline
-- **Multiline Strings**: No need to escape newlines in long text blocks
-- **Backward Compatible**: Regular JSON still works with standard `application/json` content type
+-   **Better Readability**: Add comments to document your JSON configurations.
+-   **Easier Maintenance**: Explain complex configurations inline.
+-   **Clean Certificates**: Copy-paste PEM certificates directly without manual formatting or escaping.
+-   **Backward Compatible**: Regular JSON still works with the standard `application/json` content type.

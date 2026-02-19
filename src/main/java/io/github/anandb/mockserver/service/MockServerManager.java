@@ -3,7 +3,7 @@ package io.github.anandb.mockserver.service;
 import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
 import io.github.anandb.mockserver.exception.ServerCreationException;
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
-import io.github.anandb.mockserver.model.CreateServerRequest;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.model.ServerInfo;
@@ -35,7 +35,7 @@ public class MockServerManager {
 
     private final Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
 
-    public ServerInfo createServer(CreateServerRequest request) {
+    public ServerInfo createServer(ServerCreationRequest request) {
         String serverId = request.getServerId();
 
         if (servers.containsKey(serverId)) {

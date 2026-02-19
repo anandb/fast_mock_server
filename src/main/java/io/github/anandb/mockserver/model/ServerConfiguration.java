@@ -18,7 +18,7 @@ public class ServerConfiguration {
     @NotNull(message = "Server configuration is required")
     @Valid
     @JsonProperty("server")
-    private CreateServerRequest server;
+    private ServerCreationRequest server;
 
     /** Optional list of expectations to configure on this server at startup */
     @JsonProperty("expectations")
@@ -26,13 +26,13 @@ public class ServerConfiguration {
 
     public ServerConfiguration() {}
 
-    public ServerConfiguration(CreateServerRequest server, List<EnhancedExpectationDTO> expectations) {
+    public ServerConfiguration(ServerCreationRequest server, List<EnhancedExpectationDTO> expectations) {
         this.server = server;
         this.expectations = expectations;
     }
 
-    public CreateServerRequest getServer() { return server; }
-    public void setServer(CreateServerRequest server) { this.server = server; }
+    public ServerCreationRequest getServer() { return server; }
+    public void setServer(ServerCreationRequest server) { this.server = server; }
     public List<EnhancedExpectationDTO> getExpectations() { return expectations; }
     public void setExpectations(List<EnhancedExpectationDTO> expectations) { this.expectations = expectations; }
 

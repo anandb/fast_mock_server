@@ -2,6 +2,7 @@ package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.model.HttpRequestContext;
 import io.github.anandb.mockserver.util.MapperSupplier;
+import io.github.anandb.mockserver.util.RequestUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
@@ -12,7 +13,6 @@ import freemarker.template.TemplateException;
 import lombok.extern.slf4j.Slf4j;
 
 import org.mockserver.model.Cookie;
-import org.mockserver.model.Header;
 import org.mockserver.model.HttpRequest;
 import org.springframework.stereotype.Service;
 
@@ -54,12 +54,11 @@ public class FreemarkerTemplateService {
         // Parse headers - assuming one value per header
         Map<String, String> headers = new HashMap<>();
         if (httpRequest.getHeaderList() != null) {
-            for (Header header : httpRequest.getHeaderList()) {
-                // Get first value if multiple values exist
+            httpRequest.getHeaderList().forEach(header -> {
                 if (header.getValues() != null && !header.getValues().isEmpty()) {
                     headers.put(header.getName().getValue(), header.getValues().get(0).getValue());
                 }
-            }
+            });
         }
 
         // Parse body as JSON
@@ -69,7 +68,6 @@ public class FreemarkerTemplateService {
                 body = objectMapper.readTree(httpRequest.getBodyAsString());
             } catch (Exception e) {
                 log.warn("Failed to parse request body as JSON: {}", e.getMessage());
-                // If parsing fails, create empty JsonNode
                 body = objectMapper.createObjectNode();
             }
         } else {
@@ -84,8 +82,8 @@ public class FreemarkerTemplateService {
             }
         }
 
-        // Extract path variables
-        Map<String, String> pathVariables = extractPathVariables(
+        // Extract path variables using utility
+        Map<String, String> pathVariables = RequestUtils.extractPathVariables(
             httpRequest.getPath().getValue(),
             pathPattern
         );
@@ -96,53 +94,6 @@ public class FreemarkerTemplateService {
                 .cookies(cookies)
                 .pathVariables(pathVariables)
                 .build();
-    }
-
-    /**
-     * Extracts path variables from a request path based on a path pattern.
-     * <p>
-     * For example, given pattern "/users/{id}/posts/{postId}" and path "/users/123/posts/456",
-     * this will return a map: {"id": "123", "postId": "456"}
-     * </p>
-     *
-     * @param requestPath the actual request path
-     * @param pathPattern the expectation path pattern with variables in {brackets}
-     * @return map of path variable names to values
-     */
-    private Map<String, String> extractPathVariables(String requestPath, String pathPattern) {
-        Map<String, String> pathVariables = new HashMap<>();
-
-        if (pathPattern == null || requestPath == null) {
-            return pathVariables;
-        }
-
-        // Split both paths into segments
-        String[] patternSegments = pathPattern.split("/");
-        String[] pathSegments = requestPath.split("/");
-
-        // Must have same number of segments
-        if (patternSegments.length != pathSegments.length) {
-            log.debug("Path segment count mismatch: pattern has {} segments, request has {}",
-                     patternSegments.length, pathSegments.length);
-            return pathVariables;
-        }
-
-        // Match segments and extract variables
-        for (int i = 0; i < patternSegments.length; i++) {
-            String patternSegment = patternSegments[i];
-            String pathSegment = pathSegments[i];
-
-            // Check if this segment is a variable (enclosed in curly braces)
-            if (patternSegment.startsWith("{") && patternSegment.endsWith("}")) {
-                // Extract variable name (remove braces)
-                String variableName = patternSegment.substring(1, patternSegment.length() - 1);
-                pathVariables.put(variableName, pathSegment);
-                log.trace("Extracted path variable: {} = {}", variableName, pathSegment);
-            }
-        }
-
-        log.debug("Extracted {} path variable(s) from path", pathVariables.size());
-        return pathVariables;
     }
 
     /**
@@ -170,8 +121,6 @@ public class FreemarkerTemplateService {
         dataModel.put("body", objectMapper.convertValue(context.getBody(), Map.class));
         dataModel.put("cookies", context.getCookies());
         dataModel.put("pathVariables", context.getPathVariables() != null ? context.getPathVariables() : new HashMap<>());
-
-        System.out.println(dataModel.get("pathVariables"));
 
         // Process template
         StringWriter writer = new StringWriter();

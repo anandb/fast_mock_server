@@ -1,6 +1,6 @@
 package io.github.anandb.mockserver.service;
 
-import io.github.anandb.mockserver.model.CreateServerRequest;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -86,10 +86,10 @@ class ConfigurationLoaderServiceJsonmcTest {
             configFile.toFile()
         );
 
-        ArgumentCaptor<CreateServerRequest> requestCaptor = ArgumentCaptor.forClass(CreateServerRequest.class);
+        ArgumentCaptor<ServerCreationRequest> requestCaptor = ArgumentCaptor.forClass(ServerCreationRequest.class);
         verify(mockServerManager).createServer(requestCaptor.capture());
 
-        CreateServerRequest capturedRequest = requestCaptor.getValue();
+        ServerCreationRequest capturedRequest = requestCaptor.getValue();
         assertEquals("test-server-1", capturedRequest.getServerId());
     }
 
@@ -117,10 +117,10 @@ class ConfigurationLoaderServiceJsonmcTest {
             base64Content
         );
 
-        verify(mockServerManager).createServer(any(CreateServerRequest.class));
+        verify(mockServerManager).createServer(any(ServerCreationRequest.class));
     }
 
-    private CreateServerRequest any(Class<CreateServerRequest> type) {
+    private ServerCreationRequest any(Class<ServerCreationRequest> type) {
         return org.mockito.ArgumentMatchers.any(type);
     }
 }

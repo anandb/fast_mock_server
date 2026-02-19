@@ -1,7 +1,7 @@
 package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.exception.ServerCreationException;
-import io.github.anandb.mockserver.model.CreateServerRequest;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
 import io.github.anandb.mockserver.model.ServerConfiguration;
 import io.github.anandb.mockserver.model.ServerInstance;
@@ -99,7 +99,7 @@ public class ConfigurationLoaderService {
     }
 
     private void processServerConfiguration(ServerConfiguration config) {
-        CreateServerRequest serverRequest = config.getServer();
+        ServerCreationRequest serverRequest = config.getServer();
         String serverId = serverRequest.getServerId();
 
         mockServerManager.createServer(serverRequest);

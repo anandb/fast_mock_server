@@ -3,7 +3,7 @@ package io.github.anandb.mockserver.controller;
 import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
 import io.github.anandb.mockserver.exception.ServerCreationException;
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
-import io.github.anandb.mockserver.model.CreateServerRequest;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.ServerInfo;
 import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.service.MockServerManager;
@@ -40,7 +40,7 @@ public class ServerController {
     private final MockServerManager mockServerManager;
 
     @PostMapping
-    public ResponseEntity<ServerInfo> createServer(@Valid @RequestBody CreateServerRequest request) {
+    public ResponseEntity<ServerInfo> createServer(@Valid @RequestBody ServerCreationRequest request) {
         log.info("Request to create server: {}", request.getServerId());
         ServerInfo serverInfo = mockServerManager.createServer(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(serverInfo);

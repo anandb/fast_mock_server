@@ -9,19 +9,15 @@
       {
         "httpRequest": {
           "method": "GET",
-          "path": "/api/download/documents/{id}",
-          "pathParameters":{
-            "id": "[a-zA-Z0-9-]+"
-          }
+          "path": "/api/download/documents/{id}"
         },
+        /*
+         * The "file" field is now at the top level of the expectation object.
+         * It contains a path or glob pattern to serve as a download.
+         */
+        "file": "/path/to/${pathVariables.id}",
         "httpResponse": {
           "statusCode": 200,
-          /*
-           * The "file" field contains an absolute file path
-           * to serve as a download. When this field is present,
-           * the "body" field should be omitted.
-           */
-          "file": "/path/to/${pathVariables.id}",
           "headers": [
             {
               "name": "X-Download-Type",
@@ -35,9 +31,9 @@
           "method": "GET",
           "path": "/api/download/images"
         },
+        "file": "/path/to/image1.png",
         "httpResponse": {
-          "statusCode": 200,
-          "file": "/path/to/image1.png"
+          "statusCode": 200
         }
       },
       {
@@ -45,13 +41,9 @@
           "method": "POST",
           "path": "/api/export/reports"
         },
+        "file": "/path/to/report1.csv",
         "httpResponse": {
           "statusCode": 200,
-          /*
-           * Files can be of different types - the callback will
-           * automatically detect the content type based on file extensions
-           */
-          "file": "/path/to/report1.csv",
           "headers": [
             {
               "name": "X-Report-Count",
@@ -65,12 +57,9 @@
           "method": "GET",
           "path": "/api/download/archive"
         },
+        "file": "/path/to/archive.zip",
         "httpResponse": {
-          "statusCode": 200,
-          /*
-           * Single file downloads also work with the files array
-           */
-          "file": "/path/to/archive.zip"
+          "statusCode": 200
         }
       },
       {
@@ -82,7 +71,6 @@
           "statusCode": 200,
           /*
            * Regular responses with body continue to work as before
-           * Only use "file" for multi-part file downloads
            */
           "body": `{"message": "This is a regular JSON response"}`
         }

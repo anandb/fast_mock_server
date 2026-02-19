@@ -1,6 +1,6 @@
 package io.github.anandb.mockserver.config;
 
-import io.github.anandb.mockserver.model.CreateServerRequest;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.ServerInfo;
 import io.github.anandb.mockserver.service.MockServerManager;
 import org.junit.jupiter.api.Test;
@@ -20,10 +20,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration test for the application/jsonmc MIME type support.
- * <p>
- * Tests that Spring MVC correctly processes requests with Content-Type: application/jsonmc
- * by parsing JSON with comments and multiline strings, then passing it through the
- * standard JSON processing pipeline.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,7 +39,7 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
         mockServerInfo.setPort(8080);
         mockServerInfo.setStatus("running");
 
-        when(mockServerManager.createServer(any(CreateServerRequest.class)))
+        when(mockServerManager.createServer(any(ServerCreationRequest.class)))
                 .thenReturn(mockServerInfo);
 
         // JSON with comments and multiline strings
@@ -73,7 +69,7 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
                 .andExpect(jsonPath("$.status").value("running"));
 
         // Verify that the service was called with the parsed request
-        verify(mockServerManager).createServer(any(CreateServerRequest.class));
+        verify(mockServerManager).createServer(any(ServerCreationRequest.class));
     }
 
     @Test
@@ -84,7 +80,7 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
         mockServerInfo.setPort(9090);
         mockServerInfo.setStatus("running");
 
-        when(mockServerManager.createServer(any(CreateServerRequest.class)))
+        when(mockServerManager.createServer(any(ServerCreationRequest.class)))
                 .thenReturn(mockServerInfo);
 
         // More complex JSON with various comment styles and multiline strings
@@ -122,7 +118,7 @@ class JsonMultilineCommentHttpMessageConverterIntegrationTest {
                 .andExpect(jsonPath("$.port").value(9090));
 
         // Verify that the service was called
-        verify(mockServerManager).createServer(any(CreateServerRequest.class));
+        verify(mockServerManager).createServer(any(ServerCreationRequest.class));
     }
 
     @Test
