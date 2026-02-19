@@ -13,10 +13,12 @@ import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
 import io.github.anandb.mockserver.exception.ServerCreationException;
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
 import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.ServerInfo;
 import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +32,33 @@ import lombok.extern.slf4j.Slf4j;
 public class MockServerManager {
 
     private final TlsConfigurationService tlsConfigService;
+    private final KubernetesTunnelService kubernetesTunnelService;
     private final List<ResponseStrategy> strategies;
     private Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
+    private volatile boolean shuttingDown = false;
+
+    @PostConstruct
+    public void init() {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (!shuttingDown) {
+                log.warn("JVM shutting down - forcing tunnel cleanup");
+                forceKillTunnels();
+            }
+        }));
+    }
+
+    private void forceKillTunnels() {
+        for (ServerInstance instance : servers.values()) {
+            Map<String, Process> tunnels = instance.tunnels();
+            if (tunnels != null) {
+                for (Process tunnel : tunnels.values()) {
+                    if (tunnel != null && tunnel.isAlive()) {
+                        tunnel.destroyForcibly();
+                    }
+                }
+            }
+        }
+    }
 
     public ServerInfo createServer(ServerCreationRequest request) {
         String serverId = request.getServerId();
@@ -63,6 +90,7 @@ public class MockServerManager {
 
             if (request.isRelayEnabled()) {
                 log.info("Configuring relay for server: {}", serverId);
+                startTunnelsSequentially(instance, request.getRelays());
                 configureRelay(instance);
             }
 
@@ -101,6 +129,7 @@ public class MockServerManager {
         }
 
         try {
+            stopTunnels(instance);
             instance.server().stop();
             tlsConfigService.cleanupServerCertificates(serverId);
             log.info("Successfully deleted server: {}", serverId);
@@ -137,8 +166,57 @@ public class MockServerManager {
             .build();
     }
 
+    private void startTunnelsSequentially(ServerInstance instance, List<RelayConfig> relays) {
+        if (relays == null) {
+            return;
+        }
+
+        for (RelayConfig relay : relays) {
+            if (relay.isTunnelEnabled()) {
+                try {
+                    log.info("Starting tunnel for relay in namespace: {} with pod prefix: {}",
+                            relay.getTunnelConfig().getNamespace(), relay.getTunnelConfig().getPodPrefix());
+                    
+                    if (!kubernetesTunnelService.validateKubectl()) {
+                        throw new ServerCreationException("kubectl is not installed or not accessible");
+                    }
+
+                    int hostPort = kubernetesTunnelService.findAvailablePort();
+                    Process tunnelProcess = kubernetesTunnelService.startTunnel(relay.getTunnelConfig(), hostPort);
+                    
+                    relay.setAssignedHostPort(hostPort);
+                    instance.addTunnel(relay.getTunnelConfig().getNamespace() + ":" + relay.getTunnelConfig().getPodPrefix(), tunnelProcess);
+                    
+                    log.info("Tunnel started on host port: {}", hostPort);
+                } catch (Exception e) {
+                    log.error("Failed to start tunnel for relay", e);
+                    throw new ServerCreationException("Failed to start tunnel: " + e.getMessage(), e);
+                }
+            }
+        }
+    }
+
+    private void stopTunnels(ServerInstance instance) {
+        Map<String, Process> tunnels = instance.tunnels();
+        if (tunnels != null && !tunnels.isEmpty()) {
+            log.info("Stopping {} tunnels for server: {}", tunnels.size(), instance.serverId());
+            for (Map.Entry<String, Process> entry : tunnels.entrySet()) {
+                try {
+                    kubernetesTunnelService.stopTunnel(entry.getValue());
+                    log.debug("Stopped tunnel: {}", entry.getKey());
+                } catch (Exception e) {
+                    log.error("Failed to stop tunnel: {}", entry.getKey(), e);
+                }
+            }
+        }
+    }
+
     @PreDestroy
     public void shutdown() {
+        if (shuttingDown) {
+            return;
+        }
+        shuttingDown = true;
         log.info("Shutting down all MockServers...");
         List<String> serverIds = new ArrayList<>(servers.keySet());
         for (String serverId : serverIds) {

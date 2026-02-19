@@ -3,81 +3,120 @@ package io.github.anandb.mockserver.model;
 import org.mockserver.integration.ClientAndServer;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-/**
- * Record representing an active mock server instance.
- */
-public record ServerInstance(
-    String serverId,
-    int port,
-    ClientAndServer server,
-    TlsConfig tlsConfig,
-    List<GlobalHeader> globalHeaders,
-    BasicAuthConfig basicAuthConfig,
-    List<RelayConfig> relays,
-    LocalDateTime createdAt,
-    String description
-) {
-    /**
-     * Gets the protocol being used by this server.
-     *
-     * @return "https" if TLS is configured and valid, "http" otherwise
-     */
+public class ServerInstance {
+    private final String serverId;
+    private final int port;
+    private final ClientAndServer server;
+    private final TlsConfig tlsConfig;
+    private final List<GlobalHeader> globalHeaders;
+    private final BasicAuthConfig basicAuthConfig;
+    private final List<RelayConfig> relays;
+    private final LocalDateTime createdAt;
+    private final String description;
+    private final Map<String, Process> tunnels;
+
+    public ServerInstance(
+            String serverId,
+            int port,
+            ClientAndServer server,
+            TlsConfig tlsConfig,
+            List<GlobalHeader> globalHeaders,
+            BasicAuthConfig basicAuthConfig,
+            List<RelayConfig> relays,
+            LocalDateTime createdAt,
+            String description) {
+        this.serverId = serverId;
+        this.port = port;
+        this.server = server;
+        this.tlsConfig = tlsConfig;
+        this.globalHeaders = globalHeaders;
+        this.basicAuthConfig = basicAuthConfig;
+        this.relays = relays;
+        this.createdAt = createdAt;
+        this.description = description;
+        this.tunnels = new HashMap<>();
+    }
+
+    public String serverId() {
+        return serverId;
+    }
+
+    public int port() {
+        return port;
+    }
+
+    public ClientAndServer server() {
+        return server;
+    }
+
+    public TlsConfig tlsConfig() {
+        return tlsConfig;
+    }
+
+    public List<GlobalHeader> globalHeaders() {
+        return globalHeaders;
+    }
+
+    public BasicAuthConfig basicAuthConfig() {
+        return basicAuthConfig;
+    }
+
+    public List<RelayConfig> relays() {
+        return relays;
+    }
+
+    public LocalDateTime createdAt() {
+        return createdAt;
+    }
+
+    public String description() {
+        return description;
+    }
+
+    public Map<String, Process> tunnels() {
+        return tunnels;
+    }
+
+    public void addTunnel(String key, Process process) {
+        tunnels.put(key, process);
+    }
+
+    public Process getTunnel(String key) {
+        return tunnels.get(key);
+    }
+
+    public void removeTunnel(String key) {
+        tunnels.remove(key);
+    }
+
     public String getProtocol() {
         return (tlsConfig != null && tlsConfig.isValid()) ? "https" : "http";
     }
 
-    /**
-     * Gets the complete base URL for accessing this server.
-     *
-     * @return formatted base URL (e.g., "https://localhost:1443")
-     */
     public String getBaseUrl() {
         return String.format("%s://localhost:%d", getProtocol(), port);
     }
 
-    /**
-     * Checks if TLS is enabled for this server.
-     *
-     * @return true if TLS is configured and valid, false otherwise
-     */
     public boolean isTlsEnabled() {
         return tlsConfig != null && tlsConfig.isValid();
     }
 
-    /**
-     * Checks if mutual TLS (mTLS) is enabled for this server.
-     *
-     * @return true if mTLS is configured and valid, false otherwise
-     */
     public boolean isMtlsEnabled() {
         return tlsConfig != null && tlsConfig.hasMtls();
     }
 
-    /**
-     * Checks if basic authentication is enabled for this server.
-     *
-     * @return true if basic auth is configured and valid, false otherwise
-     */
     public boolean isBasicAuthEnabled() {
         return basicAuthConfig != null && basicAuthConfig.isValid();
     }
 
-    /**
-     * Checks if relay configuration is enabled for this server.
-     *
-     * @return true if relay is configured and valid, false otherwise
-     */
     public boolean isRelayEnabled() {
         return relays != null && !relays.isEmpty() && relays.stream().allMatch(RelayConfig::isValid);
     }
 
-    /**
-     * Checks if the underlying server is running.
-     *
-     * @return true if running, false otherwise
-     */
     public boolean isRunning() {
         return server != null && server.isRunning();
     }

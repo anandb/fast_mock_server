@@ -1,27 +1,27 @@
 package io.github.anandb.mockserver.service;
 
-import io.github.anandb.mockserver.exception.ServerCreationException;
-import io.github.anandb.mockserver.model.ServerCreationRequest;
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
-import io.github.anandb.mockserver.model.ServerConfiguration;
-import io.github.anandb.mockserver.model.ServerInstance;
-import io.github.anandb.mockserver.util.JsonCommentParser;
-import io.github.anandb.mockserver.strategy.ResponseStrategy;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Base64;
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.github.anandb.mockserver.exception.ServerCreationException;
+import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.ServerConfiguration;
+import io.github.anandb.mockserver.model.ServerCreationRequest;
+import io.github.anandb.mockserver.model.ServerInstance;
+import io.github.anandb.mockserver.strategy.ResponseStrategy;
+import io.github.anandb.mockserver.util.JsonCommentParser;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 /**
- * Service responsible for loading server and expectation configurations from a JSON file or base64.
+ * Service responsible for loading server and expectation configurations from a JSON file.
  */
 @Slf4j
 @Service
@@ -33,24 +33,19 @@ public class ConfigurationLoaderService {
     private final List<ResponseStrategy> strategies;
 
     private static final String CONFIG_FILE_PROPERTY = "mock.server.config.file";
-    private static final String CONFIG_FILE_B64_PROPERTY = "mock.server.config.fileb64";
+    private static final String DOCKER_CONFIG_FILE = "/server.jsonmc";
 
     @PostConstruct
     public void loadConfigurationsOnStartup() {
-        String configB64 = System.getProperty(CONFIG_FILE_B64_PROPERTY);
-        if (configB64 != null && !configB64.trim().isEmpty()) {
-            try {
-                loadConfigurationsFromBase64(configB64);
-                return;
-            } catch (Exception e) {
-                log.error("Failed to load configurations from base64", e);
-                throw new ServerCreationException("Failed to load configurations from base64: " + e.getMessage(), e);
-            }
-        }
-
         String configFilePath = System.getProperty(CONFIG_FILE_PROPERTY);
+
         if (configFilePath == null || configFilePath.trim().isEmpty()) {
-            return;
+            File dockerConfigFile = new File(DOCKER_CONFIG_FILE);
+            if (dockerConfigFile.exists() && dockerConfigFile.isFile()) {
+                configFilePath = DOCKER_CONFIG_FILE;
+            } else {
+                return;
+            }
         }
 
         File configFile = new File(configFilePath);
@@ -65,12 +60,6 @@ public class ConfigurationLoaderService {
             log.error("Failed to load configurations from file: {}", configFilePath, e);
             throw new ServerCreationException("Failed to load configurations from file: " + configFilePath, e);
         }
-    }
-
-    private void loadConfigurationsFromBase64(String configB64) throws IOException {
-        byte[] decodedBytes = Base64.getDecoder().decode(configB64.trim());
-        String configContent = new String(decodedBytes, StandardCharsets.UTF_8);
-        loadConfigurationsFromString(configContent, true);
     }
 
     private void loadConfigurationsFromFile(File configFile) throws IOException {

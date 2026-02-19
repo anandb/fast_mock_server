@@ -40,6 +40,9 @@ class MockServerManagerTest {
     private TlsConfigurationService tlsConfigService;
 
     @Mock
+    private KubernetesTunnelService kubernetesTunnelService;
+
+    @Mock
     private RelayService relayService;
 
     private List<ResponseStrategy> strategies = new ArrayList<>();
@@ -49,7 +52,7 @@ class MockServerManagerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mockServerManager = new MockServerManager(tlsConfigService, strategies);
+        mockServerManager = new MockServerManager(tlsConfigService, kubernetesTunnelService, strategies);
     }
 
     @Test

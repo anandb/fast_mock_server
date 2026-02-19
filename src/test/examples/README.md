@@ -50,6 +50,12 @@ Configuration demonstrating file downloads and multi-part responses.
 - **Features:** Multi-part file downloads
 - **Note:** Scripts not yet created for this example
 
+### 8. server-config-tunnel-example/
+Relay server that forwards requests to a Kubernetes pod via kubectl port-forward tunnel.
+- **Port:** 9001
+- **Features:** Kubernetes pod discovery, auto-assigned tunnel port (9000-11000), tunnel lifecycle management
+- **Note:** Requires kubectl access to target Kubernetes cluster
+
 ## Usage
 
 Each example can be run independently:
@@ -105,8 +111,12 @@ examples/
 │   ├── server-config-relay-no-auth-example.jsonmc
 │   ├── start_server.sh
 │   └── start_client.sh
-└── server-config-files-example/
-    └── server-config-files-example.jsonmc
+├── server-config-files-example/
+│   └── server-config-files-example.jsonmc
+└── server-config-tunnel-example/
+    ├── server-config-tunnel-example.jsonmc
+    ├── start_server.sh
+    └── start_client.sh
 ```
 
 ## Notes

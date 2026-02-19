@@ -1,0 +1,29 @@
+{
+  "server": {
+    "serverId": "k8s-tunnel-server",
+    "port": 9001,
+    "description": "Relay server with Kubernetes tunnel support",
+    "relays": [
+      {
+        "tunnelConfig": {
+          "namespace": "default",
+          "podPrefix": "my-app-",
+          "podPort": 8080
+        },
+        "prefixes": ["/api/**"]
+      }
+    ]
+  },
+  "expectations": [
+    {
+      "httpRequest": {
+        "method": "GET",
+        "path": "/health"
+      },
+      "httpResponse": {
+        "statusCode": 200,
+        "body": "{\"status\": \"tunnel-server-ready\", \"tunnel\": \"kubectl port-forward\"}"
+      }
+    }
+  ]
+}

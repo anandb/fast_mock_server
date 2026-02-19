@@ -15,11 +15,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -101,26 +99,5 @@ class ConfigurationLoaderServiceJsonmcTest {
 
     private boolean isJsonmcFile(String fileName) {
         return fileName.toLowerCase().endsWith(".jsonmc");
-    }
-
-    @Test
-    void testLoadConfigurationsFromBase64() throws Exception {
-        String jsonContent = "[{\"server\":{\"serverId\":\"base64-server\",\"port\":8083}}]";
-        String base64Content = Base64.getEncoder().encodeToString(jsonContent.getBytes(StandardCharsets.UTF_8));
-
-        when(mockServerManager.getServerInstance(anyString())).thenReturn(serverInstance);
-        when(serverInstance.server()).thenReturn(mock(org.mockserver.integration.ClientAndServer.class));
-
-        ReflectionTestUtils.invokeMethod(
-            configurationLoaderService,
-            "loadConfigurationsFromBase64",
-            base64Content
-        );
-
-        verify(mockServerManager).createServer(any(ServerCreationRequest.class));
-    }
-
-    private ServerCreationRequest any(Class<ServerCreationRequest> type) {
-        return org.mockito.ArgumentMatchers.any(type);
     }
 }

@@ -5,8 +5,9 @@ A Spring Boot application for managing multiple MockServer instances with suppor
 ## Features
 
 - **Multiple MockServer Instances**: Create and manage multiple mock servers in a single process
-- **Dynamic Configuration**: Configure expectations via REST API
+- **File-based Configuration**: Configure servers via JSON/JSONMC configuration file at startup
 - **Relay/Proxy Mode**: Forward requests to remote servers with optional OAuth2 authentication
+- **Kubernetes Tunnel Support**: Establish kubectl port-forward tunnels to Kubernetes pods
 - **TLS/HTTPS Support**: Enable HTTPS with custom certificates
 - **Mutual TLS (mTLS)**: Client certificate validation with CA certificate
 - **Basic Authentication**: HTTP Basic Auth protection for mock servers
@@ -49,6 +50,30 @@ Incoming HTTP Request (MockServer Port)
 
 ## Architecture
 
+```
+┌─────────────────────────────────────────────────────────┐
+│       Spring Boot Management App (Control Port 8080)    │
+├─────────────────────────────────────────────────────────┤
+│  ConfigurationLoaderService                             │
+│  - Loads config from file or base64                    │
+│  - Creates servers on startup                          │
+├─────────────────────────────────────────────────────────┤
+│  MockServerManager    │  EnhancedResponseCallback       │
+│  - Server registry    │  - Strategy Router             │
+│  - Lifecycle mgmt     │  - Global Header Merging      │
+│  - Tunnel management │                                │
+├─────────────────────────────────────────────────────────┤
+│                  Response Strategies                    │
+│  - Static  - Dynamic File  - SSE  - Relay             │
+│  - Kubernetes Tunnel                                  │
+└─────────────────────────────────────────────────────────┘
+            │                          │
+            ▼                          ▼
+     ┌─────────────┐          ┌─────────────┐
+     │ MockServer  │          │ MockServer  │
+     │ Port 1080   │          │ Port 1443   │
+     │ (HTTP)      │          │ (HTTPS)     │
+     └─────────────┘          └─────────────┘
 ```
 ┌─────────────────────────────────────────────────────────┐
 │       Spring Boot Management App (Control Port 8080)   │
@@ -100,14 +125,14 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=se
 
 The management API will be available at `http://localhost:8080`
 
-## Loading Configuration from File or Base64
+## Loading Configuration from File
 
-You can automatically create servers and configure expectations at startup by providing either a JSON configuration file or base64-encoded configuration content. This is useful for:
+You can automatically create servers and configure expectations at startup by providing a JSON configuration file. This is useful for:
 - Consistent test environments
 - CI/CD pipelines
 - Automated testing setups
 - Quick server setup without API calls
-- Passing configuration via environment variables or command line
+- Docker containers
 
 ### Configuration File Format
 
@@ -145,10 +170,6 @@ Create a JSON file (e.g., `server-config.json`) with an array of server configur
 
 ### Usage
 
-You have two options for loading configuration at startup:
-
-#### Option 1: Configuration File
-
 Specify the configuration file path using the `mock.server.config.file` system property:
 
 ```bash
@@ -162,31 +183,28 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./
 java -Dmock.server.config.file=./config/servers.json -jar target/mock-server-1.0.0.jar
 ```
 
-#### Option 2: Base64-Encoded Configuration
+### Docker Usage
 
-Alternatively, provide base64-encoded configuration content using the `mock.server.config.fileb64` system property. This is useful when:
-- Configuration needs to be passed via environment variables
-- Files cannot be easily mounted (e.g., container environments)
-- Configuration is generated dynamically
-- Avoiding filesystem access is preferred
+When running inside a Docker container, place your configuration file at `/server.jsonmc` in the container filesystem. The application will automatically detect and load it:
 
 ```bash
-# First, encode your configuration file to base64
-CONFIG_B64=$(base64 -w 0 server-config.json)
+# Build the JAR
+mvn clean package -DskipTests
 
-# Then pass it as a system property
-java -Dmock.server.config.fileb64="$CONFIG_B64" -jar target/mock-server-1.0.0.jar
+# Build Docker image with config
+docker build -t mock-server .
+# (Ensure server.jsonmc is copied to root of container)
 
-# Or with Maven
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.fileb64=$CONFIG_B64"
-
-# Direct inline base64 (for short configs)
-java -Dmock.server.config.fileb64="WwogIHsKICAgICJzZXJ2ZXIiOiB7CiAgICAgICJzZXJ2ZXJJZCI6ICJ0ZXN0IiwKICAgICAgInBvcnQiOiA4MDgxCiAgICB9CiAgfQpd" -jar target/mock-server-1.0.0.jar
+# Run the container - config at /server.jsonmc will be auto-loaded
+# Note: Use --net=host due to dynamic port mappings for mock servers
+docker run --net=host mock-server
 ```
 
-**Priority:** The `mock.server.config.fileb64` property is checked first. If it's set, the application loads configuration from the base64-encoded content and ignores `mock.server.config.file`. If neither property is set, the application starts without pre-configured servers.
+**Important:** Due to the complexity of managing multiple dynamic ports for mock servers (each server can use different ports), you must run the container with `--net=host`. This allows the mock servers to bind directly to host ports without Docker port mapping overhead.
 
-**Format Support:** Both JSON and JSONMC formats are supported. The system auto-detects JSONMC format by looking for comment markers (`//` or `/*`) in the decoded content.
+**Format Support:** Both JSON and JSONMC formats are supported. The system auto-detects JSONMC format by looking for comment markers (`//` or `/*`) in the file content.
+
+**Note:** If no configuration file is specified and no `/server.jsonmc` exists, the application starts without pre-configured servers.
 
 ## File Glob Pattern Support
 
@@ -251,13 +269,17 @@ When configuring expectations with file responses, you can use glob patterns to 
 ### Configuration File Structure
 
 Each server configuration object contains:
-- **server** (required): Server creation parameters (same as POST /api/servers)
+- **server** (required): Server creation parameters
   - `serverId`: Unique identifier
   - `port`: Port number (1024-65535)
   - `description`: Optional description
   - `tlsConfig`: Optional TLS/HTTPS configuration
   - `globalHeaders`: Optional global response headers
+  - `basicAuthConfig`: Optional basic authentication
+  - `relays`: Optional relay/tunnel configuration
 - **expectations** (optional): Array of expectations to configure on this server
+
+**Note:** This application does not expose a REST API for server management. All configuration is loaded from the configuration file at startup.
 
 See `server-config-example.json` for a complete example with multiple servers and various configurations.
 
@@ -1029,6 +1051,36 @@ See `examples/server-config-relay-example.jsonmc` and `examples/server-config-re
 
 For detailed relay configuration documentation, see [docs/RELAY_CONFIGURATION.md](docs/RELAY_CONFIGURATION.md).
 
+### Kubernetes Tunnel Support
+
+The relay feature also supports establishing kubectl port-forward tunnels to Kubernetes pods. This enables access to services running inside a Kubernetes cluster without exposing them publicly.
+
+**Key Features:**
+- **Automatic Pod Discovery**: Finds pods using prefix filter
+- **Auto-assigned Ports**: Host port automatically assigned from range 9000-11000
+- **Sequential Creation**: Multiple tunnels created one at a time
+- **Graceful Shutdown**: Tunnels automatically killed on server stop
+
+**Example Configuration:**
+```json
+{
+  "server": {
+    "serverId": "k8s-tunnel",
+    "port": 9001,
+    "relays": [{
+      "tunnelConfig": {
+        "namespace": "production",
+        "podPrefix": "api-service-",
+        "podPort": 8080
+      },
+      "prefixes": ["/api/**"]
+    }]
+  }
+}
+```
+
+For detailed tunnel configuration documentation, see [docs/RELAY_CONFIGURATION.md](docs/RELAY_CONFIGURATION.md).
+
 ## Error Handling
 
 All errors return a consistent format:
@@ -1065,103 +1117,6 @@ mockserver.cert.cleanup-on-shutdown=true
 
 # Logging level
 logging.level.io.github.anandb.mockserver=DEBUG
-```
-
-## Project Structure
-
-```
-mock_server/
-├── docs/                                    # Documentation
-│   ├── FREEMARKER_TEMPLATE_GUIDE.md        # Freemarker templating guide
-│   ├── JSONMC_USAGE.md                     # JSON with comments format guide
-│   ├── RELAY_CONFIGURATION.md              # Relay/proxy configuration guide
-│   └── TEST_SUITE.md                       # Test suite documentation
-├── examples/                                # Configuration examples
-│   ├── server-config-basicauth-example.jsonmc
-│   ├── server-config-example.jsonmc
-│   ├── server-config-files-example.jsonmc
-│   ├── server-config-mtls-example.jsonmc
-│   ├── server-config-relay-example.jsonmc
-│   ├── server-config-relay-no-auth-example.jsonmc
-│   └── test-config.jsonmc
-├── src/
-│   ├── main/
-│   │   ├── java/io/github/anandb/mockserver/
-│   │   │   ├── MockServerApplication.java   # Main application entry point
-│   │   │   ├── callback/                    # Unified Response Callback
-│   │   │   │   └── EnhancedResponseCallback.java
-│   │   │   ├── config/                      # Configuration classes
-│   │   │   │   ├── JsonMultilineCommentHttpMessageConverter.java
-│   │   │   │   └── WebConfig.java
-│   │   │   ├── controller/                  # REST API controllers
-│   │   │   │   ├── ExpectationController.java
-│   │   │   │   └── ServerController.java
-│   │   │   ├── exception/                   # Exception handling
-│   │   │   │   ├── GlobalExceptionHandler.java
-│   │   │   │   ├── InvalidCertificateException.java
-│   │   │   │   ├── InvalidExpectationException.java
-│   │   │   │   ├── ServerAlreadyExistsException.java
-│   │   │   │   ├── ServerCreationException.java
-│   │   │   │   └── ServerNotFoundException.java
-│   │   │   ├── model/                       # Domain models & Records
-│   │   │   │   ├── BasicAuthConfig.java
-│   │   │   │   ├── CreateServerRequest.java
-│   │   │   │   ├── EnhancedExpectationDTO.java
-│   │   │   │   ├── GlobalHeader.java
-│   │   │   │   ├── HttpRequestContext.java
-│   │   │   │   ├── MtlsConfig.java
-│   │   │   │   ├── RelayConfig.java
-│   │   │   │   ├── ServerConfiguration.java
-│   │   │   │   ├── ServerInfo.java
-│   │   │   │   ├── ServerInstance.java
-│   │   │   │   └── TlsConfig.java
-│   │   │   ├── service/                     # Business logic services
-│   │   │   │   ├── CertificateValidator.java
-│   │   │   │   ├── ConfigurationLoaderService.java
-│   │   │   │   ├── FreemarkerTemplateService.java
-│   │   │   │   ├── MockServerManager.java
-│   │   │   │   ├── MockServerOperations.java
-│   │   │   │   ├── MockServerOperationsImpl.java
-│   │   │   │   ├── OAuth2TokenService.java
-│   │   │   │   ├── RelayService.java
-│   │   │   │   └── TlsConfigurationService.java
-│   │   │   ├── strategy/                    # Response Generation Strategies
-│   │   │   │   ├── DynamicFileStrategy.java
-│   │   │   │   ├── RelayResponseStrategy.java
-│   │   │   │   ├── SSEResponseStrategy.java
-│   │   │   │   └── StaticResponseStrategy.java
-│   │   │   └── util/                        # Utility classes
-│   │   │       ├── FreemarkerTemplateDetector.java
-│   │   │       ├── JsonCommentParser.java
-│   │   │       └── MapperSupplier.java
-│   │   └── resources/
-│   │       └── application.properties
-│   └── test/
-│       ├── java/io/github/anandb/mockserver/
-│       │   ├── MockServerApplicationTests.java
-│       │   ├── config/
-│       │   │   └── JsonMultilineCommentHttpMessageConverterIntegrationTest.java
-│       │   ├── controller/
-│       │   │   ├── ExpectationControllerTest.java
-│       │   │   └── ServerControllerTest.java
-│       │   ├── integration/
-│       │   │   └── MockServerIntegrationTest.java
-│       │   ├── service/
-│       │   │   ├── CertificateValidatorTest.java
-│       │   │   ├── ConfigurationLoaderServiceJsonmcTest.java
-│       │   │   ├── MockServerManagerTest.java
-│       │   │   └── TlsConfigurationServiceTest.java
-│       │   └── util/
-│       │       ├── JsonCommentParserDebugTest.java
-│       │       └── JsonCommentParserTest.java
-│       └── resources/
-│           ├── application-test.properties
-│           └── test-server-config.jsonmc
-├── .gitignore
-├── pom.xml
-├── QUICKSTART.md
-├── README.md
-└── UNLICENSE
 ```
 
 ## Dependencies

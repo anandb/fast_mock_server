@@ -69,7 +69,15 @@ public class RelayService {
             Map<String, List<String>> headers,
             byte[] body) throws Exception {
 
-        String remoteUrl = config.getRemoteUrl();
+        String remoteUrl;
+        
+        if (config.isTunnelEnabled() && config.getAssignedHostPort() != null) {
+            remoteUrl = "http://localhost:" + config.getAssignedHostPort();
+            log.debug("Using tunnel to relay request to localhost:{}", config.getAssignedHostPort());
+        } else {
+            remoteUrl = config.getRemoteUrl();
+        }
+        
         if (remoteUrl.endsWith("/") && path.startsWith("/")) {
             remoteUrl = remoteUrl.substring(0, remoteUrl.length() - 1);
         }

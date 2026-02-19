@@ -9,6 +9,7 @@ The relay configuration feature allows you to create a mock server that acts as 
 - Creating a simple proxy server with custom headers
 - Testing OAuth2 token management and caching
 - Forwarding requests without authentication
+- Accessing services inside Kubernetes clusters via kubectl tunnel
 
 ## Features
 
@@ -18,6 +19,7 @@ The relay configuration feature allows you to create a mock server that acts as 
 - **Full Request Forwarding**: Forwards all aspects of requests (method, path, query params, headers, body)
 - **Transparent Response**: Returns the exact response from the remote server
 - **No Authentication Mode**: Relay requests without any authentication when OAuth2 is not configured
+- **Kubernetes Tunnel Support**: Establish kubectl port-forward tunnels to Kubernetes pods
 
 ## Configuration
 
@@ -82,11 +84,13 @@ To add OAuth2 authentication, include the token endpoint and client credentials:
 
 ## Configuration Parameters
 
-### Required Parameters
+### Required Parameters (one of remoteUrl or tunnelConfig)
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `remoteUrl` | String | The base URL of the remote server to relay requests to |
+| **OR** |||
+| `tunnelConfig` | Object | Kubernetes tunnel configuration (namespace, podPrefix, podPort) |
 
 ### OAuth2 Authentication Parameters (Optional)
 
@@ -425,6 +429,198 @@ Example with TLS:
 ## See Also
 
 - [Server Configuration Guide](../README.md)
-- [API Documentation](../QUICKSTART.md)
 - [Relay with OAuth2 Example](../examples/server-config-relay-example.jsonmc)
 - [Relay without Authentication Example](../examples/server-config-relay-no-auth-example.jsonmc)
+
+---
+
+# Kubernetes Tunnel Configuration
+
+## Overview
+
+The Kubernetes tunnel feature allows you to create a relay server that automatically establishes a `kubectl port-forward` tunnel to a Kubernetes pod. This enables access to services running inside a Kubernetes cluster without exposing them publicly.
+
+## Features
+
+- **Automatic Pod Discovery**: Programmatically discovers pods using a prefix filter
+- **Single Pod Selection**: Automatically selects the first matching pod
+- **Auto-assigned Ports**: Host port is automatically assigned from range 9000-11000
+- **Sequential Tunnel Creation**: Multiple tunnels are created one at a time to avoid port conflicts
+- **Graceful Shutdown**: Tunnels are automatically killed when the server stops
+- **Tunnel over Remote URL**: When tunnel is configured, it takes precedence over remoteUrl
+
+## Configuration
+
+### Basic Tunnel Configuration
+
+```json
+{
+  "server": {
+    "serverId": "k8s-tunnel-server",
+    "port": 9001,
+    "relays": [{
+      "tunnelConfig": {
+        "namespace": "default",
+        "podPrefix": "my-app-",
+        "podPort": 8080
+      },
+      "prefixes": ["/api/**"]
+    }]
+  }
+}
+```
+
+### Tunnel Configuration with OAuth2
+
+```json
+{
+  "server": {
+    "serverId": "k8s-tunnel-oauth",
+    "port": 9002,
+    "relays": [{
+      "tunnelConfig": {
+        "namespace": "production",
+        "podPrefix": "api-service-",
+        "podPort": 8080
+      },
+      "tokenUrl": "https://auth.example.com/oauth/token",
+      "clientId": "your-client-id",
+      "clientSecret": "your-client-secret"
+    }]
+  }
+}
+```
+
+## Configuration Parameters
+
+### Required Parameters (one of remoteUrl or tunnelConfig)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `remoteUrl` | String | The base URL of the remote server to relay requests to |
+| **OR** |||
+| `tunnelConfig` | Object | Kubernetes tunnel configuration (see below) |
+
+### Tunnel Configuration Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `namespace` | String | Kubernetes namespace where pods are located |
+| `podPrefix` | String | Prefix to filter pods (first matching pod is selected) |
+| `podPort` | Integer | Target port within the Kubernetes pod |
+
+### Optional Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `prefixes` | List<String> | `["/**"]` | List of path prefixes to match (ant patterns) |
+| `tokenUrl` | String | null | OAuth2 token endpoint URL |
+| `clientId` | String | null | OAuth2 client ID |
+| `clientSecret` | String | null | OAuth2 client secret |
+| `scope` | String | null | OAuth2 scope to request |
+| `grantType` | String | "client_credentials" | OAuth2 grant type |
+| `headers` | Map<String, String> | null | Custom headers to add to all relayed requests |
+
+## How It Works
+
+### Startup Flow
+
+1. **kubectl Validation**: On first tunnel startup, validates that kubectl is installed and accessible
+2. **Pod Discovery**: Executes `kubectl get pods -n <namespace>` and filters by prefix
+3. **Port Assignment**: Automatically finds an available port in range 9000-11000
+4. **Tunnel Creation**: Starts `kubectl port-forward pod/<podName> <hostPort>:<podPort> -n <namespace>`
+5. **Relay Setup**: Configures relay to forward to `http://localhost:<hostPort>`
+
+### Request Flow
+
+1. **Incoming Request**: Client sends a request to the mock server
+2. **Tunnel Check**: If tunnel is enabled, uses `localhost:<assignedHostPort>`
+3. **Request Forwarding**: Forwards to the Kubernetes pod via the tunnel
+4. **Response Handling**: Returns the exact response from the pod
+
+### Shutdown Flow
+
+1. **Server Stop**: When the mock server is deleted or application shuts down
+2. **Tunnel Cleanup**: All kubectl processes are forcibly terminated
+3. **Port Release**: Ports are released back to the operating system
+
+## Important Notes
+
+1. **kubectl Requirement**: kubectl must be installed and configured with access to the target Kubernetes cluster
+2. **Port Range**: Host ports are automatically assigned from 9000-11000
+3. **Sequential Creation**: Multiple tunnels are created one at a time to avoid port conflicts
+4. **First Pod Match**: If multiple pods match the prefix, the first one is selected
+5. **Tunnel Precedence**: When tunnelConfig is present, it takes precedence over remoteUrl
+6. **OAuth2 Compatible**: Tunnels can be combined with OAuth2 authentication
+
+## Usage Example
+
+### Example: Accessing a Kubernetes Service
+
+Given a Kubernetes deployment:
+- Namespace: `production`
+- Pod prefix: `my-api-`
+- Container port: `8080`
+
+Configuration:
+```json
+{
+  "server": {
+    "serverId": "k8s-relay",
+    "port": 9001,
+    "relays": [{
+      "tunnelConfig": {
+        "namespace": "production",
+        "podPrefix": "my-api-",
+        "podPort": 8080
+      },
+      "prefixes": ["/api/**"]
+    }]
+  }
+}
+```
+
+Start the server:
+```bash
+java -Dmock.server.config.file=./k8s-tunnel-config.jsonmc -jar target/mock-server-1.0.0.jar
+```
+
+Test the relay:
+```bash
+curl http://localhost:9001/api/users
+# Request is forwarded via kubectl tunnel to the pod at my-api-xxx in namespace production
+```
+
+## Troubleshooting
+
+### Issue: "No pod found matching prefix"
+
+**Possible Causes:**
+- No pods running in the specified namespace
+- Pod prefix doesn't match any pod names
+- kubectl not configured with correct context
+
+**Solution:** 
+- Verify pods exist: `kubectl get pods -n <namespace>`
+- Check kubectl context: `kubectl config current-context`
+
+### Issue: "kubectl is not installed or not accessible"
+
+**Solution:**
+- Install kubectl: `curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"`
+- Configure kubectl with valid kubeconfig
+
+### Issue: "Failed to find available port"
+
+**Possible Causes:**
+- All ports in range 9000-11000 are in use
+
+**Solution:** 
+- Stop other services using ports in that range
+- Modify the port range in KubernetesTunnelService if needed
+
+## Security Considerations
+
+1. **kubectl Access**: The server process needs access to kubectl and appropriate Kubernetes credentials
+2. **Network Access**: Must have network access to the Kubernetes API server
+3. **Pod Access**: Must have permission to port-forward to the target pods

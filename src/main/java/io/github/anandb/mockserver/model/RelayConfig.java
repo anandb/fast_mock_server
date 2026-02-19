@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,6 @@ import java.util.Map;
 public class RelayConfig {
 
     /** The remote URL to relay requests to */
-    @NotBlank(message = "Remote URL is required for relay configuration")
     @JsonProperty("remoteUrl")
     private String remoteUrl;
 
@@ -70,6 +70,15 @@ public class RelayConfig {
     @JsonProperty("grantType")
     private String grantType = "client_credentials";
 
+    /** Optional tunnel configuration for Kubernetes port-forwarding */
+    @Valid
+    @JsonProperty("tunnelConfig")
+    private TunnelConfig tunnelConfig;
+
+    /** The assigned host port for the tunnel (populated at runtime) */
+    @JsonProperty("assignedHostPort")
+    private Integer assignedHostPort;
+
     /**
      * Checks if OAuth2 authentication is enabled for this relay configuration.
      *
@@ -82,16 +91,30 @@ public class RelayConfig {
     }
 
     /**
+     * Checks if tunnel configuration is enabled for this relay.
+     *
+     * @return true if tunnel configuration is present and valid, false otherwise
+     */
+    public boolean isTunnelEnabled() {
+        return tunnelConfig != null &&
+                tunnelConfig.getNamespace() != null && !tunnelConfig.getNamespace().isBlank() &&
+                tunnelConfig.getPodPrefix() != null && !tunnelConfig.getPodPrefix().isBlank() &&
+                tunnelConfig.getPodPort() != null;
+    }
+
+    /**
      * Checks if this relay configuration is valid.
-     * A configuration is valid if it has a remote URL, and if OAuth2 fields are
-     * provided,
-     * they must all be complete.
+     * A configuration is valid if it has either a remote URL or tunnel configuration.
+     * If OAuth2 fields are provided, they must all be complete.
      *
      * @return true if configuration is valid, false otherwise
      */
     public boolean isValid() {
-        // Remote URL is always required
-        if (remoteUrl == null || remoteUrl.isBlank()) {
+        boolean hasRemoteUrl = remoteUrl != null && !remoteUrl.isBlank();
+        boolean hasTunnelConfig = isTunnelEnabled();
+
+        // Must have either remote URL or tunnel config
+        if (!hasRemoteUrl && !hasTunnelConfig) {
             return false;
         }
 
@@ -105,7 +128,7 @@ public class RelayConfig {
             return hasTokenUrl && hasClientId && hasClientSecret;
         }
 
-        return true; // Valid if remote URL is present and no partial OAuth2 config
+        return true;
     }
 
     /**
