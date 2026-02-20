@@ -6,14 +6,16 @@ import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 /**
  * Utility class for expanding environment variables in strings.
- * Supports ${VARIABLE} and ${VARIABLE:-DEFAULT_VALUE} syntax.
+ * Supports @{VARIABLE} and @{VARIABLE:-DEFAULT_VALUE} syntax.
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class VariableExpander {
 
-    private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\$\\{([^}:]+)(?::-(.*?))?}");
+    private static final Pattern VARIABLE_PATTERN = Pattern.compile("@\\{([^}:]+)(?::-(.*?))?}");
 
     /**
      * Expands environment variables in the given text.
@@ -34,7 +36,7 @@ public final class VariableExpander {
      * @return The text with variables expanded
      * @throws IllegalArgumentException if a variable is not found and no default value is provided
      */
-    static String expand(String text, java.util.Map<String, String> variables) {
+    public static String expand(String text, java.util.Map<String, String> variables) {
         if (text == null) {
             return null;
         }
@@ -46,16 +48,12 @@ public final class VariableExpander {
         while (matcher.find()) {
             result.append(text, lastMatchEnd, matcher.start());
             String variableName = matcher.group(1);
-            String defaultValue = matcher.group(2);
+            String value = variables.getOrDefault(variableName, matcher.group(2));
 
-            String value = variables.get(variableName);
-            if (value == null) {
-                if (defaultValue != null) {
-                    value = defaultValue;
-                } else {
-                    throw new IllegalArgumentException("Environment variable not found: " + variableName);
-                }
+            if (isBlank(value)) {
+                throw new IllegalArgumentException("Variable not found: " + variableName);
             }
+
             result.append(value);
             lastMatchEnd = matcher.end();
         }

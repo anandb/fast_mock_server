@@ -56,7 +56,7 @@ class ConfigurationLoaderServiceVariableExpansionTest {
         [
           {
             "server": {
-              "serverId": "${TEST_SERVER_ID:-expanded-server}",
+              "serverId": "@{TEST_SERVER_ID:-expanded-server}",
               "port": 8081
             }
           }

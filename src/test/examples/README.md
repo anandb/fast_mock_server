@@ -1,127 +1,76 @@
 # Mock Server Examples
 
-This directory contains example configurations for the mock server, organized into subdirectories. Each example includes:
-- A `.jsonmc` configuration file
-- `start_server.sh` - Script to start the mock server with the configuration
-- `start_client.sh` - Script with curl commands demonstrating the endpoints
+This directory contains example configurations for the mock server. These examples demonstrate various features and capabilities of the server.
 
-## Available Examples
+## Available Configuration Files
 
-### 1. test-config/
+The following configuration files are available in this directory:
+
+### 1. [server-config-test.jsonmc](./server-config-test.jsonmc)
 Basic test server configuration demonstrating a simple API endpoint.
 - **Port:** 9001
-- **Features:** Simple GET endpoint
+- **Features:** Simple GET endpoint with global headers.
 
-### 2. server-config-example/
+### 2. [server-config-example.jsonmc](./server-config-example.jsonmc)
 Multi-server configuration with both HTTP and HTTPS servers.
-- **Servers:**
-  - api-server (HTTP on port 9001)
-  - secure-server (HTTPS on port 8443)
-- **Features:** Multiple endpoints, TLS/SSL configuration, global headers
+- **Servers:** api-server (HTTP on 9001), secure-server (HTTPS on 8443).
+- **Features:** TLS/SSL configuration, global headers.
 
-### 3. server-config-basicauth-example/
+### 3. [server-config-basicauth-example.jsonmc](./server-config-basicauth-example.jsonmc)
 Server with basic authentication.
 - **Port:** 9090
-- **Features:** Basic authentication (username: admin, password: secret123)
-- **Endpoints:** User management API
+- **Features:** Basic authentication (username: `admin`, password: `secret123`).
 
-### 4. server-config-mtls-example/
+### 4. [server-config-mtls-example.jsonmc](./server-config-mtls-example.jsonmc)
 Server with mutual TLS (mTLS) authentication.
 - **Port:** 8443 (HTTPS)
-- **Features:** Client certificate verification, embedded certificates
-- **Additional Files:** CA certificates, client certificates for testing
-- **Endpoints:** Secure banking/transaction API
+- **Features:** Client certificate verification, embedded certificates.
 
-### 5. server-config-relay-example/
+### 5. [server-config-pathvars-example.jsonmc](./server-config-pathvars-example.jsonmc)
+Configuration demonstrating path variable support in Freemarker templates.
+- **Port:** 9001
+- **Features:** Dynamic response generation using path variables.
+
+### 6. [server-config-sse-example.jsonmc](./server-config-sse-example.jsonmc)
+Server demonstrating Server-Sent Events (SSE).
+- **Port:** 9002
+- **Features:** Multiple SSE streams with configurable intervals.
+
+### 7. [server-config-relay-example.jsonmc](./server-config-relay-example.jsonmc)
 Relay server that forwards requests to a remote API with OAuth2 authentication.
 - **Port:** 8090
-- **Features:** OAuth2 token acquisition, request forwarding, multiple prefixes support
-- **Note:** Update configuration with real OAuth2 credentials and remote URL
+- **Features:** OAuth2 token acquisition and request forwarding.
 
-### 6. server-config-relay-no-auth-example/
+### 8. [server-config-relay-no-auth-example.jsonmc](./server-config-relay-no-auth-example.jsonmc)
 Relay server that forwards requests to a remote API without authentication.
 - **Port:** 8090
-- **Features:** Simple proxying, custom header injection, multiple prefixes support
-- **Note:** Update configuration with real remote URL
+- **Features:** Simple proxying and custom header injection.
 
-### 7. server-config-files-example/
+### 9. [server-config-files-example.jsonmc](./server-config-files-example.jsonmc)
 Configuration demonstrating file downloads and multi-part responses.
 - **Port:** 8082
-- **Features:** Multi-part file downloads
-- **Note:** Scripts not yet created for this example
+- **Features:** Multi-part file downloads.
 
-### 8. server-config-tunnel-example/
+### 10. [server-config-tunnel-example.jsonmc](./server-config-tunnel-example.jsonmc)
 Relay server that forwards requests to a Kubernetes pod via kubectl port-forward tunnel.
 - **Port:** 9001
-- **Features:** Kubernetes pod discovery, auto-assigned tunnel port (9000-11000), tunnel lifecycle management
-- **Note:** Requires kubectl access to target Kubernetes cluster
+- **Features:** Kubernetes pod discovery and tunnel lifecycle management.
 
 ## Usage
 
-Each example can be run independently:
+To run the mock server with a specific configuration file, use the following command from the project root:
 
-1. **Build the project** (if not already built):
-   ```bash
-   mvn clean package
-   ```
+```bash
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./src/test/examples/<config-file-name>.jsonmc"
+```
 
-2. **Start a server:**
-   ```bash
-   cd examples/<example-name>
-   ./start_server.sh
-   ```
+Replace `<config-file-name>` with the name of the desired configuration file (e.g., `server-config-test`).
 
-3. **Test the server** (in another terminal):
-   ```bash
-   cd examples/<example-name>
-   ./start_client.sh
-   ```
+### Example: Running the Test API
+```bash
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./src/test/examples/server-config-test.jsonmc"
+```
 
 ## Directory Structure
-
-```
-examples/
-├── README.md (this file)
-├── test-config/
-│   ├── test-config.jsonmc
-│   ├── start_server.sh
-│   └── start_client.sh
-├── server-config-example/
-│   ├── server-config-example.jsonmc
-│   ├── start_server.sh
-│   └── start_client.sh
-├── server-config-basicauth-example/
-│   ├── server-config-basicauth-example.jsonmc
-│   ├── start_server.sh
-│   └── start_client.sh
-├── server-config-mtls-example/
-│   ├── server-config-mtls-example.jsonmc
-│   ├── start_server.sh
-│   ├── start_client.sh
-│   ├── README.md
-│   ├── ca-cert.pem
-│   ├── ca-key.pem
-│   ├── client-cert.pem
-│   └── client-key.pem
-├── server-config-relay-example/
-│   ├── server-config-relay-example.jsonmc
-│   ├── start_server.sh
-│   └── start_client.sh
-├── server-config-relay-no-auth-example/
-│   ├── server-config-relay-no-auth-example.jsonmc
-│   ├── start_server.sh
-│   └── start_client.sh
-├── server-config-files-example/
-│   └── server-config-files-example.jsonmc
-└── server-config-tunnel-example/
-    ├── server-config-tunnel-example.jsonmc
-    ├── start_server.sh
-    └── start_client.sh
-```
-
-## Notes
-
-- All start scripts check for the built JAR file in the `target/` directory
-- The mTLS example includes sample certificates for testing purposes
-- Relay examples require updating the configuration with real remote URLs and credentials
-- All bash scripts are executable (`chmod +x` has been applied)
+All configuration files are located directly in this directory: `src/test/examples/`.
+There are no sub-directories or additional shell scripts.

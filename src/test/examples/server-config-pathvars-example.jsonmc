@@ -22,14 +22,17 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "headers": {
-            "Content-Type": ["application/json"]
-          },
-          "body": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "values": ["application/json"]
+            }
+          ],
+          "body": `{
             "userId": "${pathVariables.id}",
             "message": "User details retrieved",
             "requestedBy": "${headers['X-User-Name']!'anonymous'}"
-          }
+          }`
         }
       },
       {
@@ -43,16 +46,19 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "headers": {
-            "Content-Type": ["application/json"]
-          },
-          "body": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "values": ["application/json"]
+            }
+          ],
+          "body": `{
             "userId": "${pathVariables.userId}",
             "postId": "${pathVariables.postId}",
             "title": "Post ${pathVariables.postId} by user ${pathVariables.userId}",
             "author": "${headers['X-Author-Name']!'Unknown'}",
             "timestamp": "${.now?iso_utc}"
-          }
+          }`
         }
       },
       {
@@ -66,11 +72,17 @@
         },
         "httpResponse": {
           "statusCode": 201,
-          "headers": {
-            "Content-Type": ["application/json"],
-            "Location": ["/api/v1/organizations/${pathVariables.orgId}/projects/${pathVariables.projectId}/tasks/new-task-123"]
-          },
-          "body": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "values": ["application/json"]
+            },
+            {
+              "name": "Location",
+              "values": ["/api/v1/organizations/${pathVariables.orgId}/projects/${pathVariables.projectId}/tasks/new-task-123"]
+            }
+          ],
+          "body": `{
             "id": "new-task-123",
             "organizationId": "${pathVariables.orgId}",
             "projectId": "${pathVariables.projectId}",
@@ -80,7 +92,7 @@
             "priority": "${body.priority!'medium'}",
             "createdBy": "${headers['X-User-Id']!'system'}",
             "createdAt": "${.now?iso_utc}"
-          }
+          }`
         }
       },
       {
@@ -93,10 +105,13 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "headers": {
-            "Content-Type": ["application/json"]
-          },
-          "body": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "values": ["application/json"]
+            }
+          ],
+          "body": `{
             "userId": "${pathVariables.id}",
             "updatedFields": {
               "name": "${body.name}",
@@ -105,7 +120,7 @@
             },
             "updatedBy": "${headers['X-Admin-Id']!'self'}",
             "timestamp": "${.now?iso_utc}"
-          }
+          }`
         }
       },
       {
@@ -119,16 +134,19 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "headers": {
-            "Content-Type": ["application/json"]
-          },
-          "body": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "values": ["application/json"]
+            }
+          ],
+          "body": `{
             "message": "Comment deleted successfully",
             "deletedCommentId": "${pathVariables.commentId}",
             "belongsToUserId": "${pathVariables.userId}",
             "deletedBy": "${headers['X-User-Id']!'unknown'}",
             "timestamp": "${.now?iso_utc}"
-          }
+          }`
         }
       },
       {
@@ -142,10 +160,13 @@
         },
         "httpResponse": {
           "statusCode": 200,
-          "headers": {
-            "Content-Type": ["application/json"]
-          },
-          "body": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "values": ["application/json"]
+            }
+          ],
+          "body": `{
             "category": "${pathVariables.category}",
             "productId": "${pathVariables.productId}",
             "reviews": [
@@ -162,7 +183,7 @@
             ],
             "totalReviews": 2,
             "requestedBy": "${headers['User-Agent']!'Unknown Client'}"
-          }
+          }`
         }
       }
     ]

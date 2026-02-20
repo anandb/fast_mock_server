@@ -103,7 +103,8 @@ public class ConfigurationLoaderService {
                     operations.configureEnhancedExpectation(
                             dto,
                             serverInstance.globalHeaders(),
-                            strategies
+                            strategies,
+                            serverInstance.relays()
                     );
                 } catch (Exception e) {
                     log.error("Failed to configure expectation for server {}: {}", serverId, e.getMessage());

@@ -43,10 +43,10 @@ The system handles JSONMC in two primary ways:
     Line 2
     Line 3 with "quotes"
   `,
-  
-  /* 
-     Multi-line comments are great 
-     for certificates 
+
+  /*
+     Multi-line comments are great
+     for certificates
   */
   "certificate": `-----BEGIN CERTIFICATE-----
 MIID...
@@ -103,6 +103,27 @@ curl -X POST http://localhost:8080/api/servers \
   Line breaks are preserved as \n in the final JSON.`
 }
 ```
+
+### Environment Variable Expansion
+Environment variables can be referenced using the `@{VARIABLE}` or `@{VARIABLE:-DEFAULT}` syntax anywhere in the configuration. Expansion happens *before* JSON parsing, allowing it to be used for any value.
+
+```json
+{
+  "server": {
+    "serverId": "api-server",
+    "port": @{SERVER_PORT:-8080}
+  },
+  "relays": [
+    {
+      "remoteUrl": "@{REMOTE_API_URL}",
+      "clientSecret": "@{API_CLIENT_SECRET}"
+    }
+  ]
+}
+```
+
+> [!IMPORTANT]
+> This syntax (`@{}`) is specifically chosen to avoid conflicts with FreeMarker template syntax (`${}`), which is used within response bodies and file paths.
 
 ## Important Notes
 

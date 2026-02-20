@@ -10,55 +10,55 @@ class VariableExpanderTest {
     @Test
     void testSimpleExpansion() {
         Map<String, String> vars = Map.of("VAR", "value");
-        assertEquals("value", VariableExpander.expand("${VAR}", vars));
+        assertEquals("value", VariableExpander.expand("@{VAR}", vars));
     }
 
     @Test
     void testExpansionInText() {
         Map<String, String> vars = Map.of("VAR", "value");
-        assertEquals("Hello value World", VariableExpander.expand("Hello ${VAR} World", vars));
+        assertEquals("Hello value World", VariableExpander.expand("Hello @{VAR} World", vars));
     }
 
     @Test
     void testMultipleExpansions() {
         Map<String, String> vars = Map.of("VAR1", "v1", "VAR2", "v2");
-        assertEquals("v1 and v2", VariableExpander.expand("${VAR1} and ${VAR2}", vars));
+        assertEquals("v1 and v2", VariableExpander.expand("@{VAR1} and @{VAR2}", vars));
     }
 
     @Test
     void testDefaultValueWhenMissing() {
         Map<String, String> vars = Map.of();
-        assertEquals("default", VariableExpander.expand("${VAR:-default}", vars));
+        assertEquals("default", VariableExpander.expand("@{VAR:-default}", vars));
     }
 
     @Test
     void testVarOverDefaultValue() {
         Map<String, String> vars = Map.of("VAR", "value");
-        assertEquals("value", VariableExpander.expand("${VAR:-default}", vars));
+        assertEquals("value", VariableExpander.expand("@{VAR:-default}", vars));
     }
 
     @Test
     void testEmptyDefaultValue() {
         Map<String, String> vars = Map.of();
-        assertEquals("", VariableExpander.expand("${VAR:-}", vars));
+        assertThrows(IllegalArgumentException.class, () -> VariableExpander.expand("@{VAR}", vars));
     }
 
     @Test
     void testErrorWhenMissingAndNoDefault() {
         Map<String, String> vars = Map.of();
-        assertThrows(IllegalArgumentException.class, () -> VariableExpander.expand("${VAR}", vars));
+        assertThrows(IllegalArgumentException.class, () -> VariableExpander.expand("@{VAR}", vars));
     }
 
     @Test
     void testNestedLikeSyntax() {
         Map<String, String> vars = Map.of("VAR", "value");
-        assertEquals("value", VariableExpander.expand("${VAR:-other}", vars));
+        assertEquals("value", VariableExpander.expand("@{VAR:-other}", vars));
     }
 
     @Test
     void testSpecialCharactersInDefault() {
         Map<String, String> vars = Map.of();
-        assertEquals("http://localhost:8080", VariableExpander.expand("${URL:-http://localhost:8080}", vars));
+        assertEquals("http://localhost:8080", VariableExpander.expand("@{URL:-http://localhost:8080}", vars));
     }
 
     @Test

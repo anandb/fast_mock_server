@@ -51,8 +51,8 @@ To add OAuth2 authentication, include the token endpoint and client credentials:
     "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
-      "clientId": "your-client-id",
-      "clientSecret": "your-client-secret"
+      "clientId": "@{OAUTH_CLIENT_ID}",
+      "clientSecret": "@{OAUTH_CLIENT_SECRET}"
     }]
   }
 }
@@ -373,7 +373,7 @@ Response will include `"relayEnabled": true`:
 
 5. **Error Handling**: If relay fails (e.g., token acquisition fails, remote server is unreachable), the mock server returns a 502 Bad Gateway error with details.
 
-6. **Security**: Client secrets are stored in memory. Use environment variables or secure configuration management in production.
+6. **Security**: Client secrets are stored in memory. Use environment variables (`@{VARIABLE}` syntax) or secure configuration management in production.
 
 7. **Performance**: When OAuth2 is enabled, token caching significantly reduces overhead. First request may be slower due to token acquisition.
 
@@ -600,7 +600,7 @@ curl http://localhost:9001/api/users
 - Pod prefix doesn't match any pod names
 - kubectl not configured with correct context
 
-**Solution:** 
+**Solution:**
 - Verify pods exist: `kubectl get pods -n <namespace>`
 - Check kubectl context: `kubectl config current-context`
 
@@ -615,7 +615,7 @@ curl http://localhost:9001/api/users
 **Possible Causes:**
 - All ports in range 9000-11000 are in use
 
-**Solution:** 
+**Solution:**
 - Stop other services using ports in that range
 - Modify the port range in KubernetesTunnelService if needed
 

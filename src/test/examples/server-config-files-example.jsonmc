@@ -12,12 +12,12 @@
           "path": "/api/download/documents/{id}"
         },
         /*
-         * The "file" field is now at the top level of the expectation object.
+         * The "file" field is now inside the httpResponse object.
          * It contains a path or glob pattern to serve as a download.
          */
-        "file": "/path/to/${pathVariables.id}",
         "httpResponse": {
           "statusCode": 200,
+          "file": "/path/to/${pathVariables.id}",
           "headers": [
             {
               "name": "X-Download-Type",
@@ -31,9 +31,9 @@
           "method": "GET",
           "path": "/api/download/images"
         },
-        "file": "/path/to/image1.png",
         "httpResponse": {
-          "statusCode": 200
+          "statusCode": 200,
+          "file": "/path/to/image1.png"
         }
       },
       {
@@ -41,9 +41,9 @@
           "method": "POST",
           "path": "/api/export/reports"
         },
-        "file": "/path/to/report1.csv",
         "httpResponse": {
           "statusCode": 200,
+          "file": "/path/to/report1.csv",
           "headers": [
             {
               "name": "X-Report-Count",
@@ -57,9 +57,9 @@
           "method": "GET",
           "path": "/api/download/archive"
         },
-        "file": "/path/to/archive.zip",
         "httpResponse": {
-          "statusCode": 200
+          "statusCode": 200,
+          "file": "/path/to/archive.zip"
         }
       },
       {

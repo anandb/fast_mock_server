@@ -116,7 +116,9 @@ public class RelayResponseStrategy implements ResponseStrategy {
 
     @Override
     public boolean supports(EnhancedExpectationDTO config) {
-        return false;
+        // Support if it's explicitly NOT an SSE or File response and has no static body defined
+        // This is a heuristic for "relay DTO" created by MockServerManager
+        return !config.isSse() && !config.isFileResponse() && config.getHttpResponse() == null;
     }
 
     @Override

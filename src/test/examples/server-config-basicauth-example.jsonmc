@@ -26,7 +26,7 @@
       },
       "httpResponse": {
         "statusCode": 200,
-        "body": {
+        "body": `{
           "users": [
             {
               "id": 1,
@@ -39,7 +39,7 @@
               "email": "jane@example.com"
             }
           ]
-        }
+        }`
       }
     },
     {
@@ -49,11 +49,11 @@
       },
       "httpResponse": {
         "statusCode": 201,
-        "body": {
+        "body": `{
           "id": 3,
           "name": "New User",
           "email": "newuser@example.com"
-        }
+        }`
       }
     }
   ]

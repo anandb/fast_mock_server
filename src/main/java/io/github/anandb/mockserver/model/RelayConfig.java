@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

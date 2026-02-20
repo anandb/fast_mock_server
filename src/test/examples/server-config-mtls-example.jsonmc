@@ -5,7 +5,6 @@
       "port": 8443,
       "description": "Mutual TLS Secure API Server",
       "tlsConfig": {
-        "enabled": true,
         "certificate": `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIUJxPH8qPqXqYxVqZ3d5K1WqM1NjQwDQYJKoZIhvcNAQEL
 BQAwPjELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExGjAYBgNVBAoM
@@ -49,7 +48,6 @@ Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9
 Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9Z7Z8h9
 -----END PRIVATE KEY-----`,
         "mtlsConfig": {
-          "enabled": true,
           "caCertificate": `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIUAbCdEfGhIjKlMnOpQrStUvWxYzAwDQYJKoZIhvcNAQEL
 BQAwPjELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExGjAYBgNVBAoM

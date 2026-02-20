@@ -286,3 +286,12 @@ Common errors:
 - Only the first value is used if a header has multiple values
 - Template processing happens for each incoming request, so keep templates reasonably simple for performance
 - Templates are stateless - each request is processed independently
+
+## Comparison: FreeMarker vs. Environment Variables
+
+| Feature | Syntax | Processing Time | Purpose |
+|---------|--------|-----------------|---------|
+| **FreeMarker** | `${VARIABLE}` | At request time | Dynamic response data from request context |
+| **Env Variables** | `@{VARIABLE}` | At configuration load | Inject secrets, ports, or API URLs from environment |
+
+For more details on environment variables, see [JSONMC Usage Guide](JSONMC_USAGE.md).

@@ -54,9 +54,8 @@
       "port": 8443,
       "description": "HTTPS Mock Server",
       "tlsConfig": {
-        "enabled": true,
-        "certificateChainPath": "/path/to/cert.pem",
-        "privateKeyPath": "/path/to/key.pem"
+        "certificate": "/path/to/cert.pem",
+        "privateKey": "/path/to/key.pem"
       }
     },
     "expectations": [

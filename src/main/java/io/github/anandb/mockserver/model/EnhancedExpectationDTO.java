@@ -22,9 +22,7 @@ public class EnhancedExpectationDTO {
 
     private JsonNode httpRequest;
     private JsonNode httpResponse;
-    private String file;
     private Boolean sse;
-    private List<String> messages;
     private Integer interval;
 
     private static final HttpRequestSerializer REQUEST_SERIALIZER = new HttpRequestSerializer(new MockServerLogger());
@@ -39,11 +37,34 @@ public class EnhancedExpectationDTO {
     }
 
     public boolean isSse() {
+        List<String> messages = getMessages();
         return Boolean.TRUE.equals(sse) && messages != null && !messages.isEmpty();
     }
 
+    public List<String> getMessages() {
+        if (httpResponse == null || !httpResponse.has("messages")) {
+            return List.of();
+        }
+        JsonNode messagesNode = httpResponse.get("messages");
+        if (messagesNode.isArray()) {
+            java.util.List<String> messageList = new java.util.ArrayList<>();
+            messagesNode.forEach(node -> messageList.add(node.asText()));
+            return messageList;
+        }
+        return List.of();
+    }
+
     public boolean isFileResponse() {
+        String file = getFile();
         return file != null && !file.isEmpty();
+    }
+
+    public String getFile() {
+        if (httpResponse == null || !httpResponse.has("file")) {
+            return null;
+        }
+        JsonNode fileNode = httpResponse.get("file");
+        return fileNode.asText();
     }
 
     public static EnhancedExpectationDTOBuilder builder() {
@@ -53,20 +74,16 @@ public class EnhancedExpectationDTO {
     public static class EnhancedExpectationDTOBuilder {
         private JsonNode httpRequest;
         private JsonNode httpResponse;
-        private String file;
         private Boolean sse;
-        private List<String> messages;
         private Integer interval;
 
         public EnhancedExpectationDTOBuilder httpRequest(JsonNode httpRequest) { this.httpRequest = httpRequest; return this; }
         public EnhancedExpectationDTOBuilder httpResponse(JsonNode httpResponse) { this.httpResponse = httpResponse; return this; }
-        public EnhancedExpectationDTOBuilder file(String file) { this.file = file; return this; }
         public EnhancedExpectationDTOBuilder sse(Boolean sse) { this.sse = sse; return this; }
-        public EnhancedExpectationDTOBuilder messages(List<String> messages) { this.messages = messages; return this; }
         public EnhancedExpectationDTOBuilder interval(Integer interval) { this.interval = interval; return this; }
 
         public EnhancedExpectationDTO build() {
-            return new EnhancedExpectationDTO(httpRequest, httpResponse, file, sse, messages, interval);
+            return new EnhancedExpectationDTO(httpRequest, httpResponse, sse, interval);
         }
     }
 }

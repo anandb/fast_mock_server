@@ -13,13 +13,13 @@
         },
         "sse": true,
         "interval": 1000,
-        "messages": [
-          "Event 1: Server started",
-          "Event 2: Processing data",
-          "Event 3: Task completed"
-        ],
         "httpResponse": {
-          "statusCode": 200
+          "statusCode": 200,
+          "messages": [
+            "Event 1: Server started",
+            "Event 2: Processing data",
+            "Event 3: Task completed"
+          ]
         }
       },
       {
@@ -29,14 +29,14 @@
         },
         "sse": true,
         "interval": 500,
-        "messages": [
-          `{"type":"info","message":"Welcome to the notification stream"}`,
-          `{"type":"update","message":"New message received"}`,
-          `{"type":"warning","message":"Storage almost full"}`,
-          `{"type":"success","message":"Backup completed successfully"}`
-        ],
         "httpResponse": {
-          "statusCode": 200
+          "statusCode": 200,
+          "messages": [
+            `{"type":"info","message":"Welcome to the notification stream"}`,
+            `{"type":"update","message":"New message received"}`,
+            `{"type":"warning","message":"Storage almost full"}`,
+            `{"type":"success","message":"Backup completed successfully"}`
+          ]
         }
       },
       {
@@ -46,15 +46,15 @@
         },
         "sse": true,
         "interval": 2000,
-        "messages": [
-          `{"progress":10,"status":"Starting"}`,
-          `{"progress":30,"status":"Loading data"}`,
-          `{"progress":60,"status":"Processing"}`,
-          `{"progress":90,"status":"Finalizing"}`,
-          `{"progress":100,"status":"Complete"}`
-        ],
         "httpResponse": {
-          "statusCode": 200
+          "statusCode": 200,
+          "messages": [
+            `{"progress":10,"status":"Starting"}`,
+            `{"progress":30,"status":"Loading data"}`,
+            `{"progress":60,"status":"Processing"}`,
+            `{"progress":90,"status":"Finalizing"}`,
+            `{"progress":100,"status":"Complete"}`
+          ]
         }
       }
     ]

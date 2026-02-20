@@ -23,9 +23,9 @@
         /* OAuth2 token endpoint for obtaining access tokens */
         "tokenUrl": "https://webhook.site/8e075dc6-8706-4774-831f-59d51abb2793",
 
-        /* OAuth2 client credentials */
-        "clientId": "your-client-id",
-        "clientSecret": "your-client-secret",
+        /* OAuth2 client credentials - recommended to use environment variables */
+        "clientId": "@{OAUTH_CLIENT_ID:-your-client-id}",
+        "clientSecret": "@{OAUTH_CLIENT_SECRET}",
 
         /* Optional: OAuth2 scope (if required by the token endpoint) */
         "scope": "api:read api:write",
@@ -45,7 +45,7 @@
   },
 
   /* Note: When relay is configured, the server will forward matching requests
-   * to the remote URL based on the prefix match. Any expectations configured 
+   * to the remote URL based on the prefix match. Any expectations configured
    * below will be ignored for paths that match a relay prefix.
    *
    * The relay will:

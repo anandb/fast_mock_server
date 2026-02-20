@@ -176,17 +176,17 @@ public class MockServerManager {
                 try {
                     log.info("Starting tunnel for relay in namespace: {} with pod prefix: {}",
                             relay.getTunnelConfig().getNamespace(), relay.getTunnelConfig().getPodPrefix());
-                    
+
                     if (!kubernetesTunnelService.validateKubectl()) {
                         throw new ServerCreationException("kubectl is not installed or not accessible");
                     }
 
                     int hostPort = kubernetesTunnelService.findAvailablePort();
                     Process tunnelProcess = kubernetesTunnelService.startTunnel(relay.getTunnelConfig(), hostPort);
-                    
+
                     relay.setAssignedHostPort(hostPort);
                     instance.addTunnel(relay.getTunnelConfig().getNamespace() + ":" + relay.getTunnelConfig().getPodPrefix(), tunnelProcess);
-                    
+
                     log.info("Tunnel started on host port: {}", hostPort);
                 } catch (Exception e) {
                     log.error("Failed to start tunnel for relay", e);
@@ -230,9 +230,11 @@ public class MockServerManager {
 
     private void configureRelay(ServerInstance instance) {
         EnhancedExpectationDTO relayDto = EnhancedExpectationDTO.builder()
+                .httpRequest(new com.fasterxml.jackson.databind.node.ObjectNode(com.fasterxml.jackson.databind.node.JsonNodeFactory.instance)
+                        .put("path", "/**"))
                 .build();
 
         MockServerOperations operations = new MockServerOperationsImpl(instance.server());
-        operations.configureEnhancedExpectation(relayDto, instance.globalHeaders(), strategies);
+        operations.configureEnhancedExpectation(relayDto, instance.globalHeaders(), strategies, instance.relays());
     }
 }
