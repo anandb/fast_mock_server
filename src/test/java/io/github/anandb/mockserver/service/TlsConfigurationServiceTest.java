@@ -77,9 +77,10 @@ class TlsConfigurationServiceTest {
 
     @AfterEach
     void tearDown() {
-        ConfigurationProperties.certificateAuthorityCertificate(null);
-        ConfigurationProperties.privateKeyPath(null);
-        ConfigurationProperties.tlsMutualAuthenticationCertificateChain(null);
+        // Use empty strings instead of null to avoid NPE in ConcurrentHashMap used by mockserver
+        ConfigurationProperties.certificateAuthorityCertificate("");
+        ConfigurationProperties.privateKeyPath("");
+        ConfigurationProperties.tlsMutualAuthenticationCertificateChain("");
         ConfigurationProperties.tlsMutualAuthenticationRequired(false);
     }
 
