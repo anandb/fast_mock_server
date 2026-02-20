@@ -24,6 +24,26 @@ The project uses Maven and Java 17.
 - **Callback:** Unified `EnhancedResponseCallback` in `src/main/java/.../callback/`
 - **Util:** Shared utility classes in `src/main/java/.../util/`
 
+### 2. Code Style
+- **Indentation:** 4 spaces (no tabs)
+- **Line Length:** Max 120 characters
+- **Lombok:** Use `@Data`, `@NoArgsConstructor`, `@AllArgsConstructor`, `@RequiredArgsConstructor`, `@Slf4j` to reduce boilerplate
+- **Spring:** Use `@Service`, `@Component`, `@Controller` annotations for dependency injection
+- **Logging:** Use Lombok's `@Slf4j` and `log.info/warn/error` methods
+- **Exceptions:** Create custom exceptions in `exception/` package extending `RuntimeException`
+- **DTOs:** Use immutable records or Lombok-annotated classes with builder pattern
+- **Braces** - Always required for all conditional statements, loops, and methods. Can be skipped for one-line lambdas
+
+### 3. Naming Conventions
+- **Classes/Interfaces:** PascalCase (e.g., `MockServerManager`, `ResponseStrategy`)
+- **Methods:** camelCase (e.g., `createServer`, `isTlsEnabled`)
+- **Variables:** camelCase (e.g., `serverId`, `tlsConfig`)
+- **Constants:** UPPER_SNAKE_CASE (e.g., `DEFAULT_PORT`)
+- **Packages:** lowercase with dots (e.g., `io.github.anandb.mockserver.service`)
+- **DTOs:** Suffix with `DTO` (e.g., `EnhancedExpectationDTO`)
+- **Config classes:** Suffix with `Config` (e.g., `TlsConfig`)
+- **Strategy interfaces:** Suffix with `Strategy` (e.g., `ResponseStrategy`)
+
 ### 4. MockServer Integration
 - Management happens via `MockServerManager`.
 - Use `ClientAndServer` from `org.mockserver.integration`.
