@@ -79,6 +79,10 @@ public class RelayConfig {
     @JsonProperty("assignedHostPort")
     private Integer assignedHostPort;
 
+    /** Whether to ignore SSL certificate errors when relaying requests or fetching tokens */
+    @JsonProperty("ignoreSSLErrors")
+    private boolean ignoreSSLErrors = false;
+
     /**
      * Checks if OAuth2 authentication is enabled for this relay configuration.
      *

@@ -4,10 +4,12 @@ import io.github.anandb.mockserver.exception.InvalidCertificateException;
 import io.github.anandb.mockserver.model.MtlsConfig;
 import io.github.anandb.mockserver.model.TlsConfig;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockserver.configuration.ConfigurationProperties;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -71,6 +73,14 @@ class TlsConfigurationServiceTest {
         tlsConfigService = new TlsConfigurationService(certificateValidator);
         ReflectionTestUtils.setField(tlsConfigService, "tempCertDir", tempDir.toString());
         ReflectionTestUtils.setField(tlsConfigService, "cleanupOnShutdown", true);
+    }
+
+    @AfterEach
+    void tearDown() {
+        ConfigurationProperties.certificateAuthorityCertificate(null);
+        ConfigurationProperties.privateKeyPath(null);
+        ConfigurationProperties.tlsMutualAuthenticationCertificateChain(null);
+        ConfigurationProperties.tlsMutualAuthenticationRequired(false);
     }
 
     // Initialization Tests

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.anandb.mockserver.model.RelayConfig;
+import io.github.anandb.mockserver.util.HttpClientFactory;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,15 +30,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class OAuth2TokenService {
 
-    private final HttpClient httpClient;
+    private final HttpClientFactory httpClientFactory;
     private final ObjectMapper objectMapper;
     private final Map<String, TokenCache> tokenCacheMap;
 
-    public OAuth2TokenService(ObjectMapper objectMapper) {
+    public OAuth2TokenService(ObjectMapper objectMapper, HttpClientFactory httpClientFactory) {
         this.objectMapper = objectMapper;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        this.httpClientFactory = httpClientFactory;
         this.tokenCacheMap = new ConcurrentHashMap<>();
     }
 
@@ -98,6 +97,7 @@ public class OAuth2TokenService {
                 .build();
 
         // Send request
+        HttpClient httpClient = httpClientFactory.getHttpClient(relayConfig.isIgnoreSSLErrors());
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {

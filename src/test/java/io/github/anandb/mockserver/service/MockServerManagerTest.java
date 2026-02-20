@@ -8,6 +8,7 @@ import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.model.TlsConfig;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -53,6 +54,11 @@ class MockServerManagerTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         mockServerManager = new MockServerManager(tlsConfigService, kubernetesTunnelService, strategies);
+    }
+
+    @AfterEach
+    void tearDown() {
+        mockServerManager.shutdown();
     }
 
     @Test

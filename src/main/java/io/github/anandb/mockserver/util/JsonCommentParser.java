@@ -30,9 +30,10 @@ public final class JsonCommentParser {
         }
 
         String processedJson = removeCommentsAndConvertMultilineStrings(jsonWithComments);
+        String expandedJson = VariableExpander.expand(processedJson);
 
         try {
-            return objectMapper.readTree(processedJson);
+            return objectMapper.readTree(expandedJson);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid JSON: " + e.getMessage(), e);
         }
@@ -51,7 +52,8 @@ public final class JsonCommentParser {
             throw new IllegalArgumentException("JSON string cannot be null");
         }
 
-        return removeCommentsAndConvertMultilineStrings(jsonWithComments);
+        String cleaned = removeCommentsAndConvertMultilineStrings(jsonWithComments);
+        return VariableExpander.expand(cleaned);
     }
 
     /**

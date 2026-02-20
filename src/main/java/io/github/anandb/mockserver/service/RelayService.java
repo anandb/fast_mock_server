@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.AntPathMatcher;
 
 import io.github.anandb.mockserver.model.RelayConfig;
+import io.github.anandb.mockserver.util.HttpClientFactory;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -23,15 +24,13 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class RelayService {
 
-    private final HttpClient httpClient;
+    private final HttpClientFactory httpClientFactory;
     private final OAuth2TokenService tokenService;
     private final AntPathMatcher pathMatcher;
 
-    public RelayService(OAuth2TokenService tokenService) {
+    public RelayService(OAuth2TokenService tokenService, HttpClientFactory httpClientFactory) {
         this.tokenService = tokenService;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        this.httpClientFactory = httpClientFactory;
         this.pathMatcher = new AntPathMatcher();
     }
 
@@ -70,14 +69,14 @@ public class RelayService {
             byte[] body) throws Exception {
 
         String remoteUrl;
-        
+
         if (config.isTunnelEnabled() && config.getAssignedHostPort() != null) {
             remoteUrl = "http://localhost:" + config.getAssignedHostPort();
             log.debug("Using tunnel to relay request to localhost:{}", config.getAssignedHostPort());
         } else {
             remoteUrl = config.getRemoteUrl();
         }
-        
+
         if (remoteUrl.endsWith("/") && path.startsWith("/")) {
             remoteUrl = remoteUrl.substring(0, remoteUrl.length() - 1);
         }
@@ -123,6 +122,7 @@ public class RelayService {
             default -> requestBuilder.method(method.toUpperCase(), bodyPublisher);
         }
 
+        HttpClient httpClient = httpClientFactory.getHttpClient(config.isIgnoreSSLErrors());
         HttpResponse<InputStream> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
 
         Map<String, List<String>> responseHeaders = response.headers().map();
