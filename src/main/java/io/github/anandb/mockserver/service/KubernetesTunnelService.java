@@ -17,7 +17,6 @@ public class KubernetesTunnelService {
 
     private static final int MIN_PORT = 9000;
     private static final int MAX_PORT = 11000;
-    private static final int TUNNEL_STARTUP_TIMEOUT_SECONDS = 30;
 
     private final Random random = new Random();
 
@@ -26,20 +25,20 @@ public class KubernetesTunnelService {
             ProcessBuilder pb = new ProcessBuilder("kubectl", "version", "--client");
             pb.redirectErrorStream(true);
             Process process = pb.start();
-            
+
             boolean completed = process.waitFor(10, TimeUnit.SECONDS);
             if (!completed) {
                 process.destroyForcibly();
                 log.error("kubectl version command timed out");
                 return false;
             }
-            
+
             int exitCode = process.exitValue();
             if (exitCode != 0) {
                 log.error("kubectl is not installed or not accessible");
                 return false;
             }
-            
+
             log.debug("kubectl is installed and accessible");
             return true;
         } catch (IOException | InterruptedException e) {
@@ -57,9 +56,9 @@ public class KubernetesTunnelService {
             "-o", "custom-columns=:metadata.name"
         );
         pb.redirectErrorStream(true);
-        
+
         Process process = pb.start();
-        
+
         StringBuilder output = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
@@ -67,17 +66,17 @@ public class KubernetesTunnelService {
                 output.append(line).append("\n");
             }
         }
-        
+
         boolean completed = process.waitFor(30, TimeUnit.SECONDS);
         if (!completed) {
             process.destroyForcibly();
             throw new IOException("kubectl get pods command timed out");
         }
-        
+
         if (process.exitValue() != 0) {
             throw new IOException("kubectl get pods failed with exit code: " + process.exitValue());
         }
-        
+
         String[] pods = output.toString().split("\n");
         for (String pod : pods) {
             pod = pod.trim();
@@ -86,7 +85,7 @@ public class KubernetesTunnelService {
                 return pod;
             }
         }
-        
+
         throw new IOException("No pod found matching prefix: " + podPrefix + " in namespace: " + namespace);
     }
 
@@ -113,10 +112,10 @@ public class KubernetesTunnelService {
 
     public Process startTunnel(TunnelConfig config, int hostPort) throws IOException, InterruptedException {
         String podName = discoverPod(config.getNamespace(), config.getPodPrefix());
-        
+
         log.info("Starting kubectl port-forward for pod: {} in namespace: {} on local port: {} to pod port: {}",
                 podName, config.getNamespace(), hostPort, config.getPodPort());
-        
+
         ProcessBuilder pb = new ProcessBuilder(
             "kubectl", "port-forward",
             "pod/" + podName,
@@ -124,38 +123,21 @@ public class KubernetesTunnelService {
             "-n", config.getNamespace()
         );
         pb.redirectErrorStream(true);
-        
+
         Process process = pb.start();
-        
-        if (!waitForTunnelReady(process, hostPort, TUNNEL_STARTUP_TIMEOUT_SECONDS)) {
-            process.destroyForcibly();
-            throw new IOException("Tunnel failed to start within timeout");
+
+        // Wait for some time to allow the tunnel to establish
+        log.info("Waiting for tunnel to stabilize (5 seconds)...");
+        Thread.sleep(5000);
+
+        if (!process.isAlive()) {
+            throw new IOException("Tunnel process failed to start or died during stabilization");
         }
-        
+
         log.info("Tunnel started successfully for pod: {} on local port: {}", podName, hostPort);
         return process;
     }
 
-    private boolean waitForTunnelReady(Process process, int port, int timeoutSeconds) throws InterruptedException {
-        long startTime = System.currentTimeMillis();
-        
-        while (System.currentTimeMillis() - startTime < timeoutSeconds * 1000) {
-            if (!process.isAlive()) {
-                log.error("Tunnel process died during startup");
-                return false;
-            }
-            
-            if (!isPortAvailable(port)) {
-                log.debug("Port {} is now bound, tunnel is ready", port);
-                return true;
-            }
-            
-            Thread.sleep(500);
-        }
-        
-        log.warn("Timeout waiting for tunnel to start on port {}", port);
-        return false;
-    }
 
     public void stopTunnel(Process process) {
         if (process != null && process.isAlive()) {
