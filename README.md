@@ -55,6 +55,29 @@ Incoming HTTP Request (MockServer Port)
 │       Spring Boot Management App (Control Port 8080)    │
 ├─────────────────────────────────────────────────────────┤
 │  ConfigurationLoaderService                             │
+│  - Loads config from file                               │
+│  - Creates servers on startup                           │
+├─────────────────────────────────────────────────────────┤
+│  MockServerManager    │  EnhancedResponseCallback       │
+│  - Server registry    │  - Strategy Router             │
+│  - Lifecycle mgmt     │  - Global Header Merging      │
+├─────────────────────────────────────────────────────────┤
+│                  Response Strategies                    │
+│  - Static  - Dynamic File  - SSE  - Relay             │
+│  - Kubernetes Tunnel                                  │
+└─────────────────────────────────────────────────────────┘
+             │                          │
+             ▼                          ▼
+      ┌─────────────┐          ┌─────────────┐
+      │ MockServer  │          │ MockServer  │
+      │ Port 1080   │          │ Port 1443   │
+      │ (HTTP)      │          │ (HTTPS)     │
+      └─────────────┘          └─────────────┘
+```
+┌─────────────────────────────────────────────────────────┐
+│       Spring Boot Management App (Control Port 8080)    │
+├─────────────────────────────────────────────────────────┤
+│  ConfigurationLoaderService                             │
 │  - Loads config from file or base64                    │
 │  - Creates servers on startup                          │
 ├─────────────────────────────────────────────────────────┤
@@ -74,29 +97,6 @@ Incoming HTTP Request (MockServer Port)
      │ Port 1080   │          │ Port 1443   │
      │ (HTTP)      │          │ (HTTPS)     │
      └─────────────┘          └─────────────┘
-```
-┌─────────────────────────────────────────────────────────┐
-│       Spring Boot Management App (Control Port 8080)   │
-├─────────────────────────────────────────────────────────┤
-│  ServerController     │  ExpectationController          │
-│  - Create servers     │  - EnhancedExpectationDTO       │
-│  - List servers       │  - Strategy selection           │
-│  - Delete servers     │  - Unified Error Handling       │
-├─────────────────────────────────────────────────────────┤
-│  MockServerManager    │  EnhancedResponseCallback       │
-│  - Server registry    │  - Strategy Router              │
-│  - Lifecycle mgmt     │  - Global Header Merging        │
-├─────────────────────────────────────────────────────────┤
-│                  Response Strategies                    │
-│  - Static  - Dynamic File  - SSE  - Relay               │
-└─────────────────────────────────────────────────────────┘
-           │                          │
-           ▼                          ▼
-    ┌─────────────┐          ┌─────────────┐
-    │ MockServer  │          │ MockServer  │
-    │ Port 1080   │          │ Port 1443   │
-    │ (HTTP)      │          │ (HTTPS)     │
-    └─────────────┘          └─────────────┘
 ```
 
 ## Prerequisites
@@ -123,7 +123,7 @@ java -Dmock.server.config.file=server-config.json -jar target/mock-server-1.0.0.
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=server-config.json"
 ```
 
-The management API will be available at `http://localhost:8080`
+The management application runs on `http://localhost:8080`. All server configuration is done via file-based configuration at startup.
 
 ## Loading Configuration from File
 
@@ -275,7 +275,6 @@ Each server configuration object contains:
   - `description`: Optional description
   - `tlsConfig`: Optional TLS/HTTPS configuration
   - `globalHeaders`: Optional global response headers
-  - `basicAuthConfig`: Optional basic authentication
   - `relays`: Optional relay/tunnel configuration
 - **expectations** (optional): Array of expectations to configure on this server
 
@@ -291,342 +290,16 @@ See `server-config-example.json` for a complete example with multiple servers an
 - **CI/CD Integration**: Easily integrate with automated testing pipelines
 - **No API Calls**: Servers and expectations ready immediately on startup
 
-## API Documentation
+## Quick Setup
 
-### Server Management
+To create and configure mock servers, use the file-based configuration:
 
-#### Create a Server
-
-**Endpoint**: `POST /api/servers`
-
-**Simple HTTP Server**:
-```json
-{
-  "serverId": "simple-service",
-  "port": 1080,
-  "description": "Simple HTTP mock server"
-}
+```bash
+# Run with a configuration file
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./server-config.jsonmc"
 ```
 
-**HTTPS Server with Global Headers**:
-```json
-{
-  "serverId": "secure-api",
-  "port": 1443,
-  "description": "Secure API with global headers",
-  "tlsConfig": {
-    "certificate": "-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----",
-    "privateKey": "-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----"
-  },
-  "globalHeaders": [
-    {"name": "X-Service-Version", "value": "1.0.0"},
-    {"name": "X-Environment", "value": "test"},
-    {"name": "Access-Control-Allow-Origin", "value": "*"}
-  ]
-}
-```
-
-**HTTPS Server with mTLS**:
-```json
-{
-  "serverId": "mtls-service",
-  "port": 1444,
-  "description": "Service with mutual TLS",
-  "tlsConfig": {
-    "certificate": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
-    "privateKey": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
-    "mtlsConfig": {
-      "caCertificate": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
-      "requireClientAuth": true
-    }
-  }
-}
-```
-
-**Server with Basic Authentication**:
-```json
-{
-  "serverId": "protected-api",
-  "port": 9090,
-  "description": "API server with basic authentication",
-  "basicAuthConfig": {
-    "username": "admin",
-    "password": "secret123"
-  },
-  "globalHeaders": [
-    {"name": "X-API-Version", "value": "1.0"}
-  ]
-}
-```
-
-**Response**: `201 Created`
-```json
-{
-  "serverId": "secure-api",
-  "port": 1443,
-  "description": "Secure API with global headers",
-  "protocol": "https",
-  "baseUrl": "https://localhost:1443",
-  "tlsEnabled": true,
-  "mtlsEnabled": false,
-  "basicAuthEnabled": false,
-  "globalHeaders": [
-    {"name": "X-Service-Version", "value": "1.0.0"},
-    {"name": "X-Environment", "value": "test"}
-  ],
-  "createdAt": "2025-10-02T21:30:00",
-  "status": "running"
-}
-```
-
-#### List All Servers
-
-**Endpoint**: `GET /api/servers`
-
-**Response**: `200 OK`
-```json
-[
-  {
-    "serverId": "simple-service",
-    "port": 1080,
-    "protocol": "http",
-    "baseUrl": "http://localhost:1080",
-    "status": "running"
-  },
-  {
-    "serverId": "secure-api",
-    "port": 1443,
-    "protocol": "https",
-    "baseUrl": "https://localhost:1443",
-    "status": "running"
-  }
-]
-```
-
-#### Get Server Details
-
-**Endpoint**: `GET /api/servers/{serverId}`
-
-**Response**: `200 OK` - Returns ServerInfo object
-
-#### Delete a Server
-
-**Endpoint**: `DELETE /api/servers/{serverId}`
-
-**Response**: `204 No Content`
-
-### Expectation Management
-
-#### Configure Expectations
-
-**Endpoint**: `POST /api/servers/{serverId}/expectations`
-
-**Single Expectation**:
-```json
-{
-  "httpRequest": {
-    "method": "GET",
-    "path": "/api/users/123"
-  },
-  "httpResponse": {
-    "statusCode": 200,
-    "headers": {
-      "Content-Type": ["application/json"]
-    },
-    "body": {
-      "id": 123,
-      "name": "John Doe",
-      "email": "john@example.com"
-    }
-  }
-}
-```
-
-**Multiple Expectations (Array)**:
-```json
-[
-  {
-    "httpRequest": {
-      "method": "GET",
-      "path": "/api/users"
-    },
-    "httpResponse": {
-      "statusCode": 200,
-      "headers": {
-        "Content-Type": ["application/json"]
-      },
-      "body": {
-        "users": [
-          {"id": 1, "name": "Alice"},
-          {"id": 2, "name": "Bob"}
-        ]
-      }
-    }
-  },
-  {
-    "httpRequest": {
-      "method": "POST",
-      "path": "/api/users"
-    },
-    "httpResponse": {
-      "statusCode": 201,
-      "headers": {
-        "Content-Type": ["application/json"],
-        "Location": ["/api/users/3"]
-      },
-      "body": {
-        "id": 3,
-        "name": "Charlie"
-      }
-    }
-  }
-]
-```
-
-**Response**: `200 OK`
-```
-Successfully configured 2 expectation(s) for server: simple-service
-```
-
-**Server-Sent Events (SSE) Expectations**:
-
-For streaming events to clients using Server-Sent Events, set the `sse` flag to `true` in the `httpRequest` and provide `interval` and `messages` in the `httpResponse`:
-
-```json
-{
-  "httpRequest": {
-    "method": "GET",
-    "path": "/api/stream",
-    "sse": true
-  },
-  "httpResponse": {
-    "statusCode": 200,
-    "interval": 1000,
-    "messages": [
-      "Event 1: Server started",
-      "Event 2: Processing data",
-      "Event 3: Task completed"
-    ]
-  }
-}
-```
-
-SSE Configuration:
-- `sse`: Boolean flag in `httpRequest` to enable SSE mode (required)
-- `interval`: Time in milliseconds between messages (informational, for documentation purposes)
-- `messages`: Array of strings to send as SSE events (can be plain text or JSON strings)
-
-**Example with JSON messages**:
-```json
-{
-  "httpRequest": {
-    "method": "GET",
-    "path": "/api/notifications",
-    "sse": true
-  },
-  "httpResponse": {
-    "statusCode": 200,
-    "interval": 500,
-    "messages": [
-      "{\"type\":\"info\",\"message\":\"Welcome\"}",
-      "{\"type\":\"update\",\"message\":\"New data available\"}",
-      "{\"type\":\"success\",\"message\":\"Process completed\"}"
-    ]
-  }
-}
-```
-
-SSE Response Format:
-- Content-Type: `text/event-stream`
-- Each message is formatted as: `data: <message>\n\n`
-- Messages are sent immediately (no actual delay between events)
-- Compatible with standard SSE clients and EventSource API
-
-**Important Notes:**
-- The `interval` field is informational only and documents the intended delay
-- MockServer's callback model doesn't support streaming with actual delays
-- All messages are sent immediately but formatted as separate SSE events
-- Clients should parse them correctly as individual SSE events
-- When `sse: true` is set, the response `body` field is ignored
-
-See `examples/server-config-sse-example.jsonmc` for complete SSE examples.
-
-**Multi-Part File Download Expectations**:
-
-For serving file downloads, use the `files` field in `httpResponse` instead of `body`:
-
-```json
-{
-  "httpRequest": {
-    "method": "GET",
-    "path": "/api/download/documents"
-  },
-  "httpResponse": {
-    "statusCode": 200,
-    "file": "/absolute/path/to/document1.pdf",
-    "headers": {
-      "X-Download-Type": ["multi-part"]
-    }
-  }
-}
-```
-
-The `files` field:
-- Accepts an array of absolute file paths
-- Automatically serves files as multipart/form-data response
-- Detects content types based on file extensions
-- Works with any file type (PDF, images, CSV, ZIP, etc.)
-- When `files` is present, the `body` field should be omitted
-
-Supported file types (auto-detected):
-- Documents: PDF, TXT, CSV
-- Archives: ZIP
-- Images: PNG, JPG, JPEG, GIF
-- Data: JSON, XML
-- Office: XLSX (served as application/octet-stream)
-- Default: application/octet-stream for unknown types
-
-**Example with Single File**:
-```json
-{
-  "httpRequest": {
-    "method": "GET",
-    "path": "/api/download/report"
-  },
-  "httpResponse": {
-    "statusCode": 200,
-    "file": "/path/to/report.pdf"
-  }
-}
-```
-
-**Example with Mixed File Types**:
-```json
-{
-  "httpRequest": {
-    "method": "POST",
-    "path": "/api/export/data"
-  },
-  "httpResponse": {
-    "statusCode": 200,
-    "file":  "/path/to/data.csv"
-  }
-}
-```
-
-See `examples/server-config-files-example.jsonmc` for complete examples.
-
-#### Get Current Expectations
-
-**Endpoint**: `GET /api/servers/{serverId}/expectations`
-
-**Response**: `200 OK` - Returns array of active expectations
-
-#### Clear All Expectations
-
-**Endpoint**: `DELETE /api/servers/{serverId}/expectations`
-
-**Response**: `200 OK`
+See `server-config-example.json` for a complete configuration example with multiple servers.
 
 ## Header Merging Behavior
 
@@ -659,46 +332,49 @@ When a server has global headers configured, they are automatically merged with 
 
 ## Complete Usage Example
 
-### 1. Create a Mock Server
+Create a configuration file `server-config.jsonmc`:
 
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serverId": "user-service",
-    "port": 1080,
-    "description": "User Service Mock",
-    "globalHeaders": [
-      {"name": "X-Service-Name", "value": "user-service"},
-      {"name": "X-Mock-Server", "value": "true"}
-    ]
-  }'
-```
-
-### 2. Configure Expectations
-
-```bash
-curl -X POST http://localhost:8080/api/servers/user-service/expectations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "httpRequest": {
-      "method": "GET",
-      "path": "/users/123"
+```json
+[
+  {
+    "server": {
+      "serverId": "user-service",
+      "port": 1080,
+      "description": "User Service Mock",
+      "globalHeaders": [
+        {"name": "X-Service-Name", "value": "user-service"},
+        {"name": "X-Mock-Server", "value": "true"}
+      ]
     },
-    "httpResponse": {
-      "statusCode": 200,
-      "headers": {
-        "Content-Type": ["application/json"]
-      },
-      "body": {
-        "id": 123,
-        "name": "John Doe"
+    "expectations": [
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/users/123"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": {
+            "id": 123,
+            "name": "John Doe"
+          }
+        }
       }
-    }
-  }'
+    ]
+  }
+]
 ```
 
-### 3. Test the Mock
+Start the server:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./server-config.jsonmc"
+```
+
+Test the mock:
 
 ```bash
 curl http://localhost:1080/users/123
@@ -717,18 +393,6 @@ curl http://localhost:1080/users/123
 Content-Type: application/json
 X-Service-Name: user-service
 X-Mock-Server: true
-```
-
-### 4. List All Servers
-
-```bash
-curl http://localhost:8080/api/servers
-```
-
-### 5. Delete Server
-
-```bash
-curl -X DELETE http://localhost:8080/api/servers/user-service
 ```
 
 ## TLS/HTTPS Example
@@ -750,17 +414,19 @@ cat server.key
 
 ### Create HTTPS Server
 
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
+Use a configuration file:
+
+```json
+{
+  "server": {
     "serverId": "https-service",
     "port": 1443,
     "tlsConfig": {
-      "certificate": "'"$(cat server.crt | sed 's/$/\\n/' | tr -d '\n')"'",
-      "privateKey": "'"$(cat server.key | sed 's/$/\\n/' | tr -d '\n')"'"
+      "certificate": "-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----",
+      "privateKey": "-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----"
     }
-  }'
+  }
+}
 ```
 
 ### Test HTTPS Server
@@ -794,113 +460,32 @@ openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key \
 
 ### Create mTLS Server
 
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
+Use a configuration file:
+
+```json
+{
+  "server": {
     "serverId": "mtls-service",
     "port": 1444,
     "tlsConfig": {
-      "certificate": "'"$(cat server.crt | sed 's/$/\\n/' | tr -d '\n')"'",
-      "privateKey": "'"$(cat server.key | sed 's/$/\\n/' | tr -d '\n')"'",
+      "certificate": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+      "privateKey": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
       "mtlsConfig": {
-        "caCertificate": "'"$(cat ca.crt | sed 's/$/\\n/' | tr -d '\n')"'",
+        "caCertificate": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
         "requireClientAuth": true
       }
     }
-  }'
+  }
+}
 ```
 
-### Test with Client Certificate
+Test with Client Certificate:
 
 ```bash
 curl -k https://localhost:1444/test \
   --cert client.crt \
   --key client.key
 ```
-
-## Basic Authentication Example
-
-Basic authentication adds HTTP Basic Auth protection to your mock server. When enabled, all requests must include valid credentials.
-
-### Create Server with Basic Auth
-
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serverId": "auth-api",
-    "port": 9090,
-    "description": "Protected API",
-    "basicAuthConfig": {
-      "username": "admin",
-      "password": "secret123"
-    }
-  }'
-```
-
-### Configure Expectations
-
-Expectations are configured normally - the basic auth is applied automatically:
-
-```bash
-curl -X POST http://localhost:8080/api/servers/auth-api/expectations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "httpRequest": {
-      "method": "GET",
-      "path": "/api/data"
-    },
-    "httpResponse": {
-      "statusCode": 200,
-      "body": {"message": "Protected data"}
-    }
-  }'
-```
-
-### Test with Credentials
-
-```bash
-# Without credentials - will fail
-curl http://localhost:9090/api/data
-
-# With correct credentials - will succeed
-curl -u admin:secret123 http://localhost:9090/api/data
-
-# Or using Authorization header
-curl -H "Authorization: Basic YWRtaW46c2VjcmV0MTIz" http://localhost:9090/api/data
-```
-
-### Combining Basic Auth with TLS
-
-You can enable both basic authentication and TLS for extra security:
-
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serverId": "secure-auth-api",
-    "port": 9443,
-    "description": "HTTPS API with Basic Auth",
-    "tlsConfig": {
-      "certificate": "'"$(cat server.crt | sed 's/$/\\n/' | tr -d '\n')"'",
-      "privateKey": "'"$(cat server.key | sed 's/$/\\n/' | tr -d '\n')"'"
-    },
-    "basicAuthConfig": {
-      "username": "admin",
-      "password": "secret123"
-    }
-  }'
-```
-
-Test the secured endpoint:
-```bash
-curl -k -u admin:secret123 https://localhost:9443/api/data
-```
-
-### Configuration File with Basic Auth
-
-See `server-config-basicauth-example.json` for a complete example configuration file that includes basic authentication.
 
 ## Relay Server (Proxy Mode)
 
@@ -915,58 +500,41 @@ The relay server feature allows you to create a mock server that acts as a proxy
 - **Full Request Forwarding**: Forwards method, path, query params, headers, and body
 - **Transparent Response**: Returns exact response from remote server
 
-### Create a Simple Relay Server (Without Authentication)
+### Configuration Examples
 
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
+**Simple relay without authentication:**
+```json
+{
+  "server": {
     "serverId": "simple-relay",
     "port": 8090,
-    "description": "Simple relay to remote API",
     "relays": [{
       "remoteUrl": "https://api.example.com"
     }]
-  }'
-```
-
-**Response**: `201 Created`
-```json
-{
-  "serverId": "simple-relay",
-  "port": 8090,
-  "protocol": "http",
-  "baseUrl": "http://localhost:8090",
-  "relayEnabled": true,
-  "status": "running"
+  }
 }
 ```
 
-### Create a Relay Server with OAuth2 Authentication
-
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
+**Relay with OAuth2:**
+```json
+{
+  "server": {
     "serverId": "oauth-relay",
     "port": 8090,
-    "description": "Relay with OAuth2 authentication",
     "relays": [{
       "remoteUrl": "https://api.example.com",
       "tokenUrl": "https://auth.example.com/oauth/token",
-      "clientId": "your-client-id",
-      "clientSecret": "your-client-secret",
-      "scope": "api:read api:write"
+      "clientId": "client-id",
+      "clientSecret": "client-secret"
     }]
-  }'
+  }
+}
 ```
 
-### Create a Relay Server with Custom Headers
-
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
+**Relay with custom headers:**
+```json
+{
+  "server": {
     "serverId": "custom-relay",
     "port": 8090,
     "relays": [{
@@ -976,12 +544,13 @@ curl -X POST http://localhost:8080/api/servers \
         "X-Client-App": "test-suite"
       }
     }]
-  }'
+  }
+}
 ```
 
 ### Testing the Relay Server
 
-Once created, any request to the relay server is automatically forwarded to the remote server:
+Once the server is started with the configuration file, any request to the relay server is automatically forwarded to the remote server:
 
 ```bash
 # Request to relay server
@@ -1014,38 +583,6 @@ curl http://localhost:8090/users/123
 - OAuth2 is completely optional - omit token parameters for no authentication
 - If providing OAuth2 config, all three parameters (`tokenUrl`, `clientId`, `clientSecret`) must be provided
 - Tokens are automatically cached and refreshed when expired
-- Can be combined with TLS/HTTPS and Basic Auth on the mock server side
-
-### Configuration File Examples
-
-**Simple relay without authentication:**
-```json
-{
-  "server": {
-    "serverId": "simple-relay",
-    "port": 8090,
-    "relays": [{
-      "remoteUrl": "https://api.example.com"
-    }]
-  }
-}
-```
-
-**Relay with OAuth2:**
-```json
-{
-  "server": {
-    "serverId": "oauth-relay",
-    "port": 8090,
-    "relays": [{
-      "remoteUrl": "https://api.example.com",
-      "tokenUrl": "https://auth.example.com/oauth/token",
-      "clientId": "client-id",
-      "clientSecret": "client-secret"
-    }]
-  }
-}
-```
 
 See `examples/server-config-relay-example.jsonmc` and `examples/server-config-relay-no-auth-example.jsonmc` for complete examples.
 

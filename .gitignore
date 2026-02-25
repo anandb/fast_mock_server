@@ -67,3 +67,4 @@ Thumbs.db
 
 # Application logs
 spring.log
+/nbactions.xml

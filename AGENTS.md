@@ -16,7 +16,6 @@ The project uses Maven and Java 17.
 ## 📝 Code Style & Conventions
 
 ### 1. Project Structure
-- **Controller:** REST API endpoints in `src/main/java/.../controller/`
 - **Service:** Business logic and MockServer lifecycle in `src/main/java/.../service/`
 - **Model:** Request/Response DTOs and domain entities in `src/main/java/.../model/`
 - **Strategy:** Response generation strategies in `src/main/java/.../strategy/`

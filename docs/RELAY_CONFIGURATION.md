@@ -190,7 +190,7 @@ The following headers are NOT forwarded to prevent conflicts:
 
 ### Example 1: Simple Relay Without Authentication
 
-Create a server configuration file `relay-no-auth-config.jsonmc`:
+Create a configuration file `relay-no-auth-config.jsonmc`:
 
 ```json
 {
@@ -206,9 +206,7 @@ Create a server configuration file `relay-no-auth-config.jsonmc`:
 
 Start the server:
 ```bash
-curl -X POST http://localhost:8080/api/servers/load \
-  -H "Content-Type: application/json" \
-  -d @relay-no-auth-config.jsonmc
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./relay-no-auth-config.jsonmc"
 ```
 
 Test the relay:
@@ -219,7 +217,7 @@ curl http://localhost:8090/users/123
 
 ### Example 2: API Relay with OAuth2 Authentication
 
-Create a server configuration file `relay-oauth-config.jsonmc`:
+Create a configuration file `relay-oauth-config.jsonmc`:
 
 ```json
 {
@@ -238,9 +236,7 @@ Create a server configuration file `relay-oauth-config.jsonmc`:
 
 Start the server:
 ```bash
-curl -X POST http://localhost:8080/api/servers/load \
-  -H "Content-Type: application/json" \
-  -d @relay-config.jsonmc
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./relay-oauth-config.jsonmc"
 ```
 
 Test the relay:
@@ -303,57 +299,6 @@ curl http://localhost:8090/users/123
       "scope": "read:users write:users admin:all"
     }]
   }
-}
-```
-
-## REST API Usage
-
-### Create a Relay Server via API (Without Authentication)
-
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serverId": "simple-relay",
-    "port": 8090,
-    "relays": [{
-      "remoteUrl": "https://api.example.com"
-    }]
-  }'
-```
-
-### Create a Relay Server via API (With OAuth2)
-
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serverId": "oauth-relay",
-    "port": 8090,
-    "relays": [{
-      "remoteUrl": "https://api.example.com",
-      "tokenUrl": "https://auth.example.com/oauth/token",
-      "clientId": "client-id",
-      "clientSecret": "client-secret"
-    }]
-  }'
-```
-
-### Check Server Status
-
-```bash
-curl http://localhost:8080/api/servers/relay-server
-```
-
-Response will include `"relayEnabled": true`:
-```json
-{
-  "serverId": "relay-server",
-  "port": 8090,
-  "protocol": "http",
-  "baseUrl": "http://localhost:8090",
-  "relayEnabled": true,
-  "status": "running"
 }
 ```
 
@@ -582,7 +527,7 @@ Configuration:
 
 Start the server:
 ```bash
-java -Dmock.server.config.file=./k8s-tunnel-config.jsonmc -jar target/mock-server-1.0.0.jar
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./k8s-tunnel-config.jsonmc"
 ```
 
 Test the relay:

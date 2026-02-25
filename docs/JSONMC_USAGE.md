@@ -54,13 +54,12 @@ MIID...
 }
 ```
 
-### Sending an API Request
+### Configuration File Example
 
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/jsonmc" \
-  -d '{
-    // Server configuration with comments
+```json
+{
+  // Server configuration with comments
+  "server": {
     "serverId": "my-test-server",
 
     /* Port configuration
@@ -72,7 +71,14 @@ curl -X POST http://localhost:8080/api/servers \
     that demonstrates the use of
     multiline strings and comments
     in JSON configuration`
-  }'
+  }
+}
+```
+
+The configuration file is loaded at startup using:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./config.jsonmc"
 ```
 
 ## Syntax Reference
@@ -127,7 +133,7 @@ Environment variables can be referenced using the `@{VARIABLE}` or `@{VARIABLE:-
 
 ## Important Notes
 
-1.  **Content-Type Header**: You must set `Content-Type: application/jsonmc` for the API to use this parser.
+1.  **File Format**: JSONMC files should have `.jsonmc` extension or the system will auto-detect comments in the file.
 2.  **Response Format**: Responses are still sent as regular `application/json`.
 3.  **Validation**: All Spring validation annotations still apply after parsing.
 4.  **Error Handling**: Invalid JSONMC syntax will return a 400 Bad Request error.

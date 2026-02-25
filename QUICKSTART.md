@@ -12,7 +12,7 @@ Ensure you have installed:
 
 1. **Clone or navigate to the project directory**
    ```bash
-   cd /home/anand/workspace/mock_server
+   cd fast_mock_server
    ```
 
 2. **Build the project**
@@ -29,36 +29,41 @@ Ensure you have installed:
 
 ## Quick Test
 
-### 1. Create a Simple HTTP Mock Server
+### 1. Create a Configuration File
 
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serverId": "test-api",
-    "port": 1080,
-    "description": "Test API Mock"
-  }'
+Create a file named `server-config.jsonmc`:
+
+```json
+[
+  {
+    "server": {
+      "serverId": "test-api",
+      "port": 1080,
+      "description": "Test API Mock"
+    },
+    "expectations": [
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/hello"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["text/plain"]
+          },
+          "body": "Hello, World!"
+        }
+      }
+    ]
+  }
+]
 ```
 
-### 2. Add an Expectation
+### 2. Run with Configuration
 
 ```bash
-curl -X POST http://localhost:8080/api/servers/test-api/expectations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "httpRequest": {
-      "method": "GET",
-      "path": "/hello"
-    },
-    "httpResponse": {
-      "statusCode": 200,
-      "headers": {
-        "Content-Type": ["text/plain"]
-      },
-      "body": "Hello, World!"
-    }
-  }'
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./server-config.jsonmc"
 ```
 
 ### 3. Test the Mock
@@ -71,42 +76,39 @@ curl http://localhost:1080/hello
 
 ### 4. Verify with Global Headers
 
-Create a server with global headers:
+Update the configuration file:
 
-```bash
-curl -X POST http://localhost:8080/api/servers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serverId": "api-with-headers",
-    "port": 1081,
-    "globalHeaders": [
-      {"name": "X-API-Version", "value": "1.0"},
-      {"name": "X-Mock-Server", "value": "true"}
-    ]
-  }'
-```
-
-Add expectation:
-
-```bash
-curl -X POST http://localhost:8080/api/servers/api-with-headers/expectations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "httpRequest": {
-      "method": "GET",
-      "path": "/user"
+```json
+[
+  {
+    "server": {
+      "serverId": "api-with-headers",
+      "port": 1081,
+      "globalHeaders": [
+        {"name": "X-API-Version", "value": "1.0"},
+        {"name": "X-Mock-Server", "value": "true"}
+      ]
     },
-    "httpResponse": {
-      "statusCode": 200,
-      "headers": {
-        "Content-Type": ["application/json"]
-      },
-      "body": {"name": "John Doe"}
-    }
-  }'
+    "expectations": [
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/user"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": {"name": "John Doe"}
+        }
+      }
+    ]
+  }
+]
 ```
 
-Test and check headers:
+Restart the server and test:
 
 ```bash
 curl -v http://localhost:1081/user
@@ -117,26 +119,11 @@ You should see headers:
 - `X-Mock-Server: true` (from global)
 - `Content-Type: application/json` (from expectation)
 
-### 5. List All Servers
-
-```bash
-curl http://localhost:8080/api/servers
-```
-
-### 6. Clean Up
-
-Delete servers:
-
-```bash
-curl -X DELETE http://localhost:8080/api/servers/test-api
-curl -X DELETE http://localhost:8080/api/servers/api-with-headers
-```
-
 ## Next Steps
 
-- See [README.md](README.md) for complete API documentation
+- See [README.md](README.md) for complete configuration documentation
+- Explore example configurations in `examples/` directory
 - Test TLS/mTLS features using the examples in README
-- Explore advanced expectation configurations
 
 ## Troubleshooting
 
@@ -145,17 +132,15 @@ curl -X DELETE http://localhost:8080/api/servers/api-with-headers
 # Check what's using the port
 lsof -i :8080
 
-# Change the management port in application.properties
-server.port=9090
+# Change the mock server port in your config file
 ```
 
-**MockServer not responding?**
+**Server not responding?**
 ```bash
 # Check logs
 tail -f logs/spring.log
 
-# Verify server is running
-curl http://localhost:8080/api/servers
+# Verify configuration file syntax
 ```
 
 ## Common Use Cases
@@ -219,4 +204,4 @@ curl http://localhost:8080/api/servers
 }
 ```
 
-Happy Mocking! 🚀
+Happy Mocking!
