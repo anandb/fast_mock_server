@@ -3,8 +3,10 @@ package io.github.anandb.mockserver.service;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -97,19 +99,25 @@ public class ConfigurationLoaderService {
         ServerInstance serverInstance = mockServerManager.getServerInstance(serverId);
         MockServerOperations operations = new MockServerOperationsImpl(serverInstance.server());
 
-        if (config.hasExpectations()) {
-            for (EnhancedExpectationDTO dto : config.getExpectations()) {
+        if (!CollectionUtils.isEmpty(serverInstance.relays())) {
+            EnhancedExpectationDTO dto = EnhancedExpectationDTO.builder().build();
+            configureExpectations(serverInstance, operations, List.of(dto));
+        } else if (config.hasExpectations()) {
+            configureExpectations(serverInstance, operations, config.getExpectations());
+        }
+    }
+
+    private void configureExpectations(ServerInstance serverInstance, MockServerOperations operations, List<EnhancedExpectationDTO> expectations) {
+        for (EnhancedExpectationDTO dto : expectations) {
                 try {
                     operations.configureEnhancedExpectation(
                             dto,
                             serverInstance.globalHeaders(),
                             strategies,
-                            serverInstance.relays()
-                    );
+                            serverInstance.relays());
                 } catch (Exception e) {
-                    log.error("Failed to configure expectation for server {}: {}", serverId, e.getMessage());
+                    log.error("Failed to configure expectation for server {}: {}", serverInstance.serverId(), e.getMessage());
                 }
             }
-        }
     }
 }

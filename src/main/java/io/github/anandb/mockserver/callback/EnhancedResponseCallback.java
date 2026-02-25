@@ -56,15 +56,19 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
     @Override
     public HttpResponse handle(HttpRequest httpRequest) {
         try {
-            log.info("MockServer callback received request: {} {}", httpRequest.getMethod(), httpRequest.getPath());
+            log.info("MockServer callback received request: {}", httpRequest);
 
             Map<String, Object> context = new HashMap<>();
             context.put("pathPattern", pathPattern);
 
             // Extract path variables for all strategies
-            Map<String, String> pathVars = RequestUtils.extractPathVariables(
-                    httpRequest.getPath().getValue(),
-                    pathPattern);
+            Map<String, String> pathVars = new HashMap<>();
+            if (httpRequest != null && httpRequest.getPath() != null) {
+                pathVars = RequestUtils.extractPathVariables(
+                        httpRequest.getPath().getValue(),
+                        pathPattern);
+            }
+
             context.put("pathVariables", pathVars);
 
             // Pass relays to context if available
@@ -78,7 +82,6 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
                     .orElseThrow(() -> new IllegalStateException("No strategy found for configuration"));
 
             HttpResponse response = strategy.handle(httpRequest, config, context);
-
             return ResponseUtils.mergeGlobalHeaders(response, globalHeaders);
 
         } catch (Exception e) {
