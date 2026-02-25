@@ -9,6 +9,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.mockserver.integration.ClientAndServer;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
 import io.github.anandb.mockserver.exception.ServerCreationException;
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
@@ -229,12 +232,16 @@ public class MockServerManager {
     }
 
     private void configureRelay(ServerInstance instance) {
+        // Use a standard glob catch-all path
+        ObjectNode requestNode = JsonNodeFactory.instance.objectNode();
+        requestNode.put("path", "/**");
+
         EnhancedExpectationDTO relayDto = EnhancedExpectationDTO.builder()
-                .httpRequest(new com.fasterxml.jackson.databind.node.ObjectNode(com.fasterxml.jackson.databind.node.JsonNodeFactory.instance)
-                        .put("path", "/**"))
+                .httpRequest(requestNode)
                 .build();
 
         MockServerOperations operations = new MockServerOperationsImpl(instance.server());
-        operations.configureEnhancedExpectation(relayDto, instance.globalHeaders(), strategies, instance.relays());
+        // Use very low priority to ensure this acts as a fallback for specific expectations
+        operations.configureEnhancedExpectation(relayDto, instance.globalHeaders(), strategies, instance.relays(), -1000);
     }
 }

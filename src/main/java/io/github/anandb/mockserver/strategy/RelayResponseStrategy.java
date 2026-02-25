@@ -33,8 +33,9 @@ public class RelayResponseStrategy implements ResponseStrategy {
             // Extract request details using centralized utility
             String method = httpRequest.getMethod().getValue();
             String path = httpRequest.getPath().getValue();
+            String relayPath = path;
 
-            // Add query parameters to path if present
+            // Add query parameters to relay path if present
             if (httpRequest.getQueryStringParameters() != null && !httpRequest.getQueryStringParameters().isEmpty()) {
                 String queryString = httpRequest.getQueryStringParameters().getEntries().stream()
                     .map(param -> param.getName().getValue() + "=" +
@@ -42,7 +43,7 @@ public class RelayResponseStrategy implements ResponseStrategy {
                              .map(val -> val.getValue())
                              .toList()))
                     .collect(java.util.stream.Collectors.joining("&"));
-                path = path + "?" + queryString;
+                relayPath = path + "?" + queryString;
             }
 
             Map<String, List<String>> headers = RequestUtils.headersToMap(httpRequest);
@@ -77,7 +78,7 @@ public class RelayResponseStrategy implements ResponseStrategy {
             RelayResponse relayResponse = relayService.relayRequest(
                 matchingRelay.get(),
                 method,
-                path,
+                relayPath,
                 headers,
                 body
             );

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
@@ -123,6 +124,7 @@ public class KubernetesTunnelService {
             "-n", config.getNamespace()
         );
         pb.redirectErrorStream(true);
+        pb.redirectOutput(ProcessBuilder.Redirect.to(new File("/dev/null")));
 
         Process process = pb.start();
 

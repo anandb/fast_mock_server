@@ -56,7 +56,7 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
     @Override
     public HttpResponse handle(HttpRequest httpRequest) {
         try {
-            log.debug("Handling request for {} {}", httpRequest.getMethod(), httpRequest.getPath());
+            log.info("MockServer callback received request: {} {}", httpRequest.getMethod(), httpRequest.getPath());
 
             Map<String, Object> context = new HashMap<>();
             context.put("pathPattern", pathPattern);

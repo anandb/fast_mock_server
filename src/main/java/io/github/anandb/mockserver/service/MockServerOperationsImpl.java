@@ -31,6 +31,11 @@ public class MockServerOperationsImpl implements MockServerOperations {
 
     @Override
     public void configureEnhancedExpectation(EnhancedExpectationDTO config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, List<RelayConfig> relays) {
+        configureEnhancedExpectation(config, globalHeaders, strategies, relays, 0);
+    }
+
+    @Override
+    public void configureEnhancedExpectation(EnhancedExpectationDTO config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, List<RelayConfig> relays, int priority) {
         String pathPattern = null;
         HttpRequest request = config.getHttpRequest();
         if (request != null && request.getPath() != null) {
@@ -45,7 +50,9 @@ public class MockServerOperationsImpl implements MockServerOperations {
                 relays
         );
 
-        clientAndServer.when(config.getHttpRequest()).respond(callback);
+        clientAndServer.when(config.getHttpRequest())
+                .withPriority(priority)
+                .respond(callback);
     }
 
     @Override

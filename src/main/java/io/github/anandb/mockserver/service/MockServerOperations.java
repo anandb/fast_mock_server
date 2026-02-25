@@ -33,6 +33,8 @@ public interface MockServerOperations {
      */
     void configureEnhancedExpectation(EnhancedExpectationDTO config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, List<RelayConfig> relays);
 
+    void configureEnhancedExpectation(EnhancedExpectationDTO config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, List<RelayConfig> relays, int priority);
+
 
     /**
      * Resets the mock server, clearing all expectations.
