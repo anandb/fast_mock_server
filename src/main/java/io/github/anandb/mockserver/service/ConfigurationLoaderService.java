@@ -3,10 +3,8 @@ package io.github.anandb.mockserver.service;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,8 +17,14 @@ import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
 import io.github.anandb.mockserver.util.JsonCommentParser;
 import jakarta.annotation.PostConstruct;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.apache.commons.lang3.Validate;
+
+import static org.apache.commons.collections.CollectionUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
  * Service responsible for loading server and expectation configurations from a JSON file.
@@ -31,29 +35,26 @@ import lombok.extern.slf4j.Slf4j;
 public class ConfigurationLoaderService {
 
     private final MockServerManager mockServerManager;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper mapper;
     private final List<ResponseStrategy> strategies;
 
     private static final String CONFIG_FILE_PROPERTY = "mock.server.config.file";
-    private static final String DOCKER_CONFIG_FILE = "/server.jsonmc";
+    public static boolean SKIP_CONFIG_VALIDATIONS_FOR_TESTS = false;
 
     @PostConstruct
     public void loadConfigurationsOnStartup() {
-        String configFilePath = System.getProperty(CONFIG_FILE_PROPERTY);
-
-        if (configFilePath == null || configFilePath.trim().isEmpty()) {
-            File dockerConfigFile = new File(DOCKER_CONFIG_FILE);
-            if (dockerConfigFile.exists() && dockerConfigFile.isFile()) {
-                configFilePath = DOCKER_CONFIG_FILE;
-            } else {
-                return;
-            }
+        if (SKIP_CONFIG_VALIDATIONS_FOR_TESTS) {
+            log.warn("Skipping Config Validations");
+            return;
         }
+
+        String configFilePath = System.getProperty(CONFIG_FILE_PROPERTY);
+        Validate.isTrue(isNotBlank(configFilePath), "Server configuration required, set property " + CONFIG_FILE_PROPERTY);
 
         File configFile = new File(configFilePath);
         if (!configFile.exists() || !configFile.isFile()) {
             log.warn("Configuration file not found or invalid: {}", configFilePath);
-            return;
+            throw new ServerCreationException("Failed to locate configuration file: " + configFilePath);
         }
 
         try {
@@ -65,29 +66,21 @@ public class ConfigurationLoaderService {
     }
 
     private void loadConfigurationsFromFile(File configFile) throws IOException {
-        boolean isJsonmc = configFile.getName().toLowerCase().endsWith(".jsonmc");
-        String fileContent = Files.readString(configFile.toPath());
-        loadConfigurationsFromString(fileContent, isJsonmc);
-    }
+        try {
+            String fileName = configFile.getName().toLowerCase();
+            String fileContent = Files.readString(configFile.toPath());
+            boolean isJsonmc = fileName.endsWith(".jsonmc") || fileName.endsWith(".jsonc");
 
-    private void loadConfigurationsFromString(String configContent, boolean isJsonmc) throws IOException {
-        if (!isJsonmc && (configContent.trim().startsWith("/*") || configContent.contains("//"))) {
-            isJsonmc = true;
-        }
+            String jsonToParse = isJsonmc ? JsonCommentParser.clean(fileContent) : fileContent;
+            ServerConfiguration[] configurations = mapper.readValue(jsonToParse, ServerConfiguration[].class);
+            Validate.isTrue(configurations != null);
 
-        String jsonToParse = isJsonmc ? JsonCommentParser.clean(configContent) : configContent;
-        ServerConfiguration[] configurations = objectMapper.readValue(jsonToParse, ServerConfiguration[].class);
-
-        if (configurations == null) {
-            return;
-        }
-
-        for (ServerConfiguration config : configurations) {
-            try {
+            for (ServerConfiguration config : configurations) {
                 processServerConfiguration(config);
-            } catch (Exception e) {
-                log.error("Failed to process server: {}", config.getServer().getServerId(), e);
             }
+        } catch (Exception e) {
+            log.error("Failed to process server configuration", e);
+            throw e;
         }
     }
 
@@ -99,25 +92,31 @@ public class ConfigurationLoaderService {
         ServerInstance serverInstance = mockServerManager.getServerInstance(serverId);
         MockServerOperations operations = new MockServerOperationsImpl(serverInstance.server());
 
-        if (!CollectionUtils.isEmpty(serverInstance.relays())) {
-            EnhancedExpectationDTO dto = EnhancedExpectationDTO.builder().build();
+        if (!isEmpty(serverInstance.relays())) {
+            EnhancedExpectationDTO dto = EnhancedExpectationDTO.builder()
+                    .httpRequest(mapper.createObjectNode())
+                    .httpResponse(mapper.createObjectNode())
+                    .build();
             configureExpectations(serverInstance, operations, List.of(dto));
         } else if (config.hasExpectations()) {
             configureExpectations(serverInstance, operations, config.getExpectations());
         }
     }
 
-    private void configureExpectations(ServerInstance serverInstance, MockServerOperations operations, List<EnhancedExpectationDTO> expectations) {
+    private void configureExpectations(ServerInstance serverInstance,
+                                        MockServerOperations operations,
+                                        List<EnhancedExpectationDTO> expectations) {
         for (EnhancedExpectationDTO dto : expectations) {
-                try {
-                    operations.configureEnhancedExpectation(
-                            dto,
-                            serverInstance.globalHeaders(),
-                            strategies,
-                            serverInstance.relays());
-                } catch (Exception e) {
-                    log.error("Failed to configure expectation for server {}: {}", serverInstance.serverId(), e.getMessage());
-                }
+            try {
+                operations.configureEnhancedExpectation(
+                        dto,
+                        serverInstance.globalHeaders(),
+                        strategies,
+                        serverInstance.relays());
+            } catch (Exception e) {
+                log.error("Failed to configure expectation for server {}: {}", serverInstance.serverId(), e);
+                throw e;
             }
+        }
     }
 }

@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import io.github.anandb.mockserver.util.ErrorCode;
+
 /**
  * Strategy for relaying HTTP requests to a remote server.
  */
@@ -66,13 +68,7 @@ public class RelayResponseStrategy implements ResponseStrategy {
                 log.warn("No matching relay found for path: {}", path);
                 return HttpResponse.response()
                     .withStatusCode(404)
-                    .withBody(
-                        """
-                        {
-                            "errorCode": "NO_MATCHING_RELAY",
-                            "message": "No matching relay configuration found for path: %s"
-                        }
-                        """.formatted(path));
+                    .withBody(new ErrorCode("NO_MATCHING_RELAY", "No matching relay configuration found for: " + path).toString());
             }
 
             RelayResponse relayResponse = relayService.relayRequest(
@@ -105,13 +101,7 @@ public class RelayResponseStrategy implements ResponseStrategy {
             log.error("Error relaying request", e);
             return HttpResponse.response()
                 .withStatusCode(502)
-                .withBody(
-                    """
-                    {
-                        "errorCode": "RELAY_ERROR",
-                        "message": "Error relaying request to remote server: %s"
-                    }
-                    """.formatted(e.getMessage()));
+                .withBody(new ErrorCode("RELAY_ERROR", "Error relaying request to remote server: " + e.getMessage()).toString());
         }
     }
 

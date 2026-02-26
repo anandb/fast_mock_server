@@ -6,7 +6,9 @@ import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
 import io.github.anandb.mockserver.util.RequestUtils;
 import io.github.anandb.mockserver.util.ResponseUtils;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.mockserver.mock.action.ExpectationResponseCallback;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
@@ -16,6 +18,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import io.github.anandb.mockserver.util.ErrorCode;
 
 /**
  * Universal callback that delegates to specialized response strategies.
@@ -89,12 +93,7 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
             return HttpResponse.response()
                     .withStatusCode(500)
                     .withHeader("Content-Type", "application/json")
-                    .withBody("""
-                            {
-                              "errorCode": "CALLBACK_ERROR",
-                              "message": "%s"
-                            }
-                            """.formatted(e.getMessage()));
+                    .withBody(new ErrorCode("CALLBACK_ERROR", e.getMessage()).toString());
         }
     }
 }
