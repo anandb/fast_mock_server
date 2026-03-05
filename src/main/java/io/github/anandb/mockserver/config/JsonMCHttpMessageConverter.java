@@ -28,11 +28,11 @@ import java.nio.charset.StandardCharsets;
  * 2. Converts it to a standard JSON object
  * 3. Passes it to the standard JSON processing pipeline
  */
-public class JsonMultilineCommentHttpMessageConverter extends AbstractHttpMessageConverter<Object> {
+public class JsonMCHttpMessageConverter extends AbstractHttpMessageConverter<Object> {
 
     private final JsonMapper objectMapper;
 
-    public JsonMultilineCommentHttpMessageConverter() {
+    public JsonMCHttpMessageConverter() {
         super(new MediaType("application", "jsonmc", StandardCharsets.UTF_8));
         this.objectMapper = MapperSupplier.getMapper();
     }

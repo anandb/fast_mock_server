@@ -24,7 +24,7 @@ public class WebConfig implements WebMvcConfigurer {
     /**
      * Configures custom HTTP message converters.
      * <p>
-     * Adds the JsonMultilineCommentHttpMessageConverter to handle
+     * Adds the JsonMCHttpMessageConverter to handle
      * application/jsonmc content type. This converter is added at the
      * beginning of the converter list to ensure it's checked before
      * standard JSON converters.
@@ -35,7 +35,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         // Add our custom converter at the beginning of the list
         // This ensures it's checked before the standard JSON converters
-        converters.add(0, new JsonMultilineCommentHttpMessageConverter());
+        converters.add(0, new JsonMCHttpMessageConverter());
     }
 
     @Bean
