@@ -1,6 +1,6 @@
 package io.github.anandb.mockserver.callback;
 
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
 import io.github.anandb.mockserver.model.GlobalHeader;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
@@ -28,14 +28,14 @@ import io.github.anandb.mockserver.util.ErrorCode;
 @Slf4j
 public class EnhancedResponseCallback implements ExpectationResponseCallback {
 
-    private final EnhancedExpectationDTO config;
+    private final EnhancedExpectation config;
     private final List<GlobalHeader> globalHeaders;
     private final List<ResponseStrategy> strategies;
     private final String pathPattern;
     private final List<RelayConfig> relays;
 
     public EnhancedResponseCallback(
-            EnhancedExpectationDTO config,
+            EnhancedExpectation config,
             List<GlobalHeader> globalHeaders,
             List<ResponseStrategy> strategies,
             String pathPattern) {
@@ -43,16 +43,16 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
     }
 
     public EnhancedResponseCallback(
-            EnhancedExpectationDTO config,
+            EnhancedExpectation config,
             List<GlobalHeader> globalHeaders,
             List<ResponseStrategy> strategies,
             String pathPattern,
             List<RelayConfig> relays) {
         this.config = config;
-        this.globalHeaders = globalHeaders;
+        this.globalHeaders = globalHeaders != null ? globalHeaders : List.of();
         this.strategies = strategies.stream()
                 .sorted(Comparator.comparingInt(ResponseStrategy::getPriority).reversed())
-                .collect(Collectors.toList());
+                .toList();
         this.pathPattern = pathPattern;
         this.relays = relays;
     }
@@ -60,40 +60,44 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
     @Override
     public HttpResponse handle(HttpRequest httpRequest) {
         try {
-            log.info("MockServer callback received request: {}", httpRequest);
+            log.info("Callback handling {}", httpRequest);
+            Map<String, Object> context = buildContext(httpRequest);
+            ResponseStrategy strategy = findSupportingStrategy();
 
-            Map<String, Object> context = new HashMap<>();
-            context.put("pathPattern", pathPattern);
-
-            // Extract path variables for all strategies
-            Map<String, String> pathVars = new HashMap<>();
-            if (httpRequest != null && httpRequest.getPath() != null) {
-                pathVars = RequestUtils.extractPathVariables(
-                        httpRequest.getPath().getValue(),
-                        pathPattern);
-            }
-
-            context.put("pathVariables", pathVars);
-
-            // Pass relays to context if available
-            if (relays != null) {
-                context.put("relays", relays);
-            }
-
-            ResponseStrategy strategy = strategies.stream()
-                    .filter(s -> s.supports(config))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("No strategy found for configuration"));
-
-            HttpResponse response = strategy.handle(httpRequest, config, context);
-            return ResponseUtils.mergeGlobalHeaders(response, globalHeaders);
-
+            return ResponseUtils.mergeGlobalHeaders(
+                strategy.handle(httpRequest, config, context),
+                globalHeaders
+            );
         } catch (Exception e) {
-            log.error("Error in enhanced callback", e);
+            log.error("Error in enhanced callback: {}", e.getMessage());
             return HttpResponse.response()
                     .withStatusCode(500)
                     .withHeader("Content-Type", "application/json")
                     .withBody(new ErrorCode("CALLBACK_ERROR", e.getMessage()).toString());
         }
+    }
+
+    private Map<String, Object> buildContext(HttpRequest httpRequest) {
+        Map<String, Object> context = new HashMap<>();
+        context.put("pathPattern", pathPattern);
+        context.put("pathVariables", extractPathVariables(httpRequest));
+        if (relays != null) {
+            context.put("relays", relays);
+        }
+        return context;
+    }
+
+    private ResponseStrategy findSupportingStrategy() {
+        return strategies.stream()
+                .filter(s -> s.supports(config))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No strategy found for configuration"));
+    }
+
+    private Map<String, String> extractPathVariables(HttpRequest httpRequest) {
+        if (httpRequest != null && httpRequest.getPath() != null && pathPattern != null) {
+            return RequestUtils.extractPathVariables(httpRequest.getPath().getValue(), pathPattern);
+        }
+        return Map.of();
     }
 }

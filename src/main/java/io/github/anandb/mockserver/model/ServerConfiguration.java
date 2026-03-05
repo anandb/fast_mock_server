@@ -22,19 +22,19 @@ public class ServerConfiguration {
 
     /** Optional list of expectations to configure on this server at startup */
     @JsonProperty("expectations")
-    private List<EnhancedExpectationDTO> expectations;
+    private List<EnhancedExpectation> expectations;
 
     public ServerConfiguration() {}
 
-    public ServerConfiguration(ServerCreationRequest server, List<EnhancedExpectationDTO> expectations) {
+    public ServerConfiguration(ServerCreationRequest server, List<EnhancedExpectation> expectations) {
         this.server = server;
         this.expectations = expectations;
     }
 
     public ServerCreationRequest getServer() { return server; }
     public void setServer(ServerCreationRequest server) { this.server = server; }
-    public List<EnhancedExpectationDTO> getExpectations() { return expectations; }
-    public void setExpectations(List<EnhancedExpectationDTO> expectations) { this.expectations = expectations; }
+    public List<EnhancedExpectation> getExpectations() { return expectations; }
+    public void setExpectations(List<EnhancedExpectation> expectations) { this.expectations = expectations; }
 
     /**
      * Checks if this server has any expectations configured.

@@ -1,6 +1,6 @@
 package io.github.anandb.mockserver.service;
 
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.model.ServerConfiguration;
 import io.github.anandb.mockserver.model.ServerCreationRequest;
@@ -187,7 +187,7 @@ class ConfigurationLoaderServiceTest {
     void testServerConfigurationHasExpectations() {
         ServerConfiguration configWithExpectations = new ServerConfiguration(
             mock(ServerCreationRequest.class),
-            List.of(mock(EnhancedExpectationDTO.class))
+            List.of(mock(EnhancedExpectation.class))
         );
         assertTrue(configWithExpectations.hasExpectations());
 

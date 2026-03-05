@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.anandb.mockserver.exception.ServerCreationException;
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
 import io.github.anandb.mockserver.model.ServerConfiguration;
 import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.ServerInstance;
@@ -39,7 +39,7 @@ public class ConfigurationLoaderService {
     private final List<ResponseStrategy> strategies;
 
     private static final String CONFIG_FILE_PROPERTY = "mock.server.config.file";
-    public static boolean SKIP_CONFIG_VALIDATIONS_FOR_TESTS = false;
+    private static boolean SKIP_CONFIG_VALIDATIONS_FOR_TESTS = false;
 
     @PostConstruct
     public void loadConfigurationsOnStartup() {
@@ -93,7 +93,7 @@ public class ConfigurationLoaderService {
         MockServerOperations operations = new MockServerOperationsImpl(serverInstance.server());
 
         if (!isEmpty(serverInstance.relays())) {
-            EnhancedExpectationDTO dto = EnhancedExpectationDTO.builder()
+            EnhancedExpectation dto = EnhancedExpectation.builder()
                     .httpRequest(mapper.createObjectNode())
                     .httpResponse(mapper.createObjectNode())
                     .build();
@@ -105,8 +105,8 @@ public class ConfigurationLoaderService {
 
     private void configureExpectations(ServerInstance serverInstance,
                                         MockServerOperations operations,
-                                        List<EnhancedExpectationDTO> expectations) {
-        for (EnhancedExpectationDTO dto : expectations) {
+                                        List<EnhancedExpectation> expectations) {
+        for (EnhancedExpectation dto : expectations) {
             try {
                 operations.configureEnhancedExpectation(
                         dto,

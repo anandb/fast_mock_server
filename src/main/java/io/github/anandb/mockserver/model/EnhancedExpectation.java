@@ -18,7 +18,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class EnhancedExpectationDTO {
+public class EnhancedExpectation {
 
     private JsonNode httpRequest;
     private JsonNode httpResponse;
@@ -82,8 +82,8 @@ public class EnhancedExpectationDTO {
         public EnhancedExpectationDTOBuilder sse(Boolean sse) { this.sse = sse; return this; }
         public EnhancedExpectationDTOBuilder interval(Integer interval) { this.interval = interval; return this; }
 
-        public EnhancedExpectationDTO build() {
-            return new EnhancedExpectationDTO(httpRequest, httpResponse, sse, interval);
+        public EnhancedExpectation build() {
+            return new EnhancedExpectation(httpRequest, httpResponse, sse, interval);
         }
     }
 }

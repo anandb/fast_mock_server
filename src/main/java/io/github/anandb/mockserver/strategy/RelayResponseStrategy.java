@@ -1,6 +1,6 @@
 package io.github.anandb.mockserver.strategy;
 
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.service.RelayService;
 import io.github.anandb.mockserver.service.RelayService.RelayResponse;
@@ -30,7 +30,7 @@ public class RelayResponseStrategy implements ResponseStrategy {
     private final RelayService relayService;
 
     @Override
-    public HttpResponse handle(HttpRequest httpRequest, EnhancedExpectationDTO config, Map<String, Object> context) {
+    public HttpResponse handle(HttpRequest httpRequest, EnhancedExpectation config, Map<String, Object> context) {
         try {
             // Extract request details using centralized utility
             String method = httpRequest.getMethod().getValue();
@@ -106,7 +106,7 @@ public class RelayResponseStrategy implements ResponseStrategy {
     }
 
     @Override
-    public boolean supports(EnhancedExpectationDTO config) {
+    public boolean supports(EnhancedExpectation config) {
         // Support if it's explicitly NOT an SSE or File response and has no static body defined
         // This is a heuristic for "relay DTO" created by MockServerManager
         return !config.isSse() && !config.isFileResponse() && config.getHttpResponse() == null;

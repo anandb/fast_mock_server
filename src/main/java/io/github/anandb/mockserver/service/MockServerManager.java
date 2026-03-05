@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
 import io.github.anandb.mockserver.exception.ServerCreationException;
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.model.ServerCreationRequest;
 import io.github.anandb.mockserver.model.ServerInfo;
@@ -23,6 +23,7 @@ import io.github.anandb.mockserver.model.ServerInstance;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -236,7 +237,7 @@ public class MockServerManager {
         ObjectNode requestNode = JsonNodeFactory.instance.objectNode();
         requestNode.put("path", "/**");
 
-        EnhancedExpectationDTO relayDto = EnhancedExpectationDTO.builder()
+        EnhancedExpectation relayDto = EnhancedExpectation.builder()
                 .httpRequest(requestNode)
                 .build();
 

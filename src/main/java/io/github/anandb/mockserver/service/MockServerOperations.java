@@ -1,6 +1,6 @@
 package io.github.anandb.mockserver.service;
 
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
 import io.github.anandb.mockserver.model.GlobalHeader;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
@@ -31,9 +31,9 @@ public interface MockServerOperations {
      * @param strategies list of available response strategies
      * @param relays list of relay configurations
      */
-    void configureEnhancedExpectation(EnhancedExpectationDTO config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, List<RelayConfig> relays);
+    void configureEnhancedExpectation(EnhancedExpectation config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, List<RelayConfig> relays);
 
-    void configureEnhancedExpectation(EnhancedExpectationDTO config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, List<RelayConfig> relays, int priority);
+    void configureEnhancedExpectation(EnhancedExpectation config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, List<RelayConfig> relays, int priority);
 
 
     /**

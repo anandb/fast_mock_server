@@ -1,9 +1,11 @@
 package io.github.anandb.mockserver.strategy;
 
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
 import io.github.anandb.mockserver.service.FreemarkerTemplateService;
 import io.github.anandb.mockserver.util.FreemarkerTemplateDetector;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.apache.commons.lang3.ObjectUtils;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
@@ -32,7 +34,7 @@ public class DynamicFileStrategy implements ResponseStrategy {
     }
 
     @Override
-    public HttpResponse handle(HttpRequest request, EnhancedExpectationDTO config, Map<String, Object> context) {
+    public HttpResponse handle(HttpRequest request, EnhancedExpectation config, Map<String, Object> context) {
         String pathPattern = (String) context.get("pathPattern");
 
         if (config.isFileResponse()) {
@@ -42,7 +44,7 @@ public class DynamicFileStrategy implements ResponseStrategy {
         }
     }
 
-    private HttpResponse handleFileResponse(HttpRequest request, EnhancedExpectationDTO config, String pathPattern) {
+    private HttpResponse handleFileResponse(HttpRequest request, EnhancedExpectation config, String pathPattern) {
         String filePathTemplate = config.getFile();
         try {
             // 1. Evaluate file path template
@@ -73,7 +75,7 @@ public class DynamicFileStrategy implements ResponseStrategy {
         }
     }
 
-    private HttpResponse handleTemplateResponseBody(HttpRequest request, EnhancedExpectationDTO config, String pathPattern) {
+    private HttpResponse handleTemplateResponseBody(HttpRequest request, EnhancedExpectation config, String pathPattern) {
         try {
             String templateString = config.getHttpResponse().getBodyAsString();
             String processedBody = templateService.processTemplateWithRequest(templateString, request, pathPattern);
@@ -89,7 +91,7 @@ public class DynamicFileStrategy implements ResponseStrategy {
     }
 
     @Override
-    public boolean supports(EnhancedExpectationDTO config) {
+    public boolean supports(EnhancedExpectation config) {
         // Support if 'file' field is present OR if the body is a Freemarker template
         if (config.isFileResponse()) {
             return true;

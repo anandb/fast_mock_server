@@ -1,7 +1,9 @@
 package io.github.anandb.mockserver.strategy;
 
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.springframework.stereotype.Component;
@@ -17,7 +19,7 @@ import java.util.Map;
 public class SSEResponseStrategy implements ResponseStrategy {
 
     @Override
-    public HttpResponse handle(HttpRequest request, EnhancedExpectationDTO config, Map<String, Object> context) {
+    public HttpResponse handle(HttpRequest request, EnhancedExpectation config, Map<String, Object> context) {
         List<String> messages = config.getMessages();
         log.info("Handling SSE request for {} {} with {} messages", 
                 request.getMethod(), request.getPath(), messages.size());
@@ -39,7 +41,7 @@ public class SSEResponseStrategy implements ResponseStrategy {
     }
 
     @Override
-    public boolean supports(EnhancedExpectationDTO config) {
+    public boolean supports(EnhancedExpectation config) {
         return config.isSse();
     }
 

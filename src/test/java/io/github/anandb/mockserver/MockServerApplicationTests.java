@@ -25,7 +25,7 @@ class MockServerApplicationTests {
      */
     @BeforeAll
     static void setUp() {
-        ConfigurationLoaderService.SKIP_CONFIG_VALIDATIONS_FOR_TESTS = true;
+        ReflectionTestUtils.setField(ConfigurationLoaderService.class, "SKIP_CONFIG_VALIDATIONS_FOR_TESTS", true);
     }
 
     @Test

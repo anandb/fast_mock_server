@@ -1,6 +1,6 @@
 package io.github.anandb.mockserver.strategy;
 
-import io.github.anandb.mockserver.model.EnhancedExpectationDTO;
+import io.github.anandb.mockserver.model.EnhancedExpectation;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 
@@ -19,7 +19,7 @@ public interface ResponseStrategy {
      * @param context shared context (path variables, cookies, etc.)
      * @return the generated HTTP response
      */
-    HttpResponse handle(HttpRequest request, EnhancedExpectationDTO config, Map<String, Object> context);
+    HttpResponse handle(HttpRequest request, EnhancedExpectation config, Map<String, Object> context);
 
     /**
      * Determines if this strategy supports the given configuration.
@@ -27,7 +27,7 @@ public interface ResponseStrategy {
      * @param config the enhanced expectation configuration
      * @return true if supported, false otherwise
      */
-    boolean supports(EnhancedExpectationDTO config);
+    boolean supports(EnhancedExpectation config);
 
     /**
      * Returns the priority of this strategy. Higher values are checked first.
