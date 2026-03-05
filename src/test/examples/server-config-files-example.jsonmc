@@ -1,9 +1,18 @@
+/*
+ * File download example configuration.
+ * Demonstrates serving files as responses with path variable support.
+ *
+ * Key field:
+ * - file: Path to file (supports ${pathVariables.xxx} interpolation)
+ *
+ * Supports: images, CSV, ZIP, and other binary files.
+ */
 [
   {
     "server": {
       "serverId": "file-server",
       "port": 8082,
-      "description": "Mock server demonstrating multi-part file downloads"
+      "description": "Mock server demonstrating file downloads"
     },
     "expectations": [
       {

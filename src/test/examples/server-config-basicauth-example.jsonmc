@@ -1,3 +1,9 @@
+/*
+ * HTTP Basic Authentication example.
+ * Demonstrates server-wide authentication with username/password.
+ *
+ * Test with: curl -u admin:secret123 http://localhost:9001/api/users
+ */
 [{
   "server": {
     "serverId": "api-server-with-auth",

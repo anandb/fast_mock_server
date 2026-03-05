@@ -1,50 +1,23 @@
+/*
+ * HTTP + HTTPS multi-server example.
+ * Test: curl http://localhost:9001/api/users
+ *       curl -k https://localhost:8443/secure/data
+ */
 [
   {
     "server": {
       "serverId": "api-server",
       "port": 9001,
-      "description": "API Mock Server with sample expectations",
-      "globalHeaders": [
-        {
-          "name": "X-API-Version",
-          "value": "1.0"
-        },
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ]
+      "globalHeaders": [{"name": "Content-Type", "value": "application/json"}]
     },
     "expectations": [
       {
-        "httpRequest": {
-          "method": "GET",
-          "path": "/api/users"
-        },
-        "httpResponse": {
-          "statusCode": 200,
-          "body": `{"users": [{"id": 1, "name": "John Doe"}, {"id": 2, "name": "Jane Smith"}]}`
-        }
+        "httpRequest": {"method": "GET", "path": "/api/users"},
+        "httpResponse": {"statusCode": 200, "body": `{"users": [{"id": 1, "name": "John"}]}`}
       },
       {
-        "httpRequest": {
-          "method": "GET",
-          "path": "/api/users/1"
-        },
-        "httpResponse": {
-          "statusCode": 200,
-          "body": `{"id": 1, "name": "John Doe", "email": "john@example.com"}`
-        }
-      },
-      {
-        "httpRequest": {
-          "method": "POST",
-          "path": "/api/users"
-        },
-        "httpResponse": {
-          "statusCode": 201,
-          "body": `{"id": 3, "name": "New User", "message": "User created successfully"}`
-        }
+        "httpRequest": {"method": "POST", "path": "/api/users"},
+        "httpResponse": {"statusCode": 201, "body": `{"id": 2, "message": "Created"}`}
       }
     ]
   },
@@ -52,28 +25,12 @@
     "server": {
       "serverId": "secure-server",
       "port": 8443,
-      "description": "HTTPS Mock Server",
-      "tlsConfig": {
-        "certificate": "/path/to/cert.pem",
-        "privateKey": "/path/to/key.pem"
-      }
+      "tlsConfig": {"certificate": "/path/to/cert.pem", "privateKey": "/path/to/key.pem"}
     },
     "expectations": [
       {
-        "httpRequest": {
-          "method": "GET",
-          "path": "/secure/data"
-        },
-        "httpResponse": {
-          "statusCode": 200,
-          "headers": [
-            {
-              "name": "X-Secure-Response",
-              "values": ["true"]
-            }
-          ],
-          "body": `{"data": "secure content"}`
-        }
+        "httpRequest": {"method": "GET", "path": "/secure/data"},
+        "httpResponse": {"statusCode": 200, "body": `{"data": "secure content"}`}
       }
     ]
   }

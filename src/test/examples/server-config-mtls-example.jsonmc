@@ -1,3 +1,14 @@
+/*
+ * Mutual TLS (mTLS) authentication example.
+ * Demonstrates client certificate verification for secure API access.
+ *
+ * Features:
+ * - Server certificate and private key (embedded PEM)
+ * - CA certificate for client verification
+ * - requireClientAuth: true enforces client certificates
+ *
+ * Note: Replace placeholder certificates with real ones for production.
+ */
 [
   {
     "server": {

@@ -1,3 +1,7 @@
+/*
+ * Minimal test configuration for basic API endpoint testing.
+ * Use this as a starting template for simple mock servers.
+ */
 [
   {
     "server": {

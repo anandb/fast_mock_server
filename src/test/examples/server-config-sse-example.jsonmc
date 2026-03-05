@@ -1,3 +1,14 @@
+/*
+ * Server-Sent Events (SSE) streaming example.
+ * Demonstrates real-time event streaming to clients.
+ *
+ * Key fields:
+ * - sse: true - Enables SSE mode
+ * - interval: milliseconds between events
+ * - messages: Array of events to stream sequentially
+ *
+ * Test with: curl -N http://localhost:9002/api/stream
+ */
 [
   {
     "server": {

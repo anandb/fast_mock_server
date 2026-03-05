@@ -18,7 +18,7 @@ Multi-server configuration with both HTTP and HTTPS servers.
 
 ### 3. [server-config-basicauth-example.jsonmc](./server-config-basicauth-example.jsonmc)
 Server with basic authentication.
-- **Port:** 9090
+- **Port:** 9001
 - **Features:** Basic authentication (username: `admin`, password: `secret123`).
 
 ### 4. [server-config-mtls-example.jsonmc](./server-config-mtls-example.jsonmc)
@@ -71,6 +71,35 @@ Replace `<config-file-name>` with the name of the desired configuration file (e.
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./src/test/examples/server-config-test.jsonmc"
 ```
 
+## Testing Examples
+
+After starting a server, use these curl commands to test:
+
+### Basic endpoint (test.jsonmc)
+```bash
+curl http://localhost:9001/test
+```
+
+### Basic auth (basicauth-example.jsonmc)
+```bash
+curl -u admin:secret123 http://localhost:9001/api/users
+```
+
+### Path variables (pathvars-example.jsonmc)
+```bash
+curl http://localhost:9001/users/123
+curl -H "X-User-Name: John" http://localhost:9001/users/456/posts/789
+```
+
+### SSE streaming (sse-example.jsonmc)
+```bash
+curl -N http://localhost:9002/api/stream
+```
+
+### mTLS (mtls-example.jsonmc)
+```bash
+curl --cert client.pem --key client-key.pem --cacert ca.pem https://localhost:8443/secure/api/health
+```
+
 ## Directory Structure
 All configuration files are located directly in this directory: `src/test/examples/`.
-There are no sub-directories or additional shell scripts.

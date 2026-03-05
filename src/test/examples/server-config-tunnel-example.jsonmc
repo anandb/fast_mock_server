@@ -1,3 +1,14 @@
+/*
+ * Kubernetes pod tunnel relay example.
+ * Automatically creates kubectl port-forward tunnels to relay traffic.
+ *
+ * Key fields (tunnelConfig):
+ * - namespace: Kubernetes namespace
+ * - podPrefix: Pod name prefix for discovery
+ * - podPort: Target port on the pod
+ *
+ * The server manages tunnel lifecycle automatically.
+ */
 [
   {
     "server": {

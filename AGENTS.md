@@ -4,56 +4,156 @@ This document provides essential information for AI agents operating in this rep
 
 ## 🛠 Build and Test Commands
 
-The project uses Maven and Java 17.
+The project uses **Maven** and **Java 25** (see `pom.xml` for current version).
 
-- **Build and package:** `mvn clean package`
-- **Run application:** `mvn spring-boot:run`
-- **Run all tests:** `mvn test`
-- **Run a single test class:** `mvn test -Dtest=ClassName`
-- **Run a single test method:** `mvn test -Dtest=ClassName#methodName`
-- **Run with specific config file:** `mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./server-config.jsonmc"`
+### Build
+```bash
+mvn clean package          # Build and package JAR
+mvn clean install          # Build and install to local repo
+mvn compile                # Compile only
+```
 
-## 📝 Code Style & Conventions
+### Run Application
+```bash
+mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./server-config.jsonmc"
+```
 
-### 1. Project Structure
-- **Service:** Business logic and MockServer lifecycle in `src/main/java/.../service/`
-- **Model:** Request/Response DTOs and domain entities in `src/main/java/.../model/`
-- **Strategy:** Response generation strategies in `src/main/java/.../strategy/`
-- **Exception:** Custom exceptions and global handler in `src/main/java/.../exception/`
-- **Callback:** Unified `EnhancedResponseCallback` in `src/main/java/.../callback/`
-- **Util:** Shared utility classes in `src/main/java/.../util/`
+### Testing
+```bash
+mvn test                                      # Run all tests
+mvn test -Dtest=MockServerManagerTest         # Run single test class
+mvn test -Dtest=MockServerManagerTest#testCreateHttpServer  # Run single test method
+mvn test -Dtest="*Integration*"               # Run tests matching pattern
+```
 
-### 2. Code Style
+## Project Structure
+
+```
+src/main/java/io/github/anandb/mockserver/
+├── callback/       # EnhancedResponseCallback - unified callback handler
+├── config/         # Spring configuration classes
+├── exception/      # Custom exceptions + GlobalExceptionHandler
+├── model/          # DTOs and domain entities
+├── service/        # Business logic, MockServer lifecycle
+├── strategy/       # Response generation strategies (Strategy Pattern)
+└── util/           # Shared utility classes
+```
+
+## 📝 Code Style Guidelines
+
+### Formatting
 - **Indentation:** 4 spaces (no tabs)
-- **Line Length:** Max 120 characters
-- **Lombok:** Use `@Data`, `@NoArgsConstructor`, `@AllArgsConstructor`, `@RequiredArgsConstructor`, `@Slf4j` to reduce boilerplate
-- **Spring:** Use `@Service`, `@Component`, `@Controller` annotations for dependency injection
-- **Logging:** Use Lombok's `@Slf4j` and `log.info/warn/error` methods
-- **Exceptions:** Create custom exceptions in `exception/` package extending `RuntimeException`
-- **DTOs:** Use immutable records or Lombok-annotated classes with builder pattern
-- **Braces** - Always required for all conditional statements, loops, and methods. Can be skipped for one-line lambdas
+- **Line length:** Max 120 characters
+- **Braces:** Always required for conditionals, loops, methods. Optional for one-line lambdas.
+- **Blank lines:** One between methods, two between class sections
 
-### 3. Naming Conventions
-- **Classes/Interfaces:** PascalCase (e.g., `MockServerManager`, `ResponseStrategy`)
-- **Methods:** camelCase (e.g., `createServer`, `isTlsEnabled`)
-- **Variables:** camelCase (e.g., `serverId`, `tlsConfig`)
-- **Constants:** UPPER_SNAKE_CASE (e.g., `DEFAULT_PORT`)
-- **Packages:** lowercase with dots (e.g., `io.github.anandb.mockserver.service`)
-- **DTOs:** Suffix with `DTO` (e.g., `EnhancedExpectationDTO`)
-- **Config classes:** Suffix with `Config` (e.g., `TlsConfig`)
-- **Strategy interfaces:** Suffix with `Strategy` (e.g., `ResponseStrategy`)
+### Import Order
+1. `java.*` and `javax.*` / `jakarta.*`
+2. Third-party libraries (org.mockserver, com.fasterxml, etc.)
+3. Spring framework imports
+4. Project imports (`io.github.anandb.mockserver.*`)
+5. Static imports last
 
-### 4. MockServer Integration
-- Management happens via `MockServerManager`.
-- Use `ClientAndServer` from `org.mockserver.integration`.
-- For any custom response logic (SSE, Files, Relay, Templates), use the **Strategy Pattern**.
-- Register new strategies by implementing `ResponseStrategy` and adding the `@Component` annotation.
-- The `EnhancedResponseCallback` automatically picks up all strategies and chooses the best one based on the `EnhancedExpectationDTO`.
+Avoid wildcard imports. Use explicit imports.
 
-## 🤖 AI Instructions
+### Naming Conventions
+| Element | Convention | Example |
+|---------|------------|----------|
+| Classes/Interfaces | PascalCase | `MockServerManager`, `ResponseStrategy` |
+| Methods | camelCase | `createServer`, `isTlsEnabled` |
+| Variables | camelCase | `serverId`, `tlsConfig` |
+| Constants | UPPER_SNAKE_CASE | `DEFAULT_PORT` |
+| Packages | lowercase | `io.github.anandb.mockserver.service` |
+| DTOs | Suffix with `DTO` | `EnhancedExpectationDTO` |
+| Config classes | Suffix with `Config` | `TlsConfig`, `RelayConfig` |
+| Strategy interfaces | Suffix with `Strategy` | `ResponseStrategy` |
+| Test classes | Suffix with `Test` | `MockServerManagerTest` |
 
-- **Context:** This is a Spring Boot wrapper around Netty MockServer. It manages multiple instances on different ports.
-- **Config Formats:** Supports `.json` and `.jsonmc` (JSON with Multiline Comments).
-- **Features:** TLS/mTLS, Basic Auth, OAuth2 Relay, SSE, and Multipart file downloads are all handled via a unified `EnhancedExpectationDTO`.
-- **Simplification:** Avoid manual JSON manipulation. Always map incoming requests to `EnhancedExpectationDTO`.
+### Lombok Annotations
+Use Lombok to reduce boilerplate:
+- `@Data` - getters, setters, equals, hashCode, toString
+- `@NoArgsConstructor`, `@AllArgsConstructor`, `@RequiredArgsConstructor`
+- `@Slf4j` - logging (use `log.info()`, `log.warn()`, `log.error()`)
+- `@Builder` - builder pattern for complex objects
+
+### Spring Annotations
+- `@Service` - business logic services
+- `@Component` - general Spring beans (including strategies)
+- `@RestController` / `@RestControllerAdvice` - REST endpoints
+- `@RequiredArgsConstructor` - constructor injection (preferred over `@Autowired`)
+
+### Documentation
+- Use Javadoc for public classes and methods
+- Include `@param`, `@return`, `@throws` tags
+- Brief description in first sentence
+
+## Error Handling
+
+### Custom Exceptions
+Create in `exception/` package, extend `RuntimeException`:
+- `ServerNotFoundException` - 404
+- `ServerAlreadyExistsException` - 409
+- `ServerCreationException` - 500
+- `InvalidCertificateException` - 400
+- `InvalidExpectationException` - 400
+
+### GlobalExceptionHandler
+All exceptions are handled centrally via `@RestControllerAdvice`. Returns structured JSON:
+```json
+{"errorCode": "ERROR_CODE", "message": "Description", "timestamp": "..."}
+```
+
+## Testing Conventions
+
+- **Framework:** JUnit 5 + Mockito
+- **Annotations:** `@Test`, `@DisplayName`, `@BeforeEach`, `@AfterEach`
+- **Assertions:** Use static imports from `org.junit.jupiter.api.Assertions`
+- **Mocking:** Use `@Mock` + `MockitoAnnotations.openMocks(this)`
+- **Naming:** Test methods should describe behavior: `testCreateHttpServer`, `shouldRejectDuplicateServerId`
+
+## Strategy Pattern (Response Generation)
+
+Implement `ResponseStrategy` interface:
+```java
+public interface ResponseStrategy {
+    HttpResponse handle(HttpRequest request, EnhancedExpectationDTO config, Map<String, Object> context);
+    boolean supports(EnhancedExpectationDTO config);
+    default int getPriority() { return 0; }  // Higher = checked first
+}
+```
+
+Existing strategies:
+- `StaticResponseStrategy` - static JSON/text responses
+- `DynamicFileStrategy` - file downloads
+- `SSEResponseStrategy` - Server-Sent Events
+- `RelayResponseStrategy` - proxy to remote servers
+
+To add a new strategy:
+1. Create class in `strategy/` implementing `ResponseStrategy`
+2. Add `@Component` annotation
+3. Implement `supports()` to match your use case
+4. Implement `handle()` for response generation
+
+## Configuration
+
+### Supported Formats
+- `.json` - standard JSON
+- `.jsonmc` - JSON with multiline comments (parsed by `JsonCommentParser`)
+
+### Key Model Classes
+- `EnhancedExpectationDTO` - unified expectation configuration
+- `ServerCreationRequest` - server creation payload
+- `ServerInstance` - runtime server state (record-style accessors)
+- `TlsConfig`, `MtlsConfig` - TLS/mTLS configuration
+- `RelayConfig` - proxy relay configuration
+- `BasicAuthConfig` - basic authentication
+
+## 🤖 AI Agent Notes
+
+- **Context:** Spring Boot wrapper around MockServer Netty. Manages multiple mock server instances on different ports.
+- **Key service:** `MockServerManager` - creates, configures, and manages server lifecycle
+- **Prefer:** Mapping requests to `EnhancedExpectationDTO` over manual JSON manipulation
+- **Features:** TLS/mTLS, Basic Auth, OAuth2 relay, SSE streaming, file downloads, FreeMarker templates
+- **Testing:** Always verify changes with `mvn test` before committing
 

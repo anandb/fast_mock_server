@@ -1,33 +1,39 @@
 /*
- * Example configuration demonstrating path variable support in Freemarker templates
+ * FreeMarker path variable and template example.
+ * Demonstrates dynamic response generation using request data.
  *
- * This example shows how to use path variables extracted from the request URL
- * in Freemarker templates along with headers, body, and cookies.
+ * Available template variables:
+ * - ${pathVariables.xxx} - URL path parameters
+ * - ${headers['Header-Name']!'default'} - Request headers with defaults
+ * - ${body.field} - JSON body field access
+ * - ${.now?iso_utc} - Current timestamp
+ *
+ * Test with:
+ *   curl http://localhost:9001/users/123
+ *   curl -H "X-User-Name: John" http://localhost:9001/users/456/posts/789
+ *   curl -X POST -H "Content-Type: application/json" \
+ *        -d '{"title":"My Task"}' http://localhost:9001/tasks
  */
 [
   {
     "server": {
       "serverId": "pathvars-demo",
       "port": 9001,
-      "description": "Demo server for path variables in Freemarker templates"
+      "description": "Demo server for FreeMarker templates"
     },
     "expectations": [
+      /* Simple path variable: single ID extraction */
       {
         "httpRequest": {
           "method": "GET",
           "path": "/users/{id}",
           "pathParameters": {
             "id": "[a-zA-Z0-9\\-]+"
-           }
+          }
         },
         "httpResponse": {
           "statusCode": 200,
-          "headers": [
-            {
-              "name": "Content-Type",
-              "values": ["application/json"]
-            }
-          ],
+          "headers": [{"name": "Content-Type", "values": ["application/json"]}],
           "body": `{
             "userId": "${pathVariables.id}",
             "message": "User details retrieved",
@@ -35,6 +41,8 @@
           }`
         }
       },
+
+      /* Multiple path variables with headers */
       {
         "httpRequest": {
           "method": "GET",
@@ -42,147 +50,35 @@
           "pathParameters": {
             "userId": "[a-zA-Z0-9\\-]+",
             "postId": "[a-zA-Z0-9\\-]+"
-           }
+          }
         },
         "httpResponse": {
           "statusCode": 200,
-          "headers": [
-            {
-              "name": "Content-Type",
-              "values": ["application/json"]
-            }
-          ],
+          "headers": [{"name": "Content-Type", "values": ["application/json"]}],
           "body": `{
             "userId": "${pathVariables.userId}",
             "postId": "${pathVariables.postId}",
             "title": "Post ${pathVariables.postId} by user ${pathVariables.userId}",
-            "author": "${headers['X-Author-Name']!'Unknown'}",
             "timestamp": "${.now?iso_utc}"
           }`
         }
       },
+
+      /* POST with body field access and defaults */
       {
         "httpRequest": {
           "method": "POST",
-          "path": "/api/v1/organizations/{orgId}/projects/{projectId}/tasks",
-          "pathParameters":{
-            "orgId": "[a-zA-Z0-9\\-]+",
-            "projectId": "[a-zA-Z0-9\\-]+"
-          }
+          "path": "/tasks"
         },
         "httpResponse": {
           "statusCode": 201,
-          "headers": [
-            {
-              "name": "Content-Type",
-              "values": ["application/json"]
-            },
-            {
-              "name": "Location",
-              "values": ["/api/v1/organizations/${pathVariables.orgId}/projects/${pathVariables.projectId}/tasks/new-task-123"]
-            }
-          ],
+          "headers": [{"name": "Content-Type", "values": ["application/json"]}],
           "body": `{
-            "id": "new-task-123",
-            "organizationId": "${pathVariables.orgId}",
-            "projectId": "${pathVariables.projectId}",
+            "id": "task-new-123",
             "title": "${body.title}",
             "description": "${body.description!'No description provided'}",
-            "assignee": "${body.assignee!'Unassigned'}",
             "priority": "${body.priority!'medium'}",
-            "createdBy": "${headers['X-User-Id']!'system'}",
             "createdAt": "${.now?iso_utc}"
-          }`
-        }
-      },
-      {
-        "httpRequest": {
-          "method": "PUT",
-          "path": "/users/{id}/profile",
-          "pathParameters":{
-            "id": "[a-zA-Z0-9\\-]+"
-          }
-        },
-        "httpResponse": {
-          "statusCode": 200,
-          "headers": [
-            {
-              "name": "Content-Type",
-              "values": ["application/json"]
-            }
-          ],
-          "body": `{
-            "userId": "${pathVariables.id}",
-            "updatedFields": {
-              "name": "${body.name}",
-              "email": "${body.email}",
-              "age": "${body.age}"
-            },
-            "updatedBy": "${headers['X-Admin-Id']!'self'}",
-            "timestamp": "${.now?iso_utc}"
-          }`
-        }
-      },
-      {
-        "httpRequest": {
-          "method": "DELETE",
-          "path": "/users/{userId}/comments/{commentId}",
-          "pathParameters":{
-            "userId": "[a-zA-Z0-9\\-]+",
-            "commentId": "[a-zA-Z0-9\\-]+"
-          }
-        },
-        "httpResponse": {
-          "statusCode": 200,
-          "headers": [
-            {
-              "name": "Content-Type",
-              "values": ["application/json"]
-            }
-          ],
-          "body": `{
-            "message": "Comment deleted successfully",
-            "deletedCommentId": "${pathVariables.commentId}",
-            "belongsToUserId": "${pathVariables.userId}",
-            "deletedBy": "${headers['X-User-Id']!'unknown'}",
-            "timestamp": "${.now?iso_utc}"
-          }`
-        }
-      },
-      {
-        "httpRequest": {
-          "method": "GET",
-          "path": "/api/v2/products/{category}/{productId}/reviews",
-          "pathParameters":{
-            "category": "[a-z]+",
-            "productId": "[a-zA-Z0-9\\-]+"
-          }
-        },
-        "httpResponse": {
-          "statusCode": 200,
-          "headers": [
-            {
-              "name": "Content-Type",
-              "values": ["application/json"]
-            }
-          ],
-          "body": `{
-            "category": "${pathVariables.category}",
-            "productId": "${pathVariables.productId}",
-            "reviews": [
-              {
-                "id": "review-1",
-                "rating": 5,
-                "comment": "Great ${pathVariables.category} product!"
-              },
-              {
-                "id": "review-2",
-                "rating": 4,
-                "comment": "Good value for product ${pathVariables.productId}"
-              }
-            ],
-            "totalReviews": 2,
-            "requestedBy": "${headers['User-Agent']!'Unknown Client'}"
           }`
         }
       }
