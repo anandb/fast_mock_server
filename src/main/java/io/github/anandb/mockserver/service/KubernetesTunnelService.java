@@ -105,7 +105,7 @@ public class KubernetesTunnelService {
 
     private boolean isPortAvailable(int port) {
         try (ServerSocket socket = new ServerSocket(port)) {
-            return true;
+            return socket != null;
         } catch (IOException e) {
             return false;
         }
