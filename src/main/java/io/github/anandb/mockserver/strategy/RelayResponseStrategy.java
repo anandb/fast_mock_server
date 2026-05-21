@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import io.github.anandb.mockserver.util.ErrorCode;
 
@@ -42,21 +43,58 @@ public class RelayResponseStrategy implements ResponseStrategy {
                 String queryString = httpRequest.getQueryStringParameters().getEntries().stream()
                     .map(param -> param.getName().getValue() + "=" +
                          String.join(",", param.getValues().stream()
-                             .map(val -> val.getValue())
-                             .toList()))
+                              .map(val -> val.getValue())
+                              .toList()))
                     .collect(java.util.stream.Collectors.joining("&"));
                 relayPath = path + "?" + queryString;
             }
 
-            Map<String, List<String>> headers = RequestUtils.headersToMap(httpRequest);
+            // Early log: helps when later request parsing fails or logs get delayed.
+            log.info(
+                "[RelayResponseStrategy] Incoming request (early) -> method={} path={} relayPath={}",
+                method,
+                path,
+                relayPath
+            );
+
+            String requestHeaders = "";
+            try {
+                requestHeaders = RequestUtils.headersToMap(httpRequest).entrySet().stream()
+                    .map(entry -> entry.getKey() + "=" + String.join(",", entry.getValue()))
+                    .collect(Collectors.joining("; "));
+            } catch (Exception headersEx) {
+                log.warn("[RelayResponseStrategy] Failed to serialize request headers for logging: {}", headersEx.getMessage());
+            }
+
+            Map<String, List<String>> headers;
+            try {
+                headers = RequestUtils.headersToMap(httpRequest);
+            } catch (Exception headersEx) {
+                log.warn("[RelayResponseStrategy] Failed to extract request headers for relay: {}", headersEx.getMessage());
+                headers = java.util.Collections.emptyMap();
+            }
 
             byte[] body = null;
+            String bodyString = null;
             if (httpRequest.getBody() != null) {
-                String bodyString = httpRequest.getBodyAsString();
+                try {
+                    bodyString = httpRequest.getBodyAsString();
+                } catch (Exception bodyEx) {
+                    log.warn("[RelayResponseStrategy] Failed to read request body for logging: {}", bodyEx.getMessage());
+                }
                 if (bodyString != null && !bodyString.isEmpty()) {
                     body = bodyString.getBytes();
                 }
             }
+
+            log.info(
+                "[RelayResponseStrategy] Incoming request -> method={} path={} relayPath={} headers=[{}] body=[{}]",
+                method,
+                path,
+                relayPath,
+                requestHeaders,
+                bodyString
+            );
 
             // Get relays from context (server-level configuration)
             @SuppressWarnings("unchecked")
@@ -79,11 +117,35 @@ public class RelayResponseStrategy implements ResponseStrategy {
                 body
             );
 
+            String relayResponseHeaders = "";
+            if (relayResponse.headers() != null && !relayResponse.headers().isEmpty()) {
+                relayResponseHeaders = relayResponse.headers().entrySet().stream()
+                    .filter(entry -> entry.getKey() != null && !entry.getKey().startsWith(":"))
+                    .map(entry -> entry.getKey() + "=" + String.join(",", entry.getValue()))
+                    .collect(Collectors.joining("; "));
+            }
+
+            String relayResponseBody = null;
+            if (relayResponse.body() != null && relayResponse.body().length > 0) {
+                relayResponseBody = new String(relayResponse.body());
+            }
+
+            log.info(
+                "[RelayResponseStrategy] Relayed response <- statusCode={} headers=[{}] body=[{}] (relayPath={})",
+                relayResponse.statusCode(),
+                relayResponseHeaders,
+                relayResponseBody,
+                relayPath
+            );
+
             HttpResponse response = HttpResponse.response()
                 .withStatusCode(relayResponse.statusCode());
 
             if (relayResponse.headers() != null) {
                 for (Map.Entry<String, List<String>> header : relayResponse.headers().entrySet()) {
+                    if (header.getKey().startsWith(":")) {
+                        continue;
+                    }
                     if (header.getValue() != null && !header.getValue().isEmpty()) {
                         response = response.withHeader(header.getKey(),
                             header.getValue().toArray(String[]::new));
@@ -93,6 +155,14 @@ public class RelayResponseStrategy implements ResponseStrategy {
 
             if (relayResponse.body() != null && relayResponse.body().length > 0) {
                 response = response.withBody(relayResponse.body());
+            }
+
+            if (response != null) {
+                log.info(
+                    "[RelayResponseStrategy] Final response -> statusCode={} (contentLength={})",
+                    relayResponse.statusCode(),
+                    relayResponse.body() == null ? 0 : relayResponse.body().length
+                );
             }
 
             return response;
