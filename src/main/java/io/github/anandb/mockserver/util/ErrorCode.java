@@ -11,6 +11,14 @@ public class ErrorCode {
         this.message = message;
     }
 
+    public String getErrorCode() {
+        return errorCode;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
     @Override
     public String toString() {
         try {

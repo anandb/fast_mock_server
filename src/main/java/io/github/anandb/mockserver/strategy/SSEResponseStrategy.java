@@ -4,6 +4,7 @@ import io.github.anandb.mockserver.model.EnhancedExpectation;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.mockserver.model.Header;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.springframework.stereotype.Component;
@@ -29,15 +30,28 @@ public class SSEResponseStrategy implements ResponseStrategy {
             sseBody.append("data: ").append(message).append("\n\n");
         }
 
-        Integer responseCode = config.getHttpResponse() != null ? config.getHttpResponse().getStatusCode() : 200;
+        Integer responseCode = 200;
+        List<Header> responseHeaders = null;
+        try {
+            org.mockserver.model.HttpResponse httpResponse = config.getHttpResponse();
+            if (httpResponse != null) {
+                responseCode = httpResponse.getStatusCode();
+                responseHeaders = new java.util.ArrayList<>(httpResponse.getHeaderList());
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse HTTP response config, using defaults: {}", e.getMessage());
+        }
 
-        return HttpResponse.response()
+        org.mockserver.model.HttpResponse response = HttpResponse.response()
                 .withStatusCode(responseCode)
-                .withHeaders(config.getHttpResponse() != null ? config.getHttpResponse().getHeaderList() : null)
                 .withHeader("Content-Type", "text/event-stream")
                 .withHeader("Cache-Control", "no-cache")
                 .withHeader("Connection", "keep-alive")
                 .withBody(sseBody.toString());
+        if (responseHeaders != null && !responseHeaders.isEmpty()) {
+            response.withHeaders(responseHeaders);
+        }
+        return response;
     }
 
     @Override

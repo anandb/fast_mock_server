@@ -16,6 +16,9 @@ public class FreemarkerTemplateDetector {
      * @return true if the content contains FreeMarker syntax, false otherwise
      */
     public static boolean isFreemarkerTemplate(String content) {
+        if (content == null) {
+            return false;
+        }
         return content.contains("${") ||
                content.contains("<#") ||
                content.contains("[#") ||

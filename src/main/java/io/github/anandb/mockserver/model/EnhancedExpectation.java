@@ -10,6 +10,7 @@ import org.mockserver.serialization.HttpRequestSerializer;
 import org.mockserver.serialization.HttpResponseSerializer;
 import org.mockserver.logging.MockServerLogger;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 
 /**
@@ -33,7 +34,18 @@ public class EnhancedExpectation {
     }
 
     public HttpResponse getHttpResponse() {
-        return httpResponse != null ? RESPONSE_SERIALIZER.deserialize(httpResponse.toString()) : null;
+        if (httpResponse == null) {
+            return null;
+        }
+        // Remove custom fields not recognized by MockServer's HttpRequestSerializer
+        // before passing to the serializer to avoid schema validation errors.
+        if (httpResponse instanceof ObjectNode objectNode) {
+            ObjectNode cleaned = objectNode.deepCopy();
+            cleaned.remove("file");
+            cleaned.remove("messages");
+            return RESPONSE_SERIALIZER.deserialize(cleaned.toString());
+        }
+        return RESPONSE_SERIALIZER.deserialize(httpResponse.toString());
     }
 
     public boolean isSse() {
