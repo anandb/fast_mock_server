@@ -132,16 +132,33 @@ public class MockServerManager {
             throw new ServerNotFoundException(serverId);
         }
 
+        cleanupResources(instance, serverId);
+        log.info("Successfully deleted server: {}", serverId);
+        return true;
+    }
+
+    private void cleanupResources(ServerInstance instance, String serverId) {
+        // Best-effort cleanup: attempt all steps, log individual failures.
+        // Never re-add the instance — partial cleanup leaves inconsistent state.
+        boolean tunnelsStopped = stopTunnels(instance);
+        boolean serverStopped = stopMockServer(instance);
+        tlsConfigService.cleanupServerCertificates(serverId);
+
+        if (!tunnelsStopped || !serverStopped) {
+            log.warn("Partial cleanup for server: {} — tunnels={}, server={}",
+                serverId, tunnelsStopped, serverStopped);
+        }
+    }
+
+    private boolean stopMockServer(ServerInstance instance) {
         try {
-            stopTunnels(instance);
-            instance.server().stop();
-            tlsConfigService.cleanupServerCertificates(serverId);
-            log.info("Successfully deleted server: {}", serverId);
+            if (instance.server() != null && instance.server().isRunning()) {
+                instance.server().stop();
+            }
             return true;
         } catch (Exception e) {
-            log.error("Error while deleting server: {}", serverId, e);
-            servers.put(serverId, instance);
-            throw new ServerCreationException("Failed to delete server: " + e.getMessage(), e);
+            log.error("Failed to stop mock server: {}", instance.serverId(), e);
+            return false;
         }
     }
 
@@ -200,19 +217,24 @@ public class MockServerManager {
         }
     }
 
-    private void stopTunnels(ServerInstance instance) {
+    private boolean stopTunnels(ServerInstance instance) {
         Map<String, Process> tunnels = instance.tunnels();
-        if (tunnels != null && !tunnels.isEmpty()) {
-            log.info("Stopping {} tunnels for server: {}", tunnels.size(), instance.serverId());
-            for (Map.Entry<String, Process> entry : tunnels.entrySet()) {
-                try {
-                    kubernetesTunnelService.stopTunnel(entry.getValue());
-                    log.debug("Stopped tunnel: {}", entry.getKey());
-                } catch (Exception e) {
-                    log.error("Failed to stop tunnel: {}", entry.getKey(), e);
-                }
+        if (tunnels == null || tunnels.isEmpty()) {
+            return true;
+        }
+
+        log.info("Stopping {} tunnels for server: {}", tunnels.size(), instance.serverId());
+        boolean allStopped = true;
+        for (Map.Entry<String, Process> entry : tunnels.entrySet()) {
+            try {
+                kubernetesTunnelService.stopTunnel(entry.getValue());
+                log.debug("Stopped tunnel: {}", entry.getKey());
+            } catch (Exception e) {
+                log.error("Failed to stop tunnel: {}", entry.getKey(), e);
+                allStopped = false;
             }
         }
+        return allStopped;
     }
 
     @PreDestroy
