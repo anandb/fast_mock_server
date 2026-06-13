@@ -1,6 +1,7 @@
 package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.model.HttpRequestContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockserver.model.Cookie;
@@ -19,7 +20,7 @@ class FreemarkerTemplateServiceTest {
 
     @BeforeEach
     void setUp() {
-        templateService = new FreemarkerTemplateService();
+        templateService = new FreemarkerTemplateService(new ObjectMapper());
     }
 
     @Test

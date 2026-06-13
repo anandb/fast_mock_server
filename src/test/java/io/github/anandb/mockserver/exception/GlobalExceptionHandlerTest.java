@@ -73,6 +73,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleOAuth2ExceptionReturns502() {
+        OAuth2Exception ex = new OAuth2Exception("token fetch failed");
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleOAuth2Exception(ex);
+
+        assertEquals(HttpStatus.BAD_GATEWAY, response.getStatusCode());
+        assertEquals("OAUTH2_ERROR", response.getBody().getErrorCode());
+        assertEquals("token fetch failed", response.getBody().getMessage());
+        assertNotNull(response.getBody().getTimestamp());
+    }
+
+    @Test
     void handleValidationErrorsReturns400() {
         BindingResult bindingResult = org.mockito.Mockito.mock(BindingResult.class);
         org.mockito.Mockito.when(bindingResult.getAllErrors())

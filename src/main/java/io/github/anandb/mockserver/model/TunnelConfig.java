@@ -23,4 +23,16 @@ public class TunnelConfig {
     @NotNull(message = "Pod port is required for tunnel configuration")
     @JsonProperty("podPort")
     private Integer podPort;
+
+    /** Max time in ms to wait for tunnel to become ready before failing. Default: 10s. */
+    @JsonProperty("tunnelReadyTimeoutMs")
+    private long tunnelReadyTimeoutMs = 10_000;
+
+    /** 3-arg constructor for backward compatibility (uses default timeout). */
+    public TunnelConfig(String namespace, String podPrefix, Integer podPort) {
+        this.namespace = namespace;
+        this.podPrefix = podPrefix;
+        this.podPort = podPort;
+        this.tunnelReadyTimeoutMs = 10_000;
+    }
 }

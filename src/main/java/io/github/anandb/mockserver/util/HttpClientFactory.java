@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.net.http.HttpClient;
@@ -53,11 +54,11 @@ public class HttpClientFactory {
                 sslContext.init(null, new TrustManager[]{trustAllManager}, new SecureRandom());
 
                 builder.sslContext(sslContext);
-                // Hostname verification is not directly exposed in the same way as SSLContext in Java 11 HttpClient,
-                // but setting a permissive SSLContext handles most certificate issues.
-                // For proper hostname verification bypass in Java HttpClient, one might need to set a property
-                // or use a more complex workaround, but usually this is sufficient for 'ignore certificate errors'.
-                System.setProperty("jdk.internal.httpclient.disableHostnameVerification", "true");
+                // Disable hostname verification per-client via SSLParameters instead of
+                // using System.setProperty which affects the entire JVM globally.
+                SSLParameters sslParams = sslContext.getDefaultSSLParameters();
+                sslParams.setEndpointIdentificationAlgorithm(null);
+                builder.sslParameters(sslParams);
 
             } catch (NoSuchAlgorithmException | KeyManagementException e) {
                 log.error("Failed to create insecure SSL context", e);

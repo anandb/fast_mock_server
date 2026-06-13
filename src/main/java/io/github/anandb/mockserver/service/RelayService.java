@@ -49,14 +49,13 @@ public class RelayService {
         return relays.stream()
                 .flatMap(relay -> relay.getAllPrefixes().stream()
                         .filter(prefix -> pathMatcher.match(prefix, path))
-                        .map(prefix -> new Object() {
-                            final RelayConfig config = relay;
-                            final String matchedPrefix = prefix;
-                        }))
+                        .map(prefix -> new PrefixMatch(relay, prefix)))
                 .sorted((a, b) -> b.matchedPrefix.length() - a.matchedPrefix.length())
-                .map(a -> a.config)
+                .map(PrefixMatch::config)
                 .findFirst();
     }
+
+    private record PrefixMatch(RelayConfig config, String matchedPrefix) {}
 
     /*
      * Relays an HTTP request to a remote server.
@@ -128,17 +127,29 @@ public class RelayService {
         Map<String, List<String>> responseHeaders = response.headers().map();
         byte[] responseBody;
         try (InputStream is = response.body()) {
-            responseBody = is.readAllBytes();
+            // Read with size limit to prevent OOM on large responses
+            responseBody = is.readNBytes((int) MAX_RELAY_BODY_SIZE + 1);
+            if (responseBody.length > MAX_RELAY_BODY_SIZE) {
+                log.warn("Relay response exceeded {} bytes, response may be truncated", MAX_RELAY_BODY_SIZE);
+            }
         }
 
         return new RelayResponse(response.statusCode(), responseHeaders, responseBody);
     }
 
+    private static final long MAX_RELAY_BODY_SIZE = 10 * 1024 * 1024; // 10 MB
+
     private boolean isRestrictedHeader(String name) {
+        // Hop-by-hop headers per RFC 2616 §13.5.1 — must not be forwarded
         return name.equalsIgnoreCase("Host") ||
                name.equalsIgnoreCase("Content-Length") ||
                name.equalsIgnoreCase("Connection") ||
-               name.equalsIgnoreCase("Upgrade");
+               name.equalsIgnoreCase("Upgrade") ||
+               name.equalsIgnoreCase("Transfer-Encoding") ||
+               name.equalsIgnoreCase("TE") ||
+               name.equalsIgnoreCase("Trailer") ||
+               name.equalsIgnoreCase("Proxy-Authorization") ||
+               name.equalsIgnoreCase("Proxy-Connection");
     }
 
     public record RelayResponse(int statusCode, Map<String, List<String>> headers, byte[] body) {}

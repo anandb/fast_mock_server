@@ -37,6 +37,7 @@ public class MockServerManager {
 
     private final TlsConfigurationService tlsConfigService;
     private final KubernetesTunnelService kubernetesTunnelService;
+    private final MockServerOperationsFactory operationsFactory;
     private final List<ResponseStrategy> strategies;
     private Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
     private volatile boolean shuttingDown = false;
@@ -64,13 +65,20 @@ public class MockServerManager {
         }
     }
 
+    private final Object serverCreationLock = new Object();
+
     public ServerInfo createServer(ServerCreationRequest request) {
         String serverId = request.getServerId();
 
-        if (servers.containsKey(serverId)) {
-            throw new ServerAlreadyExistsException(serverId);
+        // Synchronized duplicate check — server creation is inherently slow
+        // (network calls, file I/O), so the lock cost is negligible vs. the work.
+        synchronized (serverCreationLock) {
+            if (servers.containsKey(serverId)) {
+                throw new ServerAlreadyExistsException(serverId);
+            }
         }
 
+        ClientAndServer server = null;
         try {
             log.info("Creating server: {} on port {}", serverId, request.getPort());
 
@@ -78,7 +86,7 @@ public class MockServerManager {
                 tlsConfigService.configureTls(serverId, request.getTlsConfig());
             }
 
-            ClientAndServer server = ClientAndServer.startClientAndServer(request.getPort());
+            server = ClientAndServer.startClientAndServer(request.getPort());
 
             ServerInstance instance = new ServerInstance(
                 serverId,
@@ -104,6 +112,15 @@ public class MockServerManager {
 
         } catch (Exception e) {
             log.error("Failed to create server: {}", serverId, e);
+            if (server != null) {
+                try {
+                    server.stop();
+                    log.info("Stopped partially created server on port {}", request.getPort());
+                } catch (Exception stopEx) {
+                    log.warn("Failed to stop partially created server on port {}", request.getPort(), stopEx);
+                }
+            }
+            tlsConfigService.cleanupServerCertificates(serverId);
             throw new ServerCreationException("Failed to create server: " + e.getMessage(), e);
         }
     }
@@ -263,7 +280,7 @@ public class MockServerManager {
                 .httpRequest(requestNode)
                 .build();
 
-        MockServerOperations operations = new MockServerOperationsImpl(instance.server());
+        MockServerOperations operations = operationsFactory.create(instance.server());
         // Use very low priority to ensure this acts as a fallback for specific expectations
         operations.configureEnhancedExpectation(relayDto, instance.globalHeaders(), strategies, instance.relays(), -1000);
     }

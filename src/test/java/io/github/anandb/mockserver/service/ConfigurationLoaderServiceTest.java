@@ -44,6 +44,9 @@ class ConfigurationLoaderServiceTest {
     private MockServerManager mockServerManager;
 
     @Mock
+    private MockServerOperationsFactory operationsFactory;
+
+    @Mock
     private ServerInstance serverInstance;
 
     private List<ResponseStrategy> strategies = new ArrayList<>();
@@ -56,7 +59,7 @@ class ConfigurationLoaderServiceTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        configurationLoaderService = new ConfigurationLoaderService(mockServerManager, objectMapper, strategies);
+        configurationLoaderService = new ConfigurationLoaderService(mockServerManager, operationsFactory, objectMapper, strategies);
     }
 
     @Test

@@ -27,7 +27,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.github.anandb.mockserver.model.RelayConfig;
 
@@ -44,6 +46,9 @@ class MockServerManagerTest {
     private KubernetesTunnelService kubernetesTunnelService;
 
     @Mock
+    private MockServerOperationsFactory operationsFactory;
+
+    @Mock
     private RelayService relayService;
 
     private List<ResponseStrategy> strategies = new ArrayList<>();
@@ -53,7 +58,9 @@ class MockServerManagerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mockServerManager = new MockServerManager(tlsConfigService, kubernetesTunnelService, strategies);
+        MockServerOperations mockOperations = mock(MockServerOperations.class);
+        when(operationsFactory.create(any())).thenReturn(mockOperations);
+        mockServerManager = new MockServerManager(tlsConfigService, kubernetesTunnelService, operationsFactory, strategies);
     }
 
     @AfterEach

@@ -3,9 +3,10 @@ package io.github.anandb.mockserver.model;
 import org.mockserver.integration.ClientAndServer;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerInstance {
     private final String serverId;
@@ -38,7 +39,7 @@ public class ServerInstance {
         this.relays = relays;
         this.createdAt = createdAt;
         this.description = description;
-        this.tunnels = new HashMap<>();
+        this.tunnels = new ConcurrentHashMap<>();
     }
 
     public String serverId() {
@@ -58,7 +59,7 @@ public class ServerInstance {
     }
 
     public List<GlobalHeader> globalHeaders() {
-        return globalHeaders;
+        return globalHeaders != null ? Collections.unmodifiableList(globalHeaders) : List.of();
     }
 
     public BasicAuthConfig basicAuthConfig() {
@@ -66,7 +67,7 @@ public class ServerInstance {
     }
 
     public List<RelayConfig> relays() {
-        return relays;
+        return relays != null ? Collections.unmodifiableList(relays) : List.of();
     }
 
     public LocalDateTime createdAt() {

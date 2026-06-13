@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Service for managing TLS configuration and temporary certificate files.
@@ -28,6 +29,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * required for MockServer TLS/mTLS operation. It validates certificates, writes them
  * to temporary files with appropriate permissions, and ensures cleanup on shutdown.
  * </p>
+ * <p>
+ * <strong>Thread Safety:</strong> MockServer's {@code ConfigurationProperties} is global static state.
+ * Concurrent calls to {@link #configureTls} from different threads will overwrite each other's
+ * certificate paths. This service synchronizes TLS configuration to prevent race conditions,
+ * but the underlying limitation remains: only one TLS configuration can be active at a time
+ * across all MockServer instances in the JVM.
+ * </p>
  */
 @Slf4j
 @Service
@@ -35,6 +43,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TlsConfigurationService {
 
     private final CertificateValidator certificateValidator;
+
+    /**
+     * Lock protecting MockServer's global static {@code ConfigurationProperties}.
+     * Must be held when writing TLS cert/key paths to prevent concurrent servers
+     * from overwriting each other's configuration.
+     */
+    private final Object tlsConfigLock = new Object();
 
     /** Directory path for storing temporary certificate files */
     @Value("${mockserver.cert.temp-dir:/tmp/mockserver-certs}")
@@ -95,9 +110,12 @@ public class TlsConfigurationService {
         String certPath = writeCertificateToTemp(serverId, tlsConfig.getCertificate(), "cert");
         String keyPath = writeCertificateToTemp(serverId, tlsConfig.getPrivateKey(), "key");
 
-        // Configure MockServer with certificate paths
-        ConfigurationProperties.certificateAuthorityCertificate(certPath);
-        ConfigurationProperties.privateKeyPath(keyPath);
+        // Configure MockServer with certificate paths — synchronized because
+        // ConfigurationProperties is global static state shared across all MockServer instances.
+        synchronized (tlsConfigLock) {
+            ConfigurationProperties.certificateAuthorityCertificate(certPath);
+            ConfigurationProperties.privateKeyPath(keyPath);
+        }
 
         log.info("TLS configured for server {} with cert: {} and key: {}", serverId, certPath, keyPath);
 
@@ -134,11 +152,13 @@ public class TlsConfigurationService {
             "ca"
         );
 
-        // Configure MockServer for mTLS
-        ConfigurationProperties.tlsMutualAuthenticationRequired(
-            tlsConfig.getMtlsConfig().isRequireClientAuth()
-        );
-        ConfigurationProperties.tlsMutualAuthenticationCertificateChain(caCertPath);
+        // Configure MockServer for mTLS — same global state concern as configureTls
+        synchronized (tlsConfigLock) {
+            ConfigurationProperties.tlsMutualAuthenticationRequired(
+                tlsConfig.getMtlsConfig().isRequireClientAuth()
+            );
+            ConfigurationProperties.tlsMutualAuthenticationCertificateChain(caCertPath);
+        }
 
         log.info("mTLS configured for server {} with CA cert: {}, requireClientAuth: {}",
             serverId, caCertPath, tlsConfig.getMtlsConfig().isRequireClientAuth());
@@ -158,7 +178,7 @@ public class TlsConfigurationService {
      * @throws IOException if the file cannot be written
      * @throws InvalidCertificateException if the content is empty
      */
-    public String writeCertificateToTemp(String serverId, String content, String prefix)
+    String writeCertificateToTemp(String serverId, String content, String prefix)
             throws IOException {
 
         if (content == null || content.trim().isEmpty()) {
@@ -177,7 +197,8 @@ public class TlsConfigurationService {
 
         // Set restrictive permissions (owner read/write only) on Unix systems
         try {
-            if (!System.getProperty("os.name").toLowerCase().contains("win")) {
+            String osName = System.getProperty("os.name");
+            if (osName == null || !osName.toLowerCase().contains("win")) {
                 Files.setPosixFilePermissions(tempFile,
                     PosixFilePermissions.fromString("rw-------"));
                 log.debug("Set restrictive permissions on: {}", tempFile);
@@ -187,7 +208,7 @@ public class TlsConfigurationService {
         }
 
         // Track for cleanup
-        serverCertFiles.computeIfAbsent(serverId, k -> new ArrayList<>()).add(tempFile);
+        serverCertFiles.computeIfAbsent(serverId, k -> new CopyOnWriteArrayList<>()).add(tempFile);
 
         log.debug("Wrote {} certificate to temp file: {}", prefix, tempFile);
         return tempFile.toString();

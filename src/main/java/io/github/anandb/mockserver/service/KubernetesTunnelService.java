@@ -9,7 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -19,13 +19,21 @@ public class KubernetesTunnelService {
     private static final int MIN_PORT = 9000;
     private static final int MAX_PORT = 11000;
 
-    private final Random random = new Random();
-
     public boolean validateKubectl() {
         try {
             ProcessBuilder pb = new ProcessBuilder("kubectl", "version", "--client");
             pb.redirectErrorStream(true);
             Process process = pb.start();
+
+            // Consume stdout/stderr to prevent deadlock when OS pipe buffer fills up.
+            // Without this, process.waitFor() can block forever if output exceeds ~64KB.
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+            }
 
             boolean completed = process.waitFor(10, TimeUnit.SECONDS);
             if (!completed) {
@@ -36,7 +44,7 @@ public class KubernetesTunnelService {
 
             int exitCode = process.exitValue();
             if (exitCode != 0) {
-                log.error("kubectl is not installed or not accessible");
+                log.error("kubectl is not installed or not accessible (exit code {}): {}", exitCode, output);
                 return false;
             }
 
@@ -93,7 +101,7 @@ public class KubernetesTunnelService {
     public int findAvailablePort() throws IOException {
         int attempts = 0;
         while (attempts < 100) {
-            int port = MIN_PORT + random.nextInt(MAX_PORT - MIN_PORT + 1);
+            int port = MIN_PORT + ThreadLocalRandom.current().nextInt(MAX_PORT - MIN_PORT + 1);
             if (isPortAvailable(port)) {
                 log.debug("Found available port: {}", port);
                 return port;
@@ -128,16 +136,27 @@ public class KubernetesTunnelService {
 
         Process process = pb.start();
 
-        // Wait for some time to allow the tunnel to establish
-        log.info("Waiting for tunnel to stabilize (5 seconds)...");
-        Thread.sleep(5000);
+        // Poll for tunnel readiness: try connecting to the port until it responds or timeout.
+        long deadline = System.currentTimeMillis() + config.getTunnelReadyTimeoutMs();
+        long pollIntervalMs = 200;
+        log.info("Waiting for tunnel to become ready on port {} (timeout: {}ms)...", hostPort, config.getTunnelReadyTimeoutMs());
 
-        if (!process.isAlive()) {
-            throw new IOException("Tunnel process failed to start or died during stabilization");
+        while (System.currentTimeMillis() < deadline) {
+            if (!process.isAlive()) {
+                throw new IOException("Tunnel process died during startup");
+            }
+            if (!isPortAvailable(hostPort)) {
+                log.info("Tunnel ready on port {} after {}ms", hostPort,
+                    config.getTunnelReadyTimeoutMs() - (deadline - System.currentTimeMillis()));
+                return process;
+            }
+            Thread.sleep(pollIntervalMs);
         }
 
-        log.info("Tunnel started successfully for pod: {} on local port: {}", podName, hostPort);
-        return process;
+        // Timeout — clean up
+        process.destroyForcibly();
+        throw new IOException("Tunnel failed to become ready on port " + hostPort +
+            " within " + config.getTunnelReadyTimeoutMs() + "ms");
     }
 
 

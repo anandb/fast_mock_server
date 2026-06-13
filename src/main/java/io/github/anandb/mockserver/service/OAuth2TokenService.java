@@ -3,6 +3,7 @@ package io.github.anandb.mockserver.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.github.anandb.mockserver.exception.OAuth2Exception;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.util.HttpClientFactory;
 
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -50,22 +52,23 @@ public class OAuth2TokenService {
      */
     public String getAccessToken(RelayConfig relayConfig) throws Exception {
         String cacheKey = generateCacheKey(relayConfig);
-        TokenCache cache = tokenCacheMap.get(cacheKey);
 
-        // Check if cached token is still valid
-        if (cache != null && !cache.isExpired()) {
+        // Atomic check-and-fetch: prevents redundant token requests when
+        // multiple threads see an expired cache simultaneously.
+        TokenCache cached = tokenCacheMap.compute(cacheKey, (key, existing) -> {
+            if (existing != null && !existing.isExpired()) {
+                return existing;
+            }
+            return null; // force fetch below
+        });
+        if (cached != null) {
             log.debug("Using cached access token for {}", relayConfig.getTokenUrl());
-            return cache.getAccessToken();
+            return cached.getAccessToken();
         }
 
-        // Fetch new token
+        // Fetch new token (caching happens inside fetchAccessToken with server-provided expiry)
         log.info("Fetching new access token from {}", relayConfig.getTokenUrl());
-        String accessToken = fetchAccessToken(relayConfig);
-
-        // Cache the token (default expiry: 3600 seconds - 5 minutes for safety)
-        tokenCacheMap.put(cacheKey, new TokenCache(accessToken, 3300));
-
-        return accessToken;
+        return fetchAccessToken(relayConfig);
     }
 
     /**
@@ -75,6 +78,8 @@ public class OAuth2TokenService {
      * @return the access token
      * @throws Exception if token acquisition fails
      */
+    private static final long DEFAULT_TOKEN_EXPIRY_SECONDS = 3300; // 55 minutes (1 hour - 5 min safety)
+
     private String fetchAccessToken(RelayConfig relayConfig) throws Exception {
         // Build form data
         Map<String, String> formData = new HashMap<>();
@@ -101,17 +106,26 @@ public class OAuth2TokenService {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Failed to fetch access token. Status: " + response.statusCode() +
+            throw new OAuth2Exception("Failed to fetch access token. Status: " + response.statusCode() +
                                      ", Body: " + response.body());
         }
 
         // Parse response
         JsonNode jsonNode = objectMapper.readTree(response.body());
         if (!jsonNode.has("access_token")) {
-            throw new RuntimeException("Access token not found in response: " + response.body());
+            throw new OAuth2Exception("Access token not found in response: " + response.body());
         }
 
-        return jsonNode.get("access_token").asText();
+        String accessToken = jsonNode.get("access_token").asText();
+        long expiresInSeconds = jsonNode.has("expires_in")
+                ? jsonNode.get("expires_in").asLong(DEFAULT_TOKEN_EXPIRY_SECONDS)
+                : DEFAULT_TOKEN_EXPIRY_SECONDS;
+
+        // Cache with server-provided expiry (with safety margin)
+        long cacheExpiry = Math.max(expiresInSeconds - 300, 60); // at least 60s
+        tokenCacheMap.put(generateCacheKey(relayConfig), new TokenCache(accessToken, cacheExpiry));
+
+        return accessToken;
     }
 
     /**
@@ -126,9 +140,9 @@ public class OAuth2TokenService {
             if (sb.length() > 0) {
                 sb.append("&");
             }
-            sb.append(entry.getKey())
+            sb.append(URLEncoder.encode(entry.getKey(), java.nio.charset.StandardCharsets.UTF_8))
               .append("=")
-              .append(entry.getValue());
+              .append(URLEncoder.encode(entry.getValue(), java.nio.charset.StandardCharsets.UTF_8));
         }
         return sb.toString();
     }

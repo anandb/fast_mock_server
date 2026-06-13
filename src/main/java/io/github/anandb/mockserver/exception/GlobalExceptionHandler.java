@@ -105,6 +105,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles OAuth2Exception by returning a 502 BAD GATEWAY response.
+     *
+     * @param ex the OAuth2Exception thrown
+     * @return ResponseEntity with error details and 502 status
+     */
+    @ExceptionHandler(OAuth2Exception.class)
+    public ResponseEntity<ErrorResponse> handleOAuth2Exception(OAuth2Exception ex) {
+        ErrorResponse error = new ErrorResponse(
+            "OAUTH2_ERROR",
+            ex.getMessage(),
+            LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    /**
      * Handles MethodArgumentNotValidException (validation errors) by returning a 400 BAD REQUEST response.
      * <p>
      * Extracts field-level validation errors and returns them in a structured format.

@@ -30,7 +30,7 @@ public class SSEResponseStrategy implements ResponseStrategy {
             sseBody.append("data: ").append(message).append("\n\n");
         }
 
-        Integer responseCode = 200;
+        int responseCode = 200;
         List<Header> responseHeaders = null;
         try {
             org.mockserver.model.HttpResponse httpResponse = config.getHttpResponse();

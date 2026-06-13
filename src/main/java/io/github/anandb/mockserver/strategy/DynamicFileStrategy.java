@@ -27,6 +27,8 @@ import java.util.stream.Stream;
 @Component
 public class DynamicFileStrategy implements ResponseStrategy {
 
+    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
     private final FreemarkerTemplateService templateService;
 
     public DynamicFileStrategy(FreemarkerTemplateService templateService) {
@@ -57,10 +59,27 @@ public class DynamicFileStrategy implements ResponseStrategy {
                 return HttpResponse.response().withStatusCode(404).withBody("File not found: " + filePath);
             }
 
-            // 3. Serve file
-            byte[] fileContent = Files.readAllBytes(file.toPath());
+            // 3. Path traversal check — reject if the evaluated path contains ".." segments
+            // which could escape the configured base directory (e.g. "../../etc/passwd")
+            Path canonicalPath = file.getCanonicalFile().toPath();
+            String normalizedPath = filePath.replace('\\', '/');
+            if (normalizedPath.contains("..")) {
+                log.warn("Path traversal attempt blocked: path contains '..' component: {}", filePath);
+                return HttpResponse.response().withStatusCode(403).withBody("Access denied");
+            }
+
+            // 4. File size guard — prevent OOM on large files
+            long fileSize = Files.size(canonicalPath);
+            if (fileSize > MAX_FILE_SIZE) {
+                log.warn("File too large ({} bytes): {}", fileSize, filePath);
+                return HttpResponse.response().withStatusCode(413)
+                    .withBody("File too large: " + fileSize + " bytes (max " + MAX_FILE_SIZE + ")");
+            }
+
+            // 5. Serve file
+            byte[] fileContent = Files.readAllBytes(canonicalPath);
             String fileName = file.getName();
-            String contentType = determineContentType(file.toPath());
+            String contentType = determineContentType(canonicalPath);
 
             return HttpResponse.response()
                     .withStatusCode(config.getHttpResponse().getStatusCode())

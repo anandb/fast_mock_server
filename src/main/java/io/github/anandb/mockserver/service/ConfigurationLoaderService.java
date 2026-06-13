@@ -21,10 +21,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.lang3.Validate;
-
 import static org.apache.commons.collections.CollectionUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
  * Service responsible for loading server and expectation configurations from a JSON file.
@@ -35,21 +32,19 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 public class ConfigurationLoaderService {
 
     private final MockServerManager mockServerManager;
+    private final MockServerOperationsFactory operationsFactory;
     private final ObjectMapper mapper;
     private final List<ResponseStrategy> strategies;
 
     private static final String CONFIG_FILE_PROPERTY = "mock.server.config.file";
-    private static boolean SKIP_CONFIG_VALIDATIONS_FOR_TESTS = false;
 
     @PostConstruct
     public void loadConfigurationsOnStartup() {
-        if (SKIP_CONFIG_VALIDATIONS_FOR_TESTS) {
-            log.warn("Skipping Config Validations");
+        String configFilePath = System.getProperty(CONFIG_FILE_PROPERTY);
+        if (configFilePath == null || configFilePath.isBlank()) {
+            log.info("No configuration file specified via {}, skipping config loading", CONFIG_FILE_PROPERTY);
             return;
         }
-
-        String configFilePath = System.getProperty(CONFIG_FILE_PROPERTY);
-        Validate.isTrue(isNotBlank(configFilePath), "Server configuration required, set property " + CONFIG_FILE_PROPERTY);
 
         File configFile = new File(configFilePath);
         if (!configFile.exists() || !configFile.isFile()) {
@@ -73,7 +68,10 @@ public class ConfigurationLoaderService {
 
             String jsonToParse = isJsonmc ? JsonCommentParser.clean(fileContent) : fileContent;
             ServerConfiguration[] configurations = mapper.readValue(jsonToParse, ServerConfiguration[].class);
-            Validate.isTrue(configurations != null);
+            if (configurations == null || configurations.length == 0) {
+                log.warn("No server configurations found in file: {}", configFile.getName());
+                return;
+            }
 
             for (ServerConfiguration config : configurations) {
                 processServerConfiguration(config);
@@ -90,7 +88,7 @@ public class ConfigurationLoaderService {
 
         mockServerManager.createServer(serverRequest);
         ServerInstance serverInstance = mockServerManager.getServerInstance(serverId);
-        MockServerOperations operations = new MockServerOperationsImpl(serverInstance.server());
+        MockServerOperations operations = operationsFactory.create(serverInstance.server());
 
         if (!isEmpty(serverInstance.relays())) {
             EnhancedExpectation dto = EnhancedExpectation.builder()

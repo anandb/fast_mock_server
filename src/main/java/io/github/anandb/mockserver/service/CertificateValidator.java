@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -48,26 +49,16 @@ public class CertificateValidator {
             );
         }
 
-        // Try to parse the certificate
+        X509Certificate cert = parseCertificate(certificate);
         try {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            X509Certificate cert = (X509Certificate) cf.generateCertificate(
-                new ByteArrayInputStream(certificate.getBytes())
-            );
-
-            // Check validity dates
             cert.checkValidity();
-
-            log.debug("Certificate validated successfully. Subject: {}", cert.getSubjectX500Principal());
-
         } catch (CertificateException e) {
             throw new InvalidCertificateException(
-                "Invalid certificate: " + e.getMessage(),
-                e
+                "Certificate is expired or not yet valid: " + e.getMessage(), e
             );
         }
+        log.debug("Certificate validated successfully. Subject: {}", cert.getSubjectX500Principal());
     }
-
     /**
      * Validates the PEM format of a private key.
      * <p>
@@ -127,23 +118,33 @@ public class CertificateValidator {
             );
         }
 
+        X509Certificate cert = parseCertificate(caCertificate);
+
+        // Verify it's a CA certificate
+        int pathLen = cert.getBasicConstraints();
+        if (pathLen < 0) {
+            log.warn("Certificate may not be a CA certificate (basicConstraints < 0)");
+        }
+
+        log.debug("CA certificate validated successfully. Subject: {}", cert.getSubjectX500Principal());
+    }
+
+    /**
+     * Parses a PEM-encoded certificate string into an X509Certificate.
+     *
+     * @param pemContent the PEM-encoded certificate
+     * @return the parsed X509Certificate
+     * @throws InvalidCertificateException if parsing fails
+     */
+    private X509Certificate parseCertificate(String pemContent) {
         try {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            X509Certificate cert = (X509Certificate) cf.generateCertificate(
-                new ByteArrayInputStream(caCertificate.getBytes())
+            return (X509Certificate) cf.generateCertificate(
+                new ByteArrayInputStream(pemContent.getBytes(StandardCharsets.US_ASCII))
             );
-
-            // Verify it's a CA certificate
-            int pathLen = cert.getBasicConstraints();
-            if (pathLen < 0) {
-                log.warn("Certificate may not be a CA certificate (basicConstraints < 0)");
-            }
-
-            log.debug("CA certificate validated successfully. Subject: {}", cert.getSubjectX500Principal());
-
         } catch (CertificateException e) {
             throw new InvalidCertificateException(
-                "Invalid CA certificate: " + e.getMessage(),
+                "Invalid certificate: " + e.getMessage(),
                 e
             );
         }

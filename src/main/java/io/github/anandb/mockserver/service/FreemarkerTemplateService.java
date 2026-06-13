@@ -1,10 +1,9 @@
 package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.model.HttpRequestContext;
-import io.github.anandb.mockserver.util.MapperSupplier;
 import io.github.anandb.mockserver.util.RequestUtils;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -20,7 +19,9 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Service for processing Freemarker templates with HTTP request context.
@@ -34,13 +35,13 @@ import java.util.Map;
 public class FreemarkerTemplateService {
 
     private final Configuration freemarkerConfig;
-    private final JsonMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    public FreemarkerTemplateService() {
+    public FreemarkerTemplateService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
         this.freemarkerConfig = new Configuration(Configuration.VERSION_2_3_32);
         this.freemarkerConfig.setDefaultEncoding("UTF-8");
         this.freemarkerConfig.setNumberFormat("0.######");
-        this.objectMapper = MapperSupplier.getMapper();
     }
 
     /**
@@ -51,12 +52,15 @@ public class FreemarkerTemplateService {
      * @return HttpRequestContext containing headers, body, cookies, and path variables
      */
     public HttpRequestContext parseHttpRequest(HttpRequest httpRequest, String pathPattern) {
-        // Parse headers - assuming one value per header
+        // Parse headers — join multiple values per header name (standard HTTP behavior)
         Map<String, String> headers = new HashMap<>();
         if (httpRequest.getHeaderList() != null) {
             httpRequest.getHeaderList().forEach(header -> {
                 if (header.getValues() != null && !header.getValues().isEmpty()) {
-                    headers.put(header.getName().getValue(), header.getValues().get(0).getValue());
+                    String joined = header.getValues().stream()
+                            .map(v -> v.getValue())
+                            .collect(Collectors.joining(", "));
+                    headers.put(header.getName().getValue(), joined);
                 }
             });
         }

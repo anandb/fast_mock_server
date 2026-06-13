@@ -69,7 +69,7 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
                 globalHeaders
             );
         } catch (Exception e) {
-            log.error("Error in enhanced callback: {}", e.getMessage());
+            log.error("Error in enhanced callback", e);
             return HttpResponse.response()
                     .withStatusCode(500)
                     .withHeader("Content-Type", "application/json")

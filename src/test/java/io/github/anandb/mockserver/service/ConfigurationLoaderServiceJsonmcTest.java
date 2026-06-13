@@ -38,6 +38,9 @@ class ConfigurationLoaderServiceJsonmcTest {
     private MockServerManager mockServerManager;
 
     @Mock
+    private MockServerOperationsFactory operationsFactory;
+
+    @Mock
     private ServerInstance serverInstance;
 
     @Mock
@@ -54,7 +57,7 @@ class ConfigurationLoaderServiceJsonmcTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        configurationLoaderService = new ConfigurationLoaderService(mockServerManager, objectMapper, strategies);
+        configurationLoaderService = new ConfigurationLoaderService(mockServerManager, operationsFactory, objectMapper, strategies);
     }
 
     @Test
