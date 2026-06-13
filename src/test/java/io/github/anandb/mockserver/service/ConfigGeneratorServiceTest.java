@@ -28,7 +28,7 @@ class ConfigGeneratorServiceTest {
     void getAvailableTypesReturnsAllTypes() {
         Set<String> types = service.getAvailableTypes();
         assertFalse(types.isEmpty());
-        assertTrue(types.contains("test"));
+        assertTrue(types.contains("simple"));
         assertTrue(types.contains("relay"));
         assertTrue(types.contains("mtls"));
         assertTrue(types.contains("sse"));
@@ -46,7 +46,7 @@ class ConfigGeneratorServiceTest {
     @Test
     void generateCreatesFileForValidType() throws Exception {
         Path outPath = tempDir.resolve("output.json");
-        service.generate("test", outPath.toString());
+        service.generate("simple", outPath.toString());
 
         assertTrue(Files.exists(outPath));
         String content = Files.readString(outPath);
@@ -57,7 +57,7 @@ class ConfigGeneratorServiceTest {
     @Test
     void generateCreatesParentDirectories() throws Exception {
         Path outPath = tempDir.resolve("sub/dir/config.json");
-        service.generate("test", outPath.toString());
+        service.generate("simple", outPath.toString());
 
         assertTrue(Files.exists(outPath));
     }
@@ -74,7 +74,7 @@ class ConfigGeneratorServiceTest {
         Path outPath = tempDir.resolve("output.json");
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
             () -> service.generate("bad-type", outPath.toString()));
-        assertTrue(ex.getMessage().contains("test"));
+        assertTrue(ex.getMessage().contains("simple"));
         assertTrue(ex.getMessage().contains("relay"));
     }
 
@@ -90,7 +90,7 @@ class ConfigGeneratorServiceTest {
 
     @Test
     void loadTemplateReturnsContent() throws Exception {
-        String content = service.loadTemplate("test");
+        String content = service.loadTemplate("simple");
         assertNotNull(content);
         assertFalse(content.isBlank());
         assertTrue(content.contains("my-api"));

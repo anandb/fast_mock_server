@@ -32,8 +32,8 @@ public class ConfigGeneratorService {
     private static final Map<String, String> TEMPLATE_DESCRIPTIONS = new LinkedHashMap<>();
 
     static {
-        TEMPLATE_DESCRIPTIONS.put("test", "Basic API mock server");
-        TEMPLATE_DESCRIPTIONS.put("example", "HTTP + HTTPS multi-server with TLS");
+        TEMPLATE_DESCRIPTIONS.put("simple", "Basic API mock server");
+        TEMPLATE_DESCRIPTIONS.put("multi", "HTTP + HTTPS multi-server with TLS");
         TEMPLATE_DESCRIPTIONS.put("basicauth", "Basic authentication (username/password)");
         TEMPLATE_DESCRIPTIONS.put("mtls", "Mutual TLS (mTLS) with client certs");
         TEMPLATE_DESCRIPTIONS.put("pathvars", "Path variables and FreeMarker templates");

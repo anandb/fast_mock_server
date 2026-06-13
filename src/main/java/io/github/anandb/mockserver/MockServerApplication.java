@@ -25,6 +25,7 @@ public class MockServerApplication {
                     java.util.logging.LogManager.getLogManager().readConfiguration();
                 }
             }
+
             // Bridge JUL to SLF4J
             SLF4JBridgeHandler.removeHandlersForRootLogger();
             SLF4JBridgeHandler.install();
@@ -33,6 +34,7 @@ public class MockServerApplication {
             if (isBlank(System.getProperty("mockserver.logLevel", ""))) {
                 System.setProperty("mockserver.logLevel", "WARN");
             }
+            
         } catch (Exception ignored) {
             // Silently ignore if configuration fails
         }
@@ -138,8 +140,8 @@ public class MockServerApplication {
 
     private static void printTypes() {
         String[][] types = {
-            {"test", "Basic API mock server"},
-            {"example", "HTTP + HTTPS multi-server with TLS"},
+            {"simple", "Basic API mock server"},
+            {"multi", "HTTP + HTTPS multi-server with TLS"},
             {"basicauth", "Basic authentication (username/password)"},
             {"mtls", "Mutual TLS (mTLS) with client certs"},
             {"pathvars", "Path variables and FreeMarker templates"},

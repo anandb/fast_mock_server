@@ -144,7 +144,7 @@ Quickly generate a starter config for any supported feature:
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-l"
 
 # Print a template to stdout
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-g test"
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-g simple"
 
 # Generate a config to a file
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-g relay -o ./relay.json"
@@ -155,8 +155,8 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-f ./relay.json"
 
 | Type | Description |
 |------|-------------|
-| `test` | Basic API mock server |
-| `example` | HTTP + HTTPS multi-server with TLS |
+| `simple` | Basic API mock server |
+| `multi` | HTTP + HTTPS multi-server with TLS |
 | `basicauth` | Basic authentication (username/password) |
 | `mtls` | Mutual TLS (mTLS) with client certs |
 | `pathvars` | Path variables and FreeMarker templates |
