@@ -1,0 +1,24 @@
+[
+  {
+    "server": {
+      "serverId": "sse-server",
+      "port": 9002,
+      "description": "Server-Sent Events streaming server"
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "GET", "path": "/api/stream" },
+        "sse": true,
+        "interval": 1000,
+        "httpResponse": {
+          "statusCode": 200,
+          "messages": [
+            "Event 1: Server started",
+            "Event 2: Processing",
+            "Event 3: Complete"
+          ]
+        }
+      }
+    ]
+  }
+]

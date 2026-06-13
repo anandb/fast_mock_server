@@ -123,6 +123,49 @@ java -Dmock.server.config.file=server-config.json -jar target/mock-server-1.0.0.
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=server-config.json"
 ```
 
+### CLI Options
+
+```
+Usage: mock-server [options]
+
+Options:
+  -f <file>          Start server with the given config file
+  -g <type>          Generate a template config to stdout
+  -g <type> -o <file> Generate a template config to a file
+  -l                 List available config types
+```
+
+### Generate a Config Template
+
+Quickly generate a starter config for any supported feature:
+
+```bash
+# List all available config types
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-l"
+
+# Print a template to stdout
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-g test"
+
+# Generate a config to a file
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-g relay -o ./relay.json"
+
+# Then start the server with it
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-f ./relay.json"
+```
+
+| Type | Description |
+|------|-------------|
+| `test` | Basic API mock server |
+| `example` | HTTP + HTTPS multi-server with TLS |
+| `basicauth` | Basic authentication (username/password) |
+| `mtls` | Mutual TLS (mTLS) with client certs |
+| `pathvars` | Path variables and FreeMarker templates |
+| `sse` | Server-Sent Events (SSE) streaming |
+| `relay` | Relay proxy with OAuth2 authentication |
+| `relay-no-auth` | Relay proxy without authentication |
+| `files` | File download server |
+| `tunnel` | Kubernetes pod tunnel relay |
+
 The management application runs on `http://localhost:8080`. All server configuration is done via file-based configuration at startup.
 
 ## Loading Configuration from File

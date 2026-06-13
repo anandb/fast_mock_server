@@ -1,0 +1,26 @@
+[
+  {
+    "server": {
+      "serverId": "mtls-server",
+      "port": 8443,
+      "description": "HTTPS server with mutual TLS",
+      "tlsConfig": {
+        "certificate": "-----BEGIN CERTIFICATE-----\nREPLACE_WITH_YOUR_CERTIFICATE\n-----END CERTIFICATE-----",
+        "privateKey": "-----BEGIN PRIVATE KEY-----\nREPLACE_WITH_YOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----",
+        "mtlsConfig": {
+          "caCertificate": "-----BEGIN CERTIFICATE-----\nREPLACE_WITH_YOUR_CA_CERTIFICATE\n-----END CERTIFICATE-----",
+          "requireClientAuth": true
+        }
+      }
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "GET", "path": "/secure/api/health" },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"status\": \"healthy\"}"
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,19 @@
+[
+  {
+    "server": {
+      "serverId": "relay-server-no-auth",
+      "port": 8090,
+      "description": "Relay server without authentication",
+      "relays": [
+        {
+          "prefixes": ["/api/**"],
+          "remoteUrl": "https://api.example.com",
+          "headers": {
+            "X-Service-Name": "my-service"
+          }
+        }
+      ]
+    },
+    "expectations": []
+  }
+]

@@ -1,0 +1,25 @@
+[
+  {
+    "server": {
+      "serverId": "api-server-with-auth",
+      "port": 9001,
+      "description": "API server with basic authentication",
+      "basicAuthConfig": {
+        "username": "admin",
+        "password": "changeme"
+      },
+      "globalHeaders": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "GET", "path": "/api/users" },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"users\": [{\"id\": 1, \"name\": \"John\"}]}"
+        }
+      }
+    ]
+  }
+]

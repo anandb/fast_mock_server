@@ -1,0 +1,25 @@
+[
+  {
+    "server": {
+      "serverId": "file-server",
+      "port": 8082,
+      "description": "File download server"
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "GET", "path": "/api/download/{filename}" },
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/${pathVariables.filename}"
+        }
+      },
+      {
+        "httpRequest": { "method": "GET", "path": "/api/data" },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"message\": \"Regular JSON response\"}"
+        }
+      }
+    ]
+  }
+]

@@ -58,13 +58,24 @@ Relay server that forwards requests to a Kubernetes pod via kubectl port-forward
 
 ## Usage
 
-To run the mock server with a specific configuration file, use the following command from the project root:
+### Quick start
 
 ```bash
+# List available config types
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-l"
+
+# Generate a config template to stdout
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-g test"
+
+# Generate a config template to a file
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-g relay -o ./relay.json"
+
+# Start server with a config file
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-f ./relay.json"
+
+# Or set the config file directly
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./src/test/examples/<config-file-name>.jsonmc"
 ```
-
-Replace `<config-file-name>` with the name of the desired configuration file (e.g., `server-config-test`).
 
 ### Example: Running the Test API
 ```bash

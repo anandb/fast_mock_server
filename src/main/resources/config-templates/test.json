@@ -1,0 +1,28 @@
+[
+  {
+    "server": {
+      "serverId": "my-api",
+      "port": 9001,
+      "description": "Basic API mock server",
+      "globalHeaders": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "GET", "path": "/api/hello" },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"message\": \"Hello from mock server\"}"
+        }
+      },
+      {
+        "httpRequest": { "method": "POST", "path": "/api/echo" },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"echo\": true}"
+        }
+      }
+    ]
+  }
+]

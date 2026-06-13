@@ -1,0 +1,41 @@
+[
+  {
+    "server": {
+      "serverId": "api-server",
+      "port": 9001,
+      "description": "HTTP API server",
+      "globalHeaders": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "GET", "path": "/api/users" },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"users\": [{\"id\": 1, \"name\": \"John\"}]}"
+        }
+      }
+    ]
+  },
+  {
+    "server": {
+      "serverId": "secure-server",
+      "port": 8443,
+      "description": "HTTPS server with TLS",
+      "tlsConfig": {
+        "certificate": "-----BEGIN CERTIFICATE-----\nREPLACE_WITH_YOUR_CERTIFICATE\n-----END CERTIFICATE-----",
+        "privateKey": "-----BEGIN PRIVATE KEY-----\nREPLACE_WITH_YOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----"
+      }
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "GET", "path": "/secure/data" },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"data\": \"secure content\"}"
+        }
+      }
+    ]
+  }
+]
