@@ -82,11 +82,17 @@ public class MockServerManager {
         try {
             log.info("Creating server: {} on port {}", serverId, request.getPort());
 
-            if (request.isTlsEnabled()) {
-                tlsConfigService.configureTls(serverId, request.getTlsConfig());
-            }
+            // For TLS servers, we must hold the TLS lock from configuration through
+            // server creation to prevent concurrent servers from overwriting the
+            // global ConfigurationProperties.
+            Object tlsLock = request.isTlsEnabled() ? tlsConfigService.getTlsConfigLock() : null;
+            synchronized (tlsLock != null ? tlsLock : new Object()) {
+                if (request.isTlsEnabled()) {
+                    tlsConfigService.configureTls(serverId, request.getTlsConfig());
+                }
 
-            server = ClientAndServer.startClientAndServer(request.getPort());
+                server = ClientAndServer.startClientAndServer(request.getPort());
+            }
 
             ServerInstance instance = new ServerInstance(
                 serverId,
@@ -106,7 +112,15 @@ public class MockServerManager {
                 configureRelay(instance);
             }
 
-            servers.put(serverId, instance);
+            // Register inside synchronized block to prevent duplicate creation
+            synchronized (serverCreationLock) {
+                if (servers.containsKey(serverId)) {
+                    // Lost the race — another thread created this server
+                    server.stop();
+                    throw new ServerAlreadyExistsException(serverId);
+                }
+                servers.put(serverId, instance);
+            }
             log.info("Successfully created server: {} at {}", serverId, instance.getBaseUrl());
             return toServerInfo(instance);
 

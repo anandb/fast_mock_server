@@ -1,0 +1,42 @@
+[
+  {
+    "server": {
+      "serverId": "file-inline-server",
+      "port": 8083,
+      "description": "File inline server - serve file content as response body"
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "GET", "path": "/api/data/{name}", "pathParameters": { "name": "[a-zA-Z0-9\\-]+" } },
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/${pathVariables.name}.json",
+          "fileDisposition": "inline"
+        }
+      },
+      {
+        "httpRequest": { "method": "GET", "path": "/api/config" },
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/config.xml",
+          "fileDisposition": "inline"
+        }
+      },
+      {
+        "httpRequest": { "method": "GET", "path": "/api/docs/{topic}", "pathParameters": { "topic": "[a-zA-Z0-9\\-]+" } },
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/${pathVariables.topic}.md",
+          "fileDisposition": "inline"
+        }
+      },
+      {
+        "httpRequest": { "method": "GET", "path": "/api/download/{filename}", "pathParameters": { "filename": "[a-zA-Z0-9\\-]+" } },
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/${pathVariables.filename}"
+        }
+      }
+    ]
+  }
+]

@@ -52,7 +52,8 @@ Incoming HTTP Request (MockServer Port)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│       Spring Boot Management App (Control Port 8080)    │
+│              Spring Boot Application                    │
+│          (runs in background until CTRL+C)              │
 ├─────────────────────────────────────────────────────────┤
 │  ConfigurationLoaderService                             │
 │  - Loads config from file                               │
@@ -75,7 +76,8 @@ Incoming HTTP Request (MockServer Port)
       └─────────────┘          └─────────────┘
 ```
 ┌─────────────────────────────────────────────────────────┐
-│       Spring Boot Management App (Control Port 8080)    │
+│              Spring Boot Application                    │
+│          (runs in background until CTRL+C)              │
 ├─────────────────────────────────────────────────────────┤
 │  ConfigurationLoaderService                             │
 │  - Loads config from file or base64                    │
@@ -126,6 +128,8 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=se
 ### CLI Options
 
 ```
+mock-server — Mock servers, relay proxies, and tunnels for local testing
+
 Usage: mock-server [options]
 
 Options:
@@ -164,9 +168,11 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-f ./relay.json"
 | `relay` | Relay proxy with OAuth2 authentication |
 | `relay-no-auth` | Relay proxy without authentication |
 | `files` | File download server |
+| `files-inline` | File inline server (serve content as body) |
+| `uploads` | File upload server (multipart/form-data) |
 | `tunnel` | Kubernetes pod tunnel relay |
 
-The management application runs on `http://localhost:8080`. All server configuration is done via file-based configuration at startup.
+The application runs as a background process until you press CTRL+C. All server configuration is done via file-based configuration at startup.
 
 ## Loading Configuration from File
 
@@ -686,9 +692,6 @@ All errors return a consistent format:
 Edit `src/main/resources/application.properties`:
 
 ```properties
-# Management API port
-server.port=8080
-
 # Certificate temp directory
 mockserver.cert.temp-dir=/tmp/mockserver-certs
 

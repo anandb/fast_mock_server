@@ -65,10 +65,13 @@ public class RequestUtils {
         }
 
         return request.getHeaders().getEntries().stream()
+                .filter(header -> header.getName() != null && header.getName().getValue() != null)
+                .filter(header -> header.getValues() != null && !header.getValues().isEmpty())
                 .collect(Collectors.toMap(
                         header -> header.getName().getValue(),
                         header -> header.getValues().stream()
                                 .map(val -> val.getValue())
+                                .filter(java.util.Objects::nonNull)
                                 .collect(Collectors.toList()),
                         (v1, v2) -> v1 // Handle duplicates
                 ));

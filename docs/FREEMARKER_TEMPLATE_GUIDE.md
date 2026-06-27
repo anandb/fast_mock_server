@@ -45,7 +45,7 @@ POST /api/servers/my-server/expectations
 
 **Test Request:**
 ```bash
-curl -X POST http://localhost:8080/greet \
+curl -X POST http://localhost:PORT/greet \
   -H "Content-Type: application/json" \
   -d '{"name": "John", "age": 30}'
 ```
@@ -74,13 +74,13 @@ POST /api/servers/my-server/expectations
 
 **Test Request:**
 ```bash
-curl http://localhost:8080/info -H "User-Agent: MyApp/1.0"
+curl http://localhost:PORT/info -H "User-Agent: MyApp/1.0"
 ```
 
 **Response:**
 ```
 User-Agent: MyApp/1.0
-Host: localhost:8080
+Host: localhost:PORT
 ```
 
 ### Example 3: Accessing Cookies
@@ -102,7 +102,7 @@ POST /api/servers/my-server/expectations
 
 **Test Request:**
 ```bash
-curl http://localhost:8080/session -H "Cookie: JSESSIONID=abc123"
+curl http://localhost:PORT/session -H "Cookie: JSESSIONID=abc123"
 ```
 
 **Response:**
@@ -166,7 +166,7 @@ POST /api/servers/my-server/expectations
 
 **Test Request:**
 ```bash
-curl -X POST http://localhost:8080/items \
+curl -X POST http://localhost:PORT/items \
   -H "Content-Type: application/json" \
   -d '{
     "items": [

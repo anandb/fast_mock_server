@@ -1,0 +1,32 @@
+[
+  {
+    "server": {
+      "serverId": "upload-server",
+      "port": 8084,
+      "description": "File upload server (multipart/form-data)"
+    },
+    "expectations": [
+      {
+        "httpRequest": { "method": "POST", "path": "/api/upload" },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": "{\"status\": \"ok\", \"message\": \"Files uploaded\"}"
+        },
+        "fileUploads": {
+          "saveTo": "/tmp/uploads/"
+        }
+      },
+      {
+        "httpRequest": { "method": "POST", "path": "/api/upload/docs", "pathParameters": { "userId": "[a-zA-Z0-9\\-]+" } },
+        "httpResponse": {
+          "statusCode": 201,
+          "body": "{\"status\": \"created\"}"
+        },
+        "fileUploads": {
+          "saveTo": "/tmp/uploads/${pathVariables.userId}/",
+          "fileFields": ["file", "document"]
+        }
+      }
+    ]
+  }
+]

@@ -46,8 +46,10 @@ public class TlsConfigurationService {
 
     /**
      * Lock protecting MockServer's global static {@code ConfigurationProperties}.
-     * Must be held when writing TLS cert/key paths to prevent concurrent servers
-     * from overwriting each other's configuration.
+     * Must be held when writing TLS cert/key paths AND during server creation
+     * to prevent concurrent servers from overwriting each other's configuration.
+     * The caller must hold this lock from configureTls() through
+     * ClientAndServer.startClientAndServer().
      */
     private final Object tlsConfigLock = new Object();
 
@@ -82,6 +84,17 @@ public class TlsConfigurationService {
             log.error("Failed to create temp certificate directory", e);
             throw new RuntimeException("Failed to initialize TLS configuration service", e);
         }
+    }
+
+    /**
+     * Returns the lock used to synchronize TLS configuration with MockServer's
+     * global static ConfigurationProperties. Callers creating TLS servers must
+     * hold this lock from configureTls() through ClientAndServer.startClientAndServer().
+     *
+     * @return the TLS configuration lock
+     */
+    public Object getTlsConfigLock() {
+        return tlsConfigLock;
     }
 
     /**

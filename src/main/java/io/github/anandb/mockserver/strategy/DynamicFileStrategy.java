@@ -39,6 +39,11 @@ public class DynamicFileStrategy implements ResponseStrategy {
     public HttpResponse handle(HttpRequest request, EnhancedExpectation config, Map<String, Object> context) {
         String pathPattern = (String) context.get("pathPattern");
 
+        if (config.getHttpResponse() == null) {
+            log.error("No HTTP response configured for request: {}", request.getPath());
+            return HttpResponse.response().withStatusCode(500).withBody("No response configured");
+        }
+
         if (config.isFileResponse()) {
             return handleFileResponse(request, config, pathPattern);
         } else {
@@ -81,12 +86,20 @@ public class DynamicFileStrategy implements ResponseStrategy {
             String fileName = file.getName();
             String contentType = determineContentType(canonicalPath);
 
-            return HttpResponse.response()
+            HttpResponse response = HttpResponse.response()
                     .withStatusCode(config.getHttpResponse().getStatusCode())
                     .withHeaders(config.getHttpResponse().getHeaderList())
-                    .withContentType(MediaType.parse(contentType))
-                    .withHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
-                    .withBody(fileContent);
+                    .withContentType(MediaType.parse(contentType));
+
+            String disposition = config.getFileDisposition();
+            if ("inline".equalsIgnoreCase(disposition)) {
+                response.withBody(fileContent);
+            } else {
+                response.withHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+                        .withBody(fileContent);
+            }
+
+            return response;
 
         } catch (Exception e) {
             log.error("Error creating file response", e);

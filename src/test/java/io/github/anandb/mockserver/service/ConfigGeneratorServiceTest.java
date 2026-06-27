@@ -33,7 +33,7 @@ class ConfigGeneratorServiceTest {
         assertTrue(types.contains("mtls"));
         assertTrue(types.contains("sse"));
         assertTrue(types.contains("tunnel"));
-        assertEquals(10, types.size());
+        assertEquals(12, types.size());
     }
 
     @Test

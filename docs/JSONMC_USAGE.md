@@ -14,13 +14,9 @@ It solves two major pain points of standard JSON: **lack of comments** and **dif
 
 ## How It Works
 
-The system handles JSONMC in two primary ways:
+The system handles JSONMC during **file loading**:
 
-1.  **File Loading**: The `ConfigurationLoaderService` automatically detects the format. If a filename ends in `.jsonmc` or if the content contains comment markers (`//` or `/*`), it triggers the enhanced parser.
-2.  **API Requests**: When a client sends an HTTP request with `Content-Type: application/jsonmc`, the server:
-    - Parses the content using `JsonCommentParser`
-    - Converts it to standard JSON
-    - Processes it through the normal Spring MVC pipeline (validation, deserialization, etc.)
+- The `ConfigurationLoaderService` automatically detects the format. If a filename ends in `.jsonmc` or if the content contains comment markers (`//` or `/*`), it triggers the enhanced parser.
 
 ## Usage Example
 
@@ -134,30 +130,24 @@ Environment variables can be referenced using the `@{VARIABLE}` or `@{VARIABLE:-
 ## Important Notes
 
 1.  **File Format**: JSONMC files should have `.jsonmc` extension or the system will auto-detect comments in the file.
-2.  **Response Format**: Responses are still sent as regular `application/json`.
-3.  **Validation**: All Spring validation annotations still apply after parsing.
-4.  **Error Handling**: Invalid JSONMC syntax will return a 400 Bad Request error.
-5.  **Escape Sequences**: Multiline strings automatically escape newlines (`\n`), double quotes (`\"`), and backslashes (`\\`).
+2.  **Error Handling**: Invalid JSONMC syntax will result in a configuration load error at startup.
+3.  **Escape Sequences**: Multiline strings automatically escape newlines (`\n`), double quotes (`\"`), and backslashes (`\\`).
 
 ## Implementation Details
 
-The implementation consists of three main components:
+The implementation consists of one main component:
 
 1.  **JsonCommentParser** (`src/main/java/io/github/anandb/mockserver/util/JsonCommentParser.java`)
     - Core utility that uses regex to strip comments and escape content between backticks.
-2.  **JsonMultilineCommentHttpMessageConverter** (`src/main/java/io/github/anandb/mockserver/config/JsonMultilineCommentHttpMessageConverter.java`)
-    - Spring HTTP message converter that handles the `application/jsonmc` content type.
-3.  **WebConfig** (`src/main/java/io/github/anandb/mockserver/config/WebConfig.java`)
-    - Registers the custom converter with Spring MVC.
 
 ## Testing
 
-Integration tests are available in:
-`src/test/java/io/github/anandb/mockserver/config/JsonMultilineCommentHttpMessageConverterIntegrationTest.java`
+Tests are available in:
+`src/test/java/io/github/anandb/mockserver/util/JsonCommentParserTest.java`
 
 Run tests with:
 ```bash
-mvn test -Dtest=JsonMultilineCommentHttpMessageConverterIntegrationTest
+mvn test -Dtest=JsonCommentParserTest
 ```
 
 ## Benefits
@@ -165,4 +155,4 @@ mvn test -Dtest=JsonMultilineCommentHttpMessageConverterIntegrationTest
 -   **Better Readability**: Add comments to document your JSON configurations.
 -   **Easier Maintenance**: Explain complex configurations inline.
 -   **Clean Certificates**: Copy-paste PEM certificates directly without manual formatting or escaping.
--   **Backward Compatible**: Regular JSON still works with the standard `application/json` content type.
+-   **Backward Compatible**: Regular `.json` files continue to work as before.

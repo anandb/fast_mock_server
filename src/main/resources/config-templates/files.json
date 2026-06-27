@@ -7,10 +7,13 @@
     },
     "expectations": [
       {
-        "httpRequest": { "method": "GET", "path": "/api/download/{filename}" },
+        "httpRequest": { "method": "GET", "path": "/api/download/{filename}", "pathParameters": { "filename": "[a-zA-Z0-9\\-]+" } },
         "httpResponse": {
           "statusCode": 200,
-          "file": "/path/to/${pathVariables.filename}"
+          "file": "/path/to/${pathVariables.filename}",
+          "fileDisposition": "attachment"
+          // "fileDisposition": "attachment" is the default and can be omitted.
+          // Use "inline" to serve file content as response body instead.
         }
       },
       {

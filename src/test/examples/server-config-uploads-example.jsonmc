@@ -1,0 +1,89 @@
+/*
+ * File upload example configuration.
+ * Demonstrates multipart/form-data file upload handling.
+ *
+ * Key field:
+ * - fileUploads: configures where uploaded files are saved
+ *   - saveTo: directory path (supports ${pathVariables.xxx} and FreeMarker)
+ *   - fileFields: optional filter — only save files from these form fields
+ *
+ * Path traversal protection:
+ *   File names containing ".." or "/" or "\" are rejected.
+ *
+ * Test with:
+ *   curl -X POST -F "file=@data.csv" http://localhost:8084/api/upload
+ *   curl -X POST -F "file=@report.pdf" -F "document=@notes.txt" http://localhost:8084/api/upload/docs/alice
+ *   curl -X POST -F "avatar=@photo.jpg" http://localhost:8084/api/users/bob/attachments
+ */
+[
+  {
+    "server": {
+      "serverId": "upload-server",
+      "port": 8084,
+      "description": "Mock server demonstrating multipart file uploads"
+    },
+    "expectations": [
+      /* Simple upload — save all files to a fixed directory */
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/api/upload"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": `{"status": "ok", "message": "Files uploaded"}`
+        },
+        "fileUploads": {
+          "saveTo": "/tmp/uploads/"
+        }
+      },
+
+      /* Upload with field filter — only save fields named "file" and "document" */
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/api/upload/docs",
+          "pathParameters": { "userId": "[a-zA-Z0-9\\-]+" }
+        },
+        "httpResponse": {
+          "statusCode": 201,
+          "body": `{"status": "created"}`
+        },
+        "fileUploads": {
+          "saveTo": "/tmp/uploads/${pathVariables.userId}/",
+          "fileFields": ["file", "document"]
+        }
+      },
+
+      /* Upload with path variable — dynamic save path per user */
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/api/users/{userId}/attachments",
+          "pathParameters": { "userId": "[a-zA-Z0-9\\-]+" }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": `{"status": "ok"}`
+        },
+        "fileUploads": {
+          "saveTo": "/tmp/uploads/${pathVariables.userId}/attachments/"
+        }
+      },
+
+      /* Upload without response body — just save and return 204 */
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/api/import"
+        },
+        "httpResponse": {
+          "statusCode": 204
+        },
+        "fileUploads": {
+          "saveTo": "/tmp/imports/"
+        }
+      }
+    ]
+  }
+]

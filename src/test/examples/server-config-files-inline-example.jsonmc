@@ -1,0 +1,84 @@
+/*
+ * File inline example configuration.
+ * Demonstrates serving file content directly as response body (no download).
+ *
+ * Key field:
+ * - fileDisposition: "inline" returns content as body, "attachment" (default) triggers download
+ *
+ * Use case: serve JSON, XML, or Markdown files as regular API responses.
+ */
+[
+  {
+    "server": {
+      "serverId": "file-inline-server",
+      "port": 8083,
+      "description": "Mock server demonstrating inline file responses"
+    },
+    "expectations": [
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/data/{name}",
+          "pathParameters": { "name": "[a-zA-Z0-9\\-]+" }
+        },
+        /*
+         * "fileDisposition": "inline" serves the file content directly
+         * as the response body with the correct Content-Type.
+         * No Content-Disposition header is set.
+         */
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/${pathVariables.name}.json",
+          "fileDisposition": "inline"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/config"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/config.xml",
+          "fileDisposition": "inline"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/docs/{topic}",
+          "pathParameters": { "topic": "[a-zA-Z0-9\\-]+" }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/${pathVariables.topic}.md",
+          "fileDisposition": "inline"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/download/{filename}",
+          "pathParameters": { "filename": "[a-zA-Z0-9\\-]+" }
+        },
+        /*
+         * Without fileDisposition, defaults to "attachment" (download).
+         */
+        "httpResponse": {
+          "statusCode": 200,
+          "file": "/path/to/${pathVariables.filename}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/api/regular/data"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "body": `{"message": "Regular JSON response"}`
+        }
+      }
+    ]
+  }
+]

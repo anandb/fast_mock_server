@@ -7,7 +7,7 @@ This directory contains example configurations for the mock server. These exampl
 The following configuration files are available in this directory:
 
 ### 1. [server-config-test.jsonmc](./server-config-test.jsonmc)
-Basic test server configuration demonstrating a simple API endpoint.
+Basic test server configuration demonstrating a simple endpoint.
 - **Port:** 9001
 - **Features:** Simple GET endpoint with global headers.
 
@@ -51,10 +51,20 @@ Configuration demonstrating file downloads and multi-part responses.
 - **Port:** 8082
 - **Features:** Multi-part file downloads.
 
-### 10. [server-config-tunnel-example.jsonmc](./server-config-tunnel-example.jsonmc)
+### 10. [server-config-files-inline-example.jsonmc](./server-config-files-inline-example.jsonmc)
+Configuration demonstrating inline file responses (content served as body).
+- **Port:** 8083
+- **Features:** Serve JSON, XML, or Markdown files as regular API responses using `fileDisposition: "inline"`.
+
+### 11. [server-config-tunnel-example.jsonmc](./server-config-tunnel-example.jsonmc)
 Relay server that forwards requests to a Kubernetes pod via kubectl port-forward tunnel.
 - **Port:** 9001
 - **Features:** Kubernetes pod discovery and tunnel lifecycle management.
+
+### 12. [server-config-uploads-example.jsonmc](./server-config-uploads-example.jsonmc)
+Configuration demonstrating multipart file upload handling.
+- **Port:** 8084
+- **Features:** Multipart/form-data parsing, file saving to disk, path variable support, field filtering.
 
 ## Usage
 

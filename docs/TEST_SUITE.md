@@ -8,8 +8,7 @@ The test suite provides comprehensive coverage across multiple layers:
 
 1. **Unit Tests** - Test individual components in isolation
 2. **Integration Tests** - Test the entire application stack end-to-end
-3. **Controller Tests** - Test REST API endpoints with mocked services
-4. **Service Tests** - Test business logic with mocked dependencies
+3. **Service Tests** - Test business logic with mocked dependencies
 
 ## Test Structure
 
@@ -17,9 +16,6 @@ The test suite provides comprehensive coverage across multiple layers:
 src/test/
 ├── java/io/github/anandb/mockserver/
 │   ├── MockServerApplicationTests.java          # Context loading test
-│   ├── controller/
-│   │   ├── ServerControllerTest.java           # Server endpoint tests
-│   │   └── ExpectationControllerTest.java      # Expectation endpoint tests
 │   ├── service/
 │   │   ├── CertificateValidatorTest.java       # Certificate validation tests
 │   │   ├── TlsConfigurationServiceTest.java    # TLS configuration tests
@@ -131,65 +127,7 @@ Tests server lifecycle management:
 - ✓ Check for global headers correctly
 - ✓ Handle server without global headers
 
-### 2. Controller Layer Tests
-
-#### ServerControllerTest (17 tests)
-Tests server management REST endpoints:
-
-**Create Server:**
-- ✓ Create server and return 201 Created
-- ✓ Return 409 Conflict for duplicate server ID
-- ✓ Return 400 Bad Request for invalid port
-- ✓ Return 400 Bad Request for missing serverId
-- ✓ Return 400 Bad Request for port exceeding maximum
-- ✓ Accept valid server with all optional fields
-
-**List Servers:**
-- ✓ List all servers and return 200 OK
-- ✓ Return empty list when no servers exist
-
-**Get Server:**
-- ✓ Get server by ID and return 200 OK
-- ✓ Return 404 Not Found for non-existent server
-
-**Delete Server:**
-- ✓ Delete server and return 204 No Content
-- ✓ Return 404 Not Found when deleting non-existent server
-
-**Server Exists:**
-- ✓ Return true when server exists
-- ✓ Return false when server does not exist
-
-**Request Validation:**
-- ✓ Validate empty serverId
-- ✓ Validate missing port
-- ✓ Handle malformed JSON gracefully
-
-#### ExpectationControllerTest (13 tests)
-Tests expectation management REST endpoints:
-
-**Configure Expectations:**
-- ✓ Configure single expectation successfully
-- ✓ Configure multiple expectations successfully
-- ✓ Configure expectations with global headers
-- ✓ Return 404 when server not found
-- ✓ Return 400 for invalid expectation JSON
-- ✓ Handle malformed JSON gracefully
-
-**Get Expectations:**
-- ✓ Retrieve all expectations successfully
-- ✓ Return 404 when retrieving expectations for non-existent server
-
-**Clear Expectations:**
-- ✓ Clear all expectations successfully
-- ✓ Return 404 when clearing expectations for non-existent server
-
-**Complex Expectations:**
-- ✓ Handle expectations with query parameters
-- ✓ Handle expectations with request headers
-- ✓ Handle expectations with delay
-
-### 3. Integration Tests
+### 2. Integration Tests
 
 #### MockServerIntegrationTest (10 tests)
 End-to-end tests covering complete workflows:
@@ -212,7 +150,7 @@ End-to-end tests covering complete workflows:
 - ✓ Clear expectations successfully
 - ✓ Configure multiple expectations
 
-### 4. Application Tests
+### 3. Application Tests
 
 #### MockServerApplicationTests (1 test)
 Basic smoke test:
@@ -220,9 +158,9 @@ Basic smoke test:
 
 ## Total Test Count
 
-- **Unit Tests:** 66 tests
+- **Unit Tests:** 36 tests
 - **Integration Tests:** 10 tests
-- **Total:** 76+ tests
+- **Total:** 46+ tests
 
 ## Test Execution
 
@@ -235,7 +173,6 @@ mvn test
 ```bash
 mvn test -Dtest=CertificateValidatorTest
 mvn test -Dtest=MockServerManagerTest
-mvn test -Dtest=ServerControllerTest
 ```
 
 ### Run Integration Tests Only
@@ -350,15 +287,8 @@ void testExample() {
 
 5. **Error Handling**
    - Proper exception handling
-   - HTTP status codes
    - Error response format
    - Validation error messages
-
-6. **REST API**
-   - Request validation
-   - Response formats
-   - HTTP methods (GET, POST, DELETE)
-   - Content negotiation
 
 ## Dependencies Required for Tests
 
@@ -377,7 +307,6 @@ This includes:
 - AssertJ
 - Hamcrest
 - Spring Test
-- MockMvc
 
 ## Continuous Integration
 
@@ -423,4 +352,4 @@ Potential areas for additional testing:
 
 This comprehensive test suite provides strong coverage of the MockServer Manager application, ensuring reliability, correctness, and maintainability. The tests follow industry best practices and provide clear documentation of expected behavior.
 
-**Total Test Coverage:** 76+ tests covering all major functionality and edge cases.
+**Total Test Coverage:** 46+ tests covering all major functionality and edge cases.

@@ -41,6 +41,8 @@ public class ConfigGeneratorService {
         TEMPLATE_DESCRIPTIONS.put("relay", "Relay proxy with OAuth2 authentication");
         TEMPLATE_DESCRIPTIONS.put("relay-no-auth", "Relay proxy without authentication");
         TEMPLATE_DESCRIPTIONS.put("files", "File download server");
+        TEMPLATE_DESCRIPTIONS.put("files-inline", "File inline server (serve content as body)");
+        TEMPLATE_DESCRIPTIONS.put("uploads", "File upload server (multipart/form-data)");
         TEMPLATE_DESCRIPTIONS.put("tunnel", "Kubernetes pod tunnel relay");
     }
 
@@ -98,7 +100,9 @@ public class ConfigGeneratorService {
         String content = loadTemplate(type);
 
         Path outPath = Paths.get(outputPath);
-        Files.createDirectories(outPath.getParent());
+        if (outPath.getParent() != null) {
+            Files.createDirectories(outPath.getParent());
+        }
         Files.writeString(outPath, content, StandardCharsets.UTF_8);
 
         log.info("Generated config type '{}' → {}", type, outPath.toAbsolutePath());
@@ -108,6 +112,8 @@ public class ConfigGeneratorService {
      * Prints usage information to stdout.
      */
     public void printUsage() {
+        System.out.println("mock-server — Mock servers, relay proxies, and tunnels for local testing");
+        System.out.println();
         System.out.println("Usage: mock-server [options]");
         System.out.println();
         System.out.println("Options:");

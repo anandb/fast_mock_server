@@ -96,7 +96,8 @@ public class ConfigurationLoaderService {
                     .httpResponse(mapper.createObjectNode())
                     .build();
             configureExpectations(serverInstance, operations, List.of(dto));
-        } else if (config.hasExpectations()) {
+        }
+        if (config.hasExpectations()) {
             configureExpectations(serverInstance, operations, config.getExpectations());
         }
     }

@@ -6,6 +6,9 @@
  * - file: Path to file (supports ${pathVariables.xxx} interpolation)
  *
  * Supports: images, CSV, ZIP, and other binary files.
+ *
+ * To serve file content inline (no download), use "fileDisposition": "inline".
+ * See server-config-files-inline-example.jsonmc for examples.
  */
 [
   {
@@ -18,7 +21,8 @@
       {
         "httpRequest": {
           "method": "GET",
-          "path": "/api/download/documents/{id}"
+          "path": "/api/download/documents/{id}",
+          "pathParameters": { "id": "[a-zA-Z0-9\\-]+" }
         },
         /*
          * The "file" field is now inside the httpResponse object.
@@ -27,6 +31,9 @@
         "httpResponse": {
           "statusCode": 200,
           "file": "/path/to/${pathVariables.id}",
+          "fileDisposition": "attachment",
+          // "fileDisposition": "attachment" is the default and can be omitted.
+          // Use "inline" to serve file content as response body instead.
           "headers": [
             {
               "name": "X-Download-Type",

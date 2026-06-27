@@ -23,6 +23,7 @@ public class EnhancedExpectation {
 
     private JsonNode httpRequest;
     private JsonNode httpResponse;
+    private JsonNode fileUploads;
     private Boolean sse;
     private Integer interval;
 
@@ -43,6 +44,7 @@ public class EnhancedExpectation {
             ObjectNode cleaned = objectNode.deepCopy();
             cleaned.remove("file");
             cleaned.remove("messages");
+            cleaned.remove("fileDisposition");
             return RESPONSE_SERIALIZER.deserialize(cleaned.toString());
         }
         return RESPONSE_SERIALIZER.deserialize(httpResponse.toString());
@@ -79,6 +81,34 @@ public class EnhancedExpectation {
         return fileNode.asText();
     }
 
+    /**
+     * Returns the file disposition mode: "inline" to serve content directly,
+     * "attachment" (or absent) to trigger a download.
+     */
+    public String getFileDisposition() {
+        if (httpResponse == null || !httpResponse.has("fileDisposition")) {
+            return "attachment";
+        }
+        JsonNode node = httpResponse.get("fileDisposition");
+        String value = node.asText();
+        return value != null && !value.isEmpty() ? value : "attachment";
+    }
+
+    public boolean hasFileUploads() {
+        return fileUploads != null && !fileUploads.isNull();
+    }
+
+    public FileUploadConfig getFileUploadsConfig() {
+        if (fileUploads == null || fileUploads.isNull()) {
+            return null;
+        }
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().treeToValue(fileUploads, FileUploadConfig.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public static EnhancedExpectationDTOBuilder builder() {
         return new EnhancedExpectationDTOBuilder();
     }
@@ -86,16 +116,18 @@ public class EnhancedExpectation {
     public static class EnhancedExpectationDTOBuilder {
         private JsonNode httpRequest;
         private JsonNode httpResponse;
+        private JsonNode fileUploads;
         private Boolean sse;
         private Integer interval;
 
         public EnhancedExpectationDTOBuilder httpRequest(JsonNode httpRequest) { this.httpRequest = httpRequest; return this; }
         public EnhancedExpectationDTOBuilder httpResponse(JsonNode httpResponse) { this.httpResponse = httpResponse; return this; }
+        public EnhancedExpectationDTOBuilder fileUploads(JsonNode fileUploads) { this.fileUploads = fileUploads; return this; }
         public EnhancedExpectationDTOBuilder sse(Boolean sse) { this.sse = sse; return this; }
         public EnhancedExpectationDTOBuilder interval(Integer interval) { this.interval = interval; return this; }
 
         public EnhancedExpectation build() {
-            return new EnhancedExpectation(httpRequest, httpResponse, sse, interval);
+            return new EnhancedExpectation(httpRequest, httpResponse, fileUploads, sse, interval);
         }
     }
 }

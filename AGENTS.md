@@ -33,7 +33,7 @@ mvn test -Dtest="*Integration*"               # Run tests matching pattern
 src/main/java/io/github/anandb/mockserver/
 ├── callback/       # EnhancedResponseCallback - unified callback handler
 ├── config/         # Spring configuration classes
-├── exception/      # Custom exceptions + GlobalExceptionHandler
+├── exception/      # Custom exceptions
 ├── model/          # DTOs and domain entities
 ├── service/        # Business logic, MockServer lifecycle
 ├── strategy/       # Response generation strategies (Strategy Pattern)
@@ -80,7 +80,6 @@ Use Lombok to reduce boilerplate:
 ### Spring Annotations
 - `@Service` - business logic services
 - `@Component` - general Spring beans (including strategies)
-- `@RestController` / `@RestControllerAdvice` - REST endpoints
 - `@RequiredArgsConstructor` - constructor injection (preferred over `@Autowired`)
 
 ### Documentation
@@ -97,12 +96,6 @@ Create in `exception/` package, extend `RuntimeException`:
 - `ServerCreationException` - 500
 - `InvalidCertificateException` - 400
 - `InvalidExpectationException` - 400
-
-### GlobalExceptionHandler
-All exceptions are handled centrally via `@RestControllerAdvice`. Returns structured JSON:
-```json
-{"errorCode": "ERROR_CODE", "message": "Description", "timestamp": "..."}
-```
 
 ## Testing Conventions
 

@@ -25,7 +25,7 @@ Ensure you have installed:
    mvn spring-boot:run
    ```
 
-   The application will start on `http://localhost:8080`
+   The application will start and begin listening on the ports defined in your configuration file.
 
 ## Quick Test
 
@@ -129,8 +129,8 @@ You should see headers:
 
 **Port already in use?**
 ```bash
-# Check what's using the port
-lsof -i :8080
+# Check what's using the port (replace PORT with the port from your config)
+lsof -i :PORT
 
 # Change the mock server port in your config file
 ```
@@ -145,7 +145,7 @@ tail -f logs/spring.log
 
 ## Common Use Cases
 
-### Mock REST API
+### Mock Endpoint
 
 ```json
 {

@@ -126,6 +126,8 @@ public class MockServerApplication {
     }
 
     private static void printUsage() {
+        System.out.println("mock-server — Mock servers, relay proxies, and tunnels for local testing");
+        System.out.println();
         System.out.println("Usage: mock-server [options]");
         System.out.println();
         System.out.println("Options:");
@@ -149,6 +151,8 @@ public class MockServerApplication {
             {"relay", "Relay proxy with OAuth2 authentication"},
             {"relay-no-auth", "Relay proxy without authentication"},
             {"files", "File download server"},
+            {"files-inline", "File inline server (content as body)"},
+            {"uploads", "File upload server (multipart/form-data)"},
             {"tunnel", "Kubernetes pod tunnel relay"},
         };
         System.out.println("Available config types:");
