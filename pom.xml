@@ -105,6 +105,7 @@
     </dependencies>
 
     <build>
+        <finalName>fast_mock_server</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -162,6 +163,27 @@
                         <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>create-hybrid-executable</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <target>
+                                <concat destfile="${project.build.directory}/fast_mock_server" binary="true">
+                                    <fileset file="${project.basedir}/src/main/scripts/launch.sh"/>
+                                    <fileset file="${project.build.directory}/${project.build.finalName}.jar"/>
+                                </concat>
+                                <chmod file="${project.build.directory}/fast_mock_server" perm="ugo+rx"/>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
                         </goals>
                     </execution>
                 </executions>

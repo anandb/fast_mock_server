@@ -126,9 +126,9 @@ public class MockServerApplication {
     }
 
     private static void printUsage() {
-        System.out.println("mock-server — Mock servers, relay proxies, and tunnels for local testing");
+        System.out.println("fast-mock-server — Mock servers, relay proxies, and tunnels for local testing");
         System.out.println();
-        System.out.println("Usage: mock-server [options]");
+        System.out.println("Usage: fast-mock-server [options]");
         System.out.println();
         System.out.println("Options:");
         System.out.println("  -f, --config <file>          Start server with the given config file");
