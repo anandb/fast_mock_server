@@ -56,30 +56,6 @@ Incoming HTTP Request (MockServer Port)
 │          (runs in background until CTRL+C)              │
 ├─────────────────────────────────────────────────────────┤
 │  ConfigurationLoaderService                             │
-│  - Loads config from file                               │
-│  - Creates servers on startup                           │
-├─────────────────────────────────────────────────────────┤
-│  MockServerManager    │  EnhancedResponseCallback       │
-│  - Server registry    │  - Strategy Router             │
-│  - Lifecycle mgmt     │  - Global Header Merging      │
-├─────────────────────────────────────────────────────────┤
-│                  Response Strategies                    │
-│  - Static  - Dynamic File  - SSE  - Relay             │
-│  - Kubernetes Tunnel                                  │
-└─────────────────────────────────────────────────────────┘
-             │                          │
-             ▼                          ▼
-      ┌─────────────┐          ┌─────────────┐
-      │ MockServer  │          │ MockServer  │
-      │ Port 1080   │          │ Port 1443   │
-      │ (HTTP)      │          │ (HTTPS)     │
-      └─────────────┘          └─────────────┘
-```
-┌─────────────────────────────────────────────────────────┐
-│              Spring Boot Application                    │
-│          (runs in background until CTRL+C)              │
-├─────────────────────────────────────────────────────────┤
-│  ConfigurationLoaderService                             │
 │  - Loads config from file or base64                    │
 │  - Creates servers on startup                          │
 ├─────────────────────────────────────────────────────────┤
@@ -103,7 +79,7 @@ Incoming HTTP Request (MockServer Port)
 
 ## Prerequisites
 
-- Java 17 or higher
+- Java 21 or higher
 - Maven 3.8+
 
 ## Build and Run
@@ -115,11 +91,15 @@ mvn clean package
 # Run the application
 mvn spring-boot:run
 
-# Or run the JAR
-java -jar target/mock-server-1.0.0.jar
+# Run the hybrid executable (no .jar extension)
+./target/fast_mock_server
+
+# Or run as a regular JAR
+java -jar target/fast_mock_server.jar
 
 # Run with configuration file
-java -Dmock.server.config.file=server-config.json -jar target/mock-server-1.0.0.jar
+./target/fast_mock_server -f server-config.json
+java -Dmock.server.config.file=server-config.json -jar target/fast_mock_server.jar
 
 # Or with Maven
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=server-config.json"
@@ -128,15 +108,16 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=se
 ### CLI Options
 
 ```
-mock-server — Mock servers, relay proxies, and tunnels for local testing
+fast-mock-server — Mock servers, relay proxies, and tunnels for local testing
 
-Usage: mock-server [options]
+Usage: fast-mock-server [options]
 
 Options:
-  -f <file>          Start server with the given config file
-  -g <type>          Generate a template config to stdout
-  -g <type> -o <file> Generate a template config to a file
-  -l                 List available config types
+  -f, --config <file>          Start server with the given config file
+  -g, --generate <type>        Generate a template config to stdout
+  -g, --generate <type> -o, --output <file>  Generate to a file
+  -l, --list                   List available config types
+  -h, --help                   Show this help message
 ```
 
 ### Generate a Config Template
@@ -223,13 +204,13 @@ Specify the configuration file path using the `mock.server.config.file` system p
 
 ```bash
 # Using java command
-java -Dmock.server.config.file=/path/to/server-config.json -jar target/mock-server-1.0.0.jar
+java -Dmock.server.config.file=/path/to/server-config.json -jar target/fast_mock_server.jar
 
 # Using Maven
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./server-config.json"
 
 # Using relative path
-java -Dmock.server.config.file=./config/servers.json -jar target/mock-server-1.0.0.jar
+java -Dmock.server.config.file=./config/servers.json -jar target/fast_mock_server.jar
 ```
 
 ### Docker Usage
@@ -265,10 +246,10 @@ When loading server configurations at startup, you can specify a file path prefi
 
 ```bash
 # Instead of exact file path
-java -Dmock.server.config.file=/path/to/server-config.json -jar target/mock-server-1.0.0.jar
+java -Dmock.server.config.file=/path/to/server-config.json -jar target/fast_mock_server.jar
 
 # You can use a prefix - finds first file starting with "server-config"
-java -Dmock.server.config.file=/path/to/server-config -jar target/mock-server-1.0.0.jar
+java -Dmock.server.config.file=/path/to/server-config -jar target/fast_mock_server.jar
 ```
 
 **Examples:**
@@ -329,7 +310,7 @@ Each server configuration object contains:
 
 **Note:** This application does not expose a REST API for server management. All configuration is loaded from the configuration file at startup.
 
-See `server-config-example.json` for a complete example with multiple servers and various configurations.
+See `src/test/examples/server-config-example.jsonmc` for a complete example with multiple servers and various configurations.
 
 ### Benefits
 
@@ -348,7 +329,7 @@ To create and configure mock servers, use the file-based configuration:
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dmock.server.config.file=./server-config.jsonmc"
 ```
 
-See `server-config-example.json` for a complete configuration example with multiple servers.
+See `src/test/examples/server-config-example.jsonmc` for a complete configuration example with multiple servers.
 
 ## Header Merging Behavior
 
@@ -633,7 +614,7 @@ curl http://localhost:8090/users/123
 - If providing OAuth2 config, all three parameters (`tokenUrl`, `clientId`, `clientSecret`) must be provided
 - Tokens are automatically cached and refreshed when expired
 
-See `examples/server-config-relay-example.jsonmc` and `examples/server-config-relay-no-auth-example.jsonmc` for complete examples.
+See `src/test/examples/server-config-relay-example.jsonmc` and `src/test/examples/server-config-relay-no-auth-example.jsonmc` for complete examples.
 
 For detailed relay configuration documentation, see [docs/RELAY_CONFIGURATION.md](docs/RELAY_CONFIGURATION.md).
 
