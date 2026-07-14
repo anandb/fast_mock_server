@@ -17,6 +17,7 @@ public class MockServerApplication {
         try {
             // Extract logging.properties to a temp file for JUL to use
             java.nio.file.Path tempLogConfig = java.nio.file.Files.createTempFile("logging", ".properties");
+            tempLogConfig.toFile().deleteOnExit();
             try (var is = MockServerApplication.class.getResourceAsStream("/logging.properties");
                  var os = java.nio.file.Files.newOutputStream(tempLogConfig)) {
                 if (is != null) {
