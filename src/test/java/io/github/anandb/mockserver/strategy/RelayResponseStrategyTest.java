@@ -158,4 +158,71 @@ class RelayResponseStrategyTest {
     void getPriorityIs30() {
         assertEquals(30, strategy.getPriority());
     }
+
+    @Test
+    void handleRelaysTextResponseUnder1MB() throws Exception {
+        EnhancedExpectation config = new EnhancedExpectation();
+        RelayConfig relayConfig = new RelayConfig();
+        relayConfig.setRemoteUrl("https://api.example.com");
+
+        when(relayService.findMatchingRelay(anyList(), anyString()))
+                .thenReturn(Optional.of(relayConfig));
+
+        byte[] body = "{\"ok\":true}".getBytes();
+        when(relayService.relayRequest(any(), anyString(), anyString(), anyMap(), any()))
+                .thenReturn(new RelayResponse(200, Map.of("Content-Type", List.of("application/json")), body));
+
+        HttpRequest request = HttpRequest.request()
+                .withMethod("GET")
+                .withPath("/api/data");
+
+        HttpResponse result = strategy.handle(request, config, Map.of("relays", List.of(relayConfig)));
+        assertEquals(200, result.getStatusCode());
+        assertArrayEquals(body, result.getBody().getRawBytes());
+    }
+
+    @Test
+    void handleRelaysTextResponseOver1MB() throws Exception {
+        EnhancedExpectation config = new EnhancedExpectation();
+        RelayConfig relayConfig = new RelayConfig();
+        relayConfig.setRemoteUrl("https://api.example.com");
+
+        when(relayService.findMatchingRelay(anyList(), anyString()))
+                .thenReturn(Optional.of(relayConfig));
+
+        byte[] body = new byte[1100000];
+        java.util.Arrays.fill(body, (byte) 'a');
+        when(relayService.relayRequest(any(), anyString(), anyString(), anyMap(), any()))
+                .thenReturn(new RelayResponse(200, Map.of("Content-Type", List.of("text/plain")), body));
+
+        HttpRequest request = HttpRequest.request()
+                .withMethod("GET")
+                .withPath("/api/data");
+
+        HttpResponse result = strategy.handle(request, config, Map.of("relays", List.of(relayConfig)));
+        assertEquals(200, result.getStatusCode());
+        assertArrayEquals(body, result.getBody().getRawBytes());
+    }
+
+    @Test
+    void handleRelaysBinaryResponse() throws Exception {
+        EnhancedExpectation config = new EnhancedExpectation();
+        RelayConfig relayConfig = new RelayConfig();
+        relayConfig.setRemoteUrl("https://api.example.com");
+
+        when(relayService.findMatchingRelay(anyList(), anyString()))
+                .thenReturn(Optional.of(relayConfig));
+
+        byte[] body = new byte[]{1, 2, 3, 4};
+        when(relayService.relayRequest(any(), anyString(), anyString(), anyMap(), any()))
+                .thenReturn(new RelayResponse(200, Map.of("Content-Type", List.of("image/png")), body));
+
+        HttpRequest request = HttpRequest.request()
+                .withMethod("GET")
+                .withPath("/api/data");
+
+        HttpResponse result = strategy.handle(request, config, Map.of("relays", List.of(relayConfig)));
+        assertEquals(200, result.getStatusCode());
+        assertArrayEquals(body, result.getBody().getRawBytes());
+    }
 }

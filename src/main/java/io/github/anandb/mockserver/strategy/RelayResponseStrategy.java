@@ -127,7 +127,17 @@ public class RelayResponseStrategy implements ResponseStrategy {
 
             String relayResponseBody = null;
             if (relayResponse.body() != null && relayResponse.body().length > 0) {
-                relayResponseBody = new String(relayResponse.body());
+                String contentType = getHeaderValue(relayResponse.headers(), "Content-Type");
+                long bodyLength = relayResponse.body().length;
+                if (isLoggableTextContentType(contentType)) {
+                    if (bodyLength <= 1024 * 1024) { // 1MB limit
+                        relayResponseBody = new String(relayResponse.body(), java.nio.charset.StandardCharsets.UTF_8);
+                    } else {
+                        relayResponseBody = "<body too large to log: " + bodyLength + " bytes>";
+                    }
+                } else {
+                    relayResponseBody = "<binary or non-text data: " + bodyLength + " bytes>";
+                }
             }
 
             log.info(
@@ -185,5 +195,32 @@ public class RelayResponseStrategy implements ResponseStrategy {
     @Override
     public int getPriority() {
         return 30;
+    }
+
+    private String getHeaderValue(Map<String, List<String>> headers, String name) {
+        if (headers == null) {
+            return null;
+        }
+        for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+            if (name.equalsIgnoreCase(entry.getKey())) {
+                List<String> values = entry.getValue();
+                if (values != null && !values.isEmpty()) {
+                    return values.getFirst();
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean isLoggableTextContentType(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        String lower = contentType.toLowerCase();
+        return lower.contains("json") ||
+               lower.contains("xml") ||
+               lower.contains("text") ||
+               lower.contains("html") ||
+               lower.contains("javascript");
     }
 }
