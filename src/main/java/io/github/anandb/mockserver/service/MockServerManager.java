@@ -42,29 +42,6 @@ public class MockServerManager {
     private Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
     private volatile boolean shuttingDown = false;
 
-    @PostConstruct
-    public void init() {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (!shuttingDown) {
-                log.warn("JVM shutting down - forcing tunnel cleanup");
-                forceKillTunnels();
-            }
-        }));
-    }
-
-    private void forceKillTunnels() {
-        for (ServerInstance instance : servers.values()) {
-            Map<String, Process> tunnels = instance.tunnels();
-            if (tunnels != null) {
-                for (Process tunnel : tunnels.values()) {
-                    if (tunnel != null && tunnel.isAlive()) {
-                        tunnel.destroyForcibly();
-                    }
-                }
-            }
-        }
-    }
-
     private final Object serverCreationLock = new Object();
 
     public ServerInfo createServer(ServerCreationRequest request) {

@@ -36,19 +36,25 @@ public class ResponseUtils {
                 ? new ArrayList<>(response.getHeaderList())
                 : new ArrayList<>();
 
-        Map<NottableString, Header> headerMap = existingHeaders.stream().collect(Collectors.toMap(
-                Header::getName,
-                h -> h,
-                (h1, h2) -> h1
-        ));
+        java.util.Set<String> existingNames = existingHeaders.stream()
+                .map(Header::getName)
+                .filter(java.util.Objects::nonNull)
+                .map(NottableString::getValue)
+                .filter(java.util.Objects::nonNull)
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
 
+        List<Header> mergedHeaders = new ArrayList<>(existingHeaders);
         for (GlobalHeader globalHeader : globalHeaders) {
-            NottableString headerName = NottableString.string(globalHeader.getName());
-            if (!headerMap.containsKey(headerName)) {
-                headerMap.put(headerName, header(globalHeader.getName(), globalHeader.getValue()));
+            if (globalHeader.getName() != null) {
+                String lowerName = globalHeader.getName().toLowerCase();
+                if (!existingNames.contains(lowerName)) {
+                    mergedHeaders.add(header(globalHeader.getName(), globalHeader.getValue()));
+                    existingNames.add(lowerName);
+                }
             }
         }
 
-        return response.withHeaders(new ArrayList<>(headerMap.values()));
+        return response.withHeaders(mergedHeaders);
     }
 }

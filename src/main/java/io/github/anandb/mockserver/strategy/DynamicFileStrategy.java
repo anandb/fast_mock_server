@@ -64,12 +64,33 @@ public class DynamicFileStrategy implements ResponseStrategy {
                 return HttpResponse.response().withStatusCode(404).withBody("File not found: " + filePath);
             }
 
+            // Determine configured base directory from template
+            String staticPrefix = filePathTemplate;
+            int templateStart = filePathTemplate.indexOf("${");
+            if (templateStart != -1) {
+                staticPrefix = filePathTemplate.substring(0, templateStart);
+            }
+            File staticFile = new File(staticPrefix);
+            File baseDirFile = staticFile;
+            if (!staticPrefix.endsWith("/") && !staticPrefix.endsWith("\\")) {
+                baseDirFile = staticFile.getParentFile();
+            }
+            if (baseDirFile == null) {
+                baseDirFile = new File(".");
+            }
+            Path allowedBaseLimit;
+            try {
+                allowedBaseLimit = baseDirFile.getCanonicalFile().toPath();
+            } catch (IOException e) {
+                allowedBaseLimit = baseDirFile.getAbsoluteFile().toPath().normalize();
+            }
+
             // 3. Path traversal check — reject if the evaluated path contains ".." segments
-            // which could escape the configured base directory (e.g. "../../etc/passwd")
+            // or if the resolved file lies outside the allowed base limit directory.
             Path canonicalPath = file.getCanonicalFile().toPath();
             String normalizedPath = filePath.replace('\\', '/');
-            if (normalizedPath.contains("..")) {
-                log.warn("Path traversal attempt blocked: path contains '..' component: {}", filePath);
+            if (normalizedPath.contains("..") || !canonicalPath.startsWith(allowedBaseLimit)) {
+                log.warn("Path traversal attempt blocked: file {} is outside allowed base directory {}", canonicalPath, allowedBaseLimit);
                 return HttpResponse.response().withStatusCode(403).withBody("Access denied");
             }
 
@@ -159,8 +180,9 @@ public class DynamicFileStrategy implements ResponseStrategy {
             String baseDir = lastSlash != -1 ? filePathPrefix.substring(0, lastSlash) : ".";
             String fileNamePrefix = lastSlash != -1 ? filePathPrefix.substring(lastSlash + 1) : filePathPrefix;
 
-            try (Stream<Path> paths = Files.walk(Paths.get(baseDir))) {
+            try (Stream<Path> paths = Files.walk(Paths.get(baseDir).normalize(), 2)) {
                 return paths
+                        .limit(10000)
                         .filter(Files::isRegularFile)
                         .filter(path -> {
                             String name = ObjectUtils.getIfNull(path.getFileName(), () -> "").toString();

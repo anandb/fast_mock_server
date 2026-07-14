@@ -36,12 +36,14 @@ public class FreemarkerTemplateService {
 
     private final Configuration freemarkerConfig;
     private final ObjectMapper objectMapper;
+    private final Map<String, Template> templateCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     public FreemarkerTemplateService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
         this.freemarkerConfig = new Configuration(Configuration.VERSION_2_3_32);
         this.freemarkerConfig.setDefaultEncoding("UTF-8");
         this.freemarkerConfig.setNumberFormat("0.######");
+        this.freemarkerConfig.setNewBuiltinClassResolver(freemarker.core.TemplateClassResolver.ALLOWS_NOTHING_RESOLVER);
     }
 
     /**
@@ -112,12 +114,17 @@ public class FreemarkerTemplateService {
     public String processTemplate(String templateString, HttpRequestContext context)
             throws IOException, TemplateException {
 
-        // Create template from string
-        Template template = new Template(
-            "response-template",
-            new StringReader(templateString),
-            freemarkerConfig
-        );
+        Template template = templateCache.get(templateString);
+        if (template == null) {
+            template = new Template(
+                "response-template",
+                new StringReader(templateString),
+                freemarkerConfig
+            );
+            if (templateCache.size() < 1000) {
+                templateCache.putIfAbsent(templateString, template);
+            }
+        }
 
         // Prepare data model for Freemarker
         Map<String, Object> dataModel = new HashMap<>();

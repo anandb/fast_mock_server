@@ -182,6 +182,62 @@ class OAuth2TokenServiceTest {
         verify(httpClient, times(2)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
+    @Test
+    void testConcurrentTokenFetchExecutesOnlyOnce() throws Exception {
+        RelayConfig config = createRelayConfig();
+
+        String responseBody = "{\"access_token\":\"concurrent-token\",\"expires_in\":3600}";
+        HttpResponse<String> httpResponse = (HttpResponse<String>) mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpResponse.body()).thenReturn(responseBody);
+        when(httpClientFactory.getHttpClient(anyBoolean())).thenReturn(httpClient);
+
+        // Add a 100ms artificial delay to httpClient.send to simulate network wait
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenAnswer(invocation -> {
+                Thread.sleep(100);
+                return httpResponse;
+            });
+
+        int threadCount = 5;
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch doneLatch = new java.util.concurrent.CountDownLatch(threadCount);
+
+        java.util.List<String> results = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+        java.util.List<Throwable> exceptions = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    latch.await(); // wait for start signal to run concurrently
+                    String token = tokenService.getAccessToken(config);
+                    results.add(token);
+                } catch (Throwable t) {
+                    exceptions.add(t);
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        latch.countDown(); // start all threads concurrently
+        boolean finished = doneLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+        executor.shutdown();
+
+        assertTrue(finished);
+        assertTrue(exceptions.isEmpty(), "Exceptions were thrown during fetch: " + exceptions);
+        assertEquals(threadCount, results.size());
+
+        // All threads should receive the same token
+        for (String token : results) {
+            assertEquals("concurrent-token", token);
+        }
+
+        // Verify that httpClient.send was called EXACTLY once
+        verify(httpClient, times(1)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    }
+
     private RelayConfig createRelayConfig() {
         RelayConfig config = new RelayConfig();
         config.setTokenUrl("https://auth.example.com/token");

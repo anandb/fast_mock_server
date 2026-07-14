@@ -35,11 +35,13 @@ public class OAuth2TokenService {
     private final HttpClientFactory httpClientFactory;
     private final ObjectMapper objectMapper;
     private final Map<String, TokenCache> tokenCacheMap;
+    private final Map<String, Object> locks;
 
     public OAuth2TokenService(ObjectMapper objectMapper, HttpClientFactory httpClientFactory) {
         this.objectMapper = objectMapper;
         this.httpClientFactory = httpClientFactory;
         this.tokenCacheMap = new ConcurrentHashMap<>();
+        this.locks = new ConcurrentHashMap<>();
     }
 
     /**
@@ -53,22 +55,26 @@ public class OAuth2TokenService {
     public String getAccessToken(RelayConfig relayConfig) throws Exception {
         String cacheKey = generateCacheKey(relayConfig);
 
-        // Atomic check-and-fetch: prevents redundant token requests when
-        // multiple threads see an expired cache simultaneously.
-        TokenCache cached = tokenCacheMap.compute(cacheKey, (key, existing) -> {
-            if (existing != null && !existing.isExpired()) {
-                return existing;
-            }
-            return null; // force fetch below
-        });
-        if (cached != null) {
+        // Fast lock-free check for valid cached token
+        TokenCache cached = tokenCacheMap.get(cacheKey);
+        if (cached != null && !cached.isExpired()) {
             log.debug("Using cached access token for {}", relayConfig.getTokenUrl());
             return cached.getAccessToken();
         }
 
-        // Fetch new token (caching happens inside fetchAccessToken with server-provided expiry)
-        log.info("Fetching new access token from {}", relayConfig.getTokenUrl());
-        return fetchAccessToken(relayConfig);
+        // Synchronize on a per-key lock to prevent parallel fetches for the same endpoint/credentials
+        Object lock = locks.computeIfAbsent(cacheKey, k -> new Object());
+        synchronized (lock) {
+            // Double check inside synchronized block
+            cached = tokenCacheMap.get(cacheKey);
+            if (cached != null && !cached.isExpired()) {
+                log.debug("Using cached access token (after lock wait) for {}", relayConfig.getTokenUrl());
+                return cached.getAccessToken();
+            }
+
+            log.info("Fetching new access token from {}", relayConfig.getTokenUrl());
+            return fetchAccessToken(relayConfig);
+        }
     }
 
     /**

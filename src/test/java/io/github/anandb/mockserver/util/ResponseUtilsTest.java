@@ -74,4 +74,19 @@ class ResponseUtilsTest {
         assertEquals("application/json", result.getFirstHeader("Content-Type"));
         assertEquals("value", result.getFirstHeader("X-Custom"));
     }
+
+    @Test
+    void mergeGlobalHeadersDoesNotOverrideExistingCaseInsensitive() {
+        HttpResponse response = HttpResponse.response()
+                .withStatusCode(200)
+                .withHeader("content-type", "application/json");
+        List<GlobalHeader> globalHeaders = List.of(
+                new GlobalHeader("Content-Type", "text/plain")
+        );
+
+        HttpResponse result = ResponseUtils.mergeGlobalHeaders(response, globalHeaders);
+
+        assertEquals("application/json", result.getFirstHeader("content-type"));
+        assertFalse(result.getHeaderList().stream().anyMatch(h -> "Content-Type".equals(h.getName().getValue())));
+    }
 }

@@ -186,6 +186,64 @@ class DynamicFileStrategyTest {
     }
 
     @Test
+    void handleFileResponseBlocksRelativePathTraversal(@TempDir Path tempDir) throws Exception {
+        Path allowedDir = tempDir.resolve("allowed");
+        Files.createDirectories(allowedDir);
+
+        Path outsideFile = tempDir.resolve("outside.txt");
+        Files.writeString(outsideFile, "secret");
+
+        ObjectNode httpResponse = mapper.createObjectNode()
+                .put("statusCode", 200)
+                .put("file", allowedDir.toString() + "/${pathVariables.filename}");
+
+        EnhancedExpectation config = EnhancedExpectation.builder()
+                .httpResponse(httpResponse)
+                .build();
+
+        // Stub template service to return path containing ".."
+        when(templateService.processTemplateWithRequest(eq(config.getFile()), any(), any()))
+                .thenReturn(allowedDir.toString() + "/../outside.txt");
+
+        HttpResponse result = strategy.handle(
+                HttpRequest.request().withPath("/test"),
+                config,
+                Map.of("pathPattern", "/test")
+        );
+        assertEquals(403, result.getStatusCode());
+        assertEquals("Access denied", result.getBodyAsString());
+    }
+
+    @Test
+    void handleFileResponseBlocksAbsolutePathTraversal(@TempDir Path tempDir) throws Exception {
+        Path allowedDir = tempDir.resolve("allowed");
+        Files.createDirectories(allowedDir);
+
+        Path outsideFile = tempDir.resolve("outside.txt");
+        Files.writeString(outsideFile, "secret");
+
+        ObjectNode httpResponse = mapper.createObjectNode()
+                .put("statusCode", 200)
+                .put("file", allowedDir.toString() + "/${pathVariables.filename}");
+
+        EnhancedExpectation config = EnhancedExpectation.builder()
+                .httpResponse(httpResponse)
+                .build();
+
+        // Stub template service to return an absolute path outside the allowed base limit
+        when(templateService.processTemplateWithRequest(eq(config.getFile()), any(), any()))
+                .thenReturn(outsideFile.toAbsolutePath().toString());
+
+        HttpResponse result = strategy.handle(
+                HttpRequest.request().withPath("/test"),
+                config,
+                Map.of("pathPattern", "/test")
+        );
+        assertEquals(403, result.getStatusCode());
+        assertEquals("Access denied", result.getBodyAsString());
+    }
+
+    @Test
     void getPriorityIs10() {
         assertEquals(10, strategy.getPriority());
     }

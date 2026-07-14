@@ -272,4 +272,40 @@ class FreemarkerTemplateServiceTest {
         assertTrue(result.contains("\"name\": \"John\""));
         assertTrue(result.contains("\"age\": 30"));
     }
+
+    @Test
+    void testTemplateProcessingRejectsClassInstantiation() {
+        // Given
+        String template = "<#assign ex=\"freemarker.template.utility.Execute\"?new()> ${ex(\"id\")}";
+        HttpRequest httpRequest = HttpRequest.request().withPath("/test");
+
+        // When & Then
+        assertThrows(freemarker.template.TemplateException.class, () -> {
+            templateService.processTemplateWithRequest(template, httpRequest, "/test");
+        });
+    }
+
+    @Test
+    void testProcessTemplateUsesCache() throws Exception {
+        // Given
+        String template = "Hello ${pathVariables.name}!";
+        HttpRequest httpRequest = HttpRequest.request().withPath("/test");
+
+        // When
+        String result = templateService.processTemplateWithRequest(template, httpRequest, "/{name}");
+        assertEquals("Hello test!", result);
+
+        // Get private templateCache field via reflection to verify it contains the cached template
+        java.lang.reflect.Field cacheField = FreemarkerTemplateService.class.getDeclaredField("templateCache");
+        cacheField.setAccessible(true);
+        java.util.Map<?, ?> cache = (java.util.Map<?, ?>) cacheField.get(templateService);
+
+        // Then
+        assertTrue(cache.containsKey(template));
+        assertNotNull(cache.get(template));
+
+        // Processing again should hit the cache and succeed
+        String result2 = templateService.processTemplateWithRequest(template, httpRequest, "/{name}");
+        assertEquals("Hello test!", result2);
+    }
 }
