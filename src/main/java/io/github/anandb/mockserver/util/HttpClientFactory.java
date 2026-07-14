@@ -43,14 +43,16 @@ public class HttpClientFactory {
         if (ignoreSSLErrors) {
             log.warn("Creating insecure HttpClient that ignores SSL certificate errors");
             try {
-                SSLContext sslContext = SSLContext.getInstance("TLS");
                 X509TrustManager trustAllManager = new X509TrustManager() {
+                    @Override
                     public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                    @Override
                     public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return new X509Certificate[0];
-                    }
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {return new X509Certificate[0];}
                 };
+                
+                SSLContext sslContext = SSLContext.getInstance("TLS");
                 sslContext.init(null, new TrustManager[]{trustAllManager}, new SecureRandom());
 
                 builder.sslContext(sslContext);

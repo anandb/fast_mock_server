@@ -1,11 +1,13 @@
 package io.github.anandb.mockserver.model;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * DTO representing an incoming request structure used for expectations/requests.
  */
 @Data
+@NoArgsConstructor
 public class MockRequestDTO {
     private String method; // e.g., GET, POST
     private String path;   // The endpoint path, possibly with placeholders like /users/{id}

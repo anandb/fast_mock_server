@@ -75,4 +75,24 @@ class CustomExceptionTest {
         assertEquals("msg", ex.getMessage());
         assertSame(cause, ex.getCause());
     }
+
+    @Test
+    void oauth2ExceptionMessage() {
+        OAuth2Exception ex = new OAuth2Exception("token fetch failed");
+        assertEquals("token fetch failed", ex.getMessage());
+    }
+
+    @Test
+    void oauth2ExceptionWithCause() {
+        Throwable cause = new RuntimeException("connection refused");
+        OAuth2Exception ex = new OAuth2Exception("token fetch failed", cause);
+        assertEquals("token fetch failed", ex.getMessage());
+        assertSame(cause, ex.getCause());
+    }
+
+    @Test
+    void oauth2ExceptionIsRuntimeException() {
+        OAuth2Exception ex = new OAuth2Exception("error");
+        assertInstanceOf(RuntimeException.class, ex);
+    }
 }
