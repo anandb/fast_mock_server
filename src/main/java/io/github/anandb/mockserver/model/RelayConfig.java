@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import jakarta.validation.Valid;
 import java.util.ArrayList;
@@ -54,7 +55,8 @@ public class RelayConfig {
      * OAuth2 client secret (optional - only required if using OAuth2
      * authentication)
      */
-    @JsonProperty("clientSecret")
+    @ToString.Exclude
+    @JsonProperty(value = "clientSecret", access = JsonProperty.Access.WRITE_ONLY)
     private String clientSecret;
 
     /** Optional additional headers to include when relaying requests */

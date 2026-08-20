@@ -54,11 +54,42 @@ public final class VariableExpander {
                 throw new IllegalArgumentException("Variable not found: " + variableName);
             }
 
-            result.append(value);
+            // Escape JSON-special characters to prevent injection when the
+            // expanded value is embedded in a JSON string context.
+            result.append(escapeForJson(value));
             lastMatchEnd = matcher.end();
         }
 
         result.append(text.substring(lastMatchEnd));
         return result.toString();
+    }
+
+    /**
+     * Escapes characters that are special in JSON string values.
+     * This prevents environment variable values from breaking out of
+     * JSON string delimiters or injecting control structures.
+     */
+    static String escapeForJson(String value) {
+        StringBuilder escaped = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"'  -> escaped.append("\\\"");
+                case '\\' -> escaped.append("\\\\");
+                case '\n' -> escaped.append("\\n");
+                case '\r' -> escaped.append("\\r");
+                case '\t' -> escaped.append("\\t");
+                case '\b' -> escaped.append("\\b");
+                case '\f' -> escaped.append("\\f");
+                default -> {
+                    if (c < 0x20) {
+                        escaped.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        escaped.append(c);
+                    }
+                }
+            }
+        }
+        return escaped.toString();
     }
 }

@@ -76,11 +76,17 @@ public class MultipartUploadStrategy implements ResponseStrategy {
             }
             saveToPath = saveToPath.strip();
 
-            // 3. Create save directory
-            Path saveDir = Paths.get(saveToPath);
+            // 3. Validate path — reject traversal and suspicious paths
+            Path saveDir = Paths.get(saveToPath).normalize();
+            if (saveDir.toString().contains("..")) {
+                log.warn("Multipart upload rejected: path traversal detected in saveTo path: {}", saveToPath);
+                return HttpResponse.response().withStatusCode(400).withBody("Invalid upload path: traversal detected");
+            }
+
+            // 4. Create save directory
             Files.createDirectories(saveDir);
 
-            // 4. Save file parts
+            // 5. Save file parts
             int savedCount = 0;
             List<String> allowedFields = uploadConfig.getFileFields();
 
@@ -102,7 +108,7 @@ public class MultipartUploadStrategy implements ResponseStrategy {
 
             log.info("Multipart upload complete: {} files saved to {}", savedCount, saveToPath);
 
-            // 5. Return configured response
+            // 6. Return configured response
             if (config.getHttpResponse() != null) {
                 return HttpResponse.response()
                         .withStatusCode(config.getHttpResponse().getStatusCode())

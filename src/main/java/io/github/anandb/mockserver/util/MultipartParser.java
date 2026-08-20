@@ -172,27 +172,44 @@ public final class MultipartParser {
     }
 
     private static String extractHeaderValue(String headers, String headerName) {
-        // Search for Content-Disposition with the given attribute
+        // Search for Content-Disposition with the given attribute.
+        // Use word-boundary check: attribute must be preceded by ';' or start of headers
+        // to avoid matching "name" inside "filename".
         String lower = headers.toLowerCase();
-        int nameIdx = lower.indexOf(headerName + "=\"");
-        if (nameIdx == -1) {
-            nameIdx = lower.indexOf(headerName + "=");
-        }
-        if (nameIdx == -1) {
-            return null;
-        }
+        String attrLower = headerName.toLowerCase();
+        int searchFrom = 0;
 
-        int valueStart = headers.indexOf('"', nameIdx);
-        if (valueStart == -1) {
-            return null;
-        }
-        int valueEnd = headers.indexOf('"', valueStart + 1);
-        if (valueEnd == -1) {
-            return null;
-        }
+        while (searchFrom < lower.length()) {
+            int nameIdx = lower.indexOf(attrLower + "=\"", searchFrom);
+            if (nameIdx == -1) {
+                nameIdx = lower.indexOf(attrLower + "=", searchFrom);
+            }
+            if (nameIdx == -1) {
+                return null;
+            }
 
-        String value = headers.substring(valueStart + 1, valueEnd);
-        return value.isEmpty() ? null : value;
+            // Verify word boundary: attribute must be preceded by ';', ' ', or be at start
+            if (nameIdx > 0) {
+                char prev = lower.charAt(nameIdx - 1);
+                if (prev != ';' && prev != ' ' && prev != '\t') {
+                    searchFrom = nameIdx + attrLower.length();
+                    continue;
+                }
+            }
+
+            int valueStart = headers.indexOf('"', nameIdx);
+            if (valueStart == -1) {
+                return null;
+            }
+            int valueEnd = headers.indexOf('"', valueStart + 1);
+            if (valueEnd == -1) {
+                return null;
+            }
+
+            String value = headers.substring(valueStart + 1, valueEnd);
+            return value.isEmpty() ? null : value;
+        }
+        return null;
     }
 
     private static String extractContentType(String headers) {

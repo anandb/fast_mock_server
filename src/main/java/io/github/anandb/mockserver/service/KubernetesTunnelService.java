@@ -119,6 +119,19 @@ public class KubernetesTunnelService {
         }
     }
 
+    /**
+     * Tests whether a TCP connection can be established on the given port.
+     * Used to verify that kubectl port-forward has bound and is ready to forward traffic.
+     */
+    private boolean canConnect(int port) {
+        try (var socket = new java.net.Socket()) {
+            socket.connect(new java.net.InetSocketAddress("127.0.0.1", port), 1000);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     public Process startTunnel(TunnelConfig config, int hostPort) throws IOException, InterruptedException {
         String podName = discoverPod(config.getNamespace(), config.getPodPrefix());
 
@@ -127,6 +140,7 @@ public class KubernetesTunnelService {
 
         ProcessBuilder pb = new ProcessBuilder(
             "kubectl", "port-forward",
+            "--address", "127.0.0.1",
             "pod/" + podName,
             hostPort + ":" + config.getPodPort(),
             "-n", config.getNamespace()
@@ -145,7 +159,7 @@ public class KubernetesTunnelService {
             if (!process.isAlive()) {
                 throw new IOException("Tunnel process died during startup");
             }
-            if (!isPortAvailable(hostPort)) {
+            if (canConnect(hostPort)) {
                 log.info("Tunnel ready on port {} after {}ms", hostPort,
                     config.getTunnelReadyTimeoutMs() - (deadline - System.currentTimeMillis()));
                 return process;

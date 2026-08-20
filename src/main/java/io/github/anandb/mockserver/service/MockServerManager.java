@@ -56,6 +56,7 @@ public class MockServerManager {
         }
 
         ClientAndServer server = null;
+        ServerInstance instance = null;
         try {
             log.info("Creating server: {} on port {}", serverId, request.getPort());
 
@@ -71,7 +72,7 @@ public class MockServerManager {
                 server = ClientAndServer.startClientAndServer(request.getPort());
             }
 
-            ServerInstance instance = new ServerInstance(
+            instance = new ServerInstance(
                 serverId,
                 request.getPort(),
                 server,
@@ -103,6 +104,10 @@ public class MockServerManager {
 
         } catch (Exception e) {
             log.error("Failed to create server: {}", serverId, e);
+            // Clean up any tunnels that were started before the failure
+            if (instance != null) {
+                stopTunnels(instance);
+            }
             if (server != null) {
                 try {
                     server.stop();
