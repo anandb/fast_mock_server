@@ -1,9 +1,9 @@
 package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.exception.InvalidCertificateException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
@@ -18,10 +18,9 @@ import java.security.cert.X509Certificate;
  * certificate expiration dates and basic constraints for CA certificates.
  * </p>
  */
-@Slf4j
 @Component
 public class CertificateValidator {
-
+    private static final Logger log = LoggerFactory.getLogger(CertificateValidator.class);
     private static final String PEM_CERT_BEGIN = "-----BEGIN CERTIFICATE-----";
     private static final String PEM_CERT_END = "-----END CERTIFICATE-----";
     private static final String PEM_KEY_BEGIN = "-----BEGIN";
@@ -42,23 +41,18 @@ public class CertificateValidator {
         if (certificate == null || certificate.trim().isEmpty()) {
             throw new InvalidCertificateException("Certificate content is empty");
         }
-
         if (!certificate.contains(PEM_CERT_BEGIN) || !certificate.contains(PEM_CERT_END)) {
-            throw new InvalidCertificateException(
-                "Certificate must be in PEM format with BEGIN/END CERTIFICATE markers"
-            );
+            throw new InvalidCertificateException("Certificate must be in PEM format with BEGIN/END CERTIFICATE markers");
         }
-
         X509Certificate cert = parseCertificate(certificate);
         try {
             cert.checkValidity();
         } catch (CertificateException e) {
-            throw new InvalidCertificateException(
-                "Certificate is expired or not yet valid: " + e.getMessage(), e
-            );
+            throw new InvalidCertificateException("Certificate is expired or not yet valid: " + e.getMessage(), e);
         }
         log.debug("Certificate validated successfully. Subject: {}", cert.getSubjectX500Principal());
     }
+
     /**
      * Validates the PEM format of a private key.
      * <p>
@@ -74,24 +68,14 @@ public class CertificateValidator {
         if (privateKey == null || privateKey.trim().isEmpty()) {
             throw new InvalidCertificateException("Private key content is empty");
         }
-
         if (!privateKey.contains(PEM_KEY_BEGIN) || !privateKey.contains(PEM_KEY_END)) {
-            throw new InvalidCertificateException(
-                "Private key must be in PEM format with BEGIN/END markers"
-            );
+            throw new InvalidCertificateException("Private key must be in PEM format with BEGIN/END markers");
         }
-
         // Basic validation - checking for common key types
-        boolean isValidKeyType = privateKey.contains("BEGIN PRIVATE KEY") ||
-                                 privateKey.contains("BEGIN RSA PRIVATE KEY") ||
-                                 privateKey.contains("BEGIN EC PRIVATE KEY");
-
+        boolean isValidKeyType = privateKey.contains("BEGIN PRIVATE KEY") || privateKey.contains("BEGIN RSA PRIVATE KEY") || privateKey.contains("BEGIN EC PRIVATE KEY");
         if (!isValidKeyType) {
-            throw new InvalidCertificateException(
-                "Unrecognized private key format. Expected PRIVATE KEY, RSA PRIVATE KEY, or EC PRIVATE KEY"
-            );
+            throw new InvalidCertificateException("Unrecognized private key format. Expected PRIVATE KEY, RSA PRIVATE KEY, or EC PRIVATE KEY");
         }
-
         log.debug("Private key format validated successfully");
     }
 
@@ -111,21 +95,15 @@ public class CertificateValidator {
         if (caCertificate == null || caCertificate.trim().isEmpty()) {
             throw new InvalidCertificateException("CA certificate content is empty");
         }
-
         if (!caCertificate.contains(PEM_CERT_BEGIN) || !caCertificate.contains(PEM_CERT_END)) {
-            throw new InvalidCertificateException(
-                "CA certificate must be in PEM format with BEGIN/END CERTIFICATE markers"
-            );
+            throw new InvalidCertificateException("CA certificate must be in PEM format with BEGIN/END CERTIFICATE markers");
         }
-
         X509Certificate cert = parseCertificate(caCertificate);
-
         // Verify it's a CA certificate
         int pathLen = cert.getBasicConstraints();
         if (pathLen < 0) {
             log.warn("Certificate may not be a CA certificate (basicConstraints < 0)");
         }
-
         log.debug("CA certificate validated successfully. Subject: {}", cert.getSubjectX500Principal());
     }
 
@@ -139,14 +117,9 @@ public class CertificateValidator {
     private X509Certificate parseCertificate(String pemContent) {
         try {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            return (X509Certificate) cf.generateCertificate(
-                new ByteArrayInputStream(pemContent.getBytes(StandardCharsets.US_ASCII))
-            );
+            return (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(pemContent.getBytes(StandardCharsets.US_ASCII)));
         } catch (CertificateException e) {
-            throw new InvalidCertificateException(
-                "Invalid certificate: " + e.getMessage(),
-                e
-            );
+            throw new InvalidCertificateException("Invalid certificate: " + e.getMessage(), e);
         }
     }
 
@@ -166,7 +139,6 @@ public class CertificateValidator {
         // First validate formats individually
         validateCertificateFormat(certificate);
         validatePrivateKeyFormat(privateKey);
-
         // Additional validation could be added here to verify the key pair matches
         // This would require more complex cryptographic operations
         log.debug("Certificate and private key pair validated");

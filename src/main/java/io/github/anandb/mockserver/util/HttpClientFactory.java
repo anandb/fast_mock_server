@@ -1,8 +1,8 @@
 package io.github.anandb.mockserver.util;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
@@ -20,10 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Factory for creating and caching HttpClient instances.
  * Provides support for insecure clients that ignore SSL certificate errors.
  */
-@Slf4j
 @Component
 public class HttpClientFactory {
-
+    private static final Logger log = LoggerFactory.getLogger(HttpClientFactory.class);
     private final Map<Boolean, HttpClient> clientCache = new ConcurrentHashMap<>();
 
     /**
@@ -37,37 +36,35 @@ public class HttpClientFactory {
     }
 
     private HttpClient createHttpClient(boolean ignoreSSLErrors) {
-        HttpClient.Builder builder = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10));
-
+        HttpClient.Builder builder = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10));
         if (ignoreSSLErrors) {
             log.warn("Creating insecure HttpClient that ignores SSL certificate errors");
             try {
                 X509TrustManager trustAllManager = new X509TrustManager() {
                     @Override
-                    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                    public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                    }
                     @Override
-                    public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                    public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                    }
                     @Override
-                    public X509Certificate[] getAcceptedIssuers() {return new X509Certificate[0];}
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
                 };
-                
                 SSLContext sslContext = SSLContext.getInstance("TLS");
-                sslContext.init(null, new TrustManager[]{trustAllManager}, new SecureRandom());
-
+                sslContext.init(null, new TrustManager[] {trustAllManager}, new SecureRandom());
                 builder.sslContext(sslContext);
                 // Disable hostname verification per-client via SSLParameters instead of
                 // using System.setProperty which affects the entire JVM globally.
                 SSLParameters sslParams = sslContext.getDefaultSSLParameters();
                 sslParams.setEndpointIdentificationAlgorithm(null);
                 builder.sslParameters(sslParams);
-
             } catch (NoSuchAlgorithmException | KeyManagementException e) {
                 log.error("Failed to create insecure SSL context", e);
                 throw new RuntimeException("Failed to create insecure HttpClient", e);
             }
         }
-
         return builder.build();
     }
 }

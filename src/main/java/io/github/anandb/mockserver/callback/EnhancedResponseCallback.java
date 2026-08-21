@@ -6,53 +6,38 @@ import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.strategy.ResponseStrategy;
 import io.github.anandb.mockserver.util.RequestUtils;
 import io.github.anandb.mockserver.util.ResponseUtils;
-
-import lombok.extern.slf4j.Slf4j;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.mockserver.mock.action.ExpectationResponseCallback;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import io.github.anandb.mockserver.util.ErrorCode;
 
 /**
  * Universal callback that delegates to specialized response strategies.
  * Handles header merging, context building, and error handling.
  */
-@Slf4j
 public class EnhancedResponseCallback implements ExpectationResponseCallback {
-
+    private static final Logger log = LoggerFactory.getLogger(EnhancedResponseCallback.class);
     private final EnhancedExpectation config;
     private final List<GlobalHeader> globalHeaders;
     private final List<ResponseStrategy> strategies;
     private final String pathPattern;
     private final List<RelayConfig> relays;
 
-    public EnhancedResponseCallback(
-            EnhancedExpectation config,
-            List<GlobalHeader> globalHeaders,
-            List<ResponseStrategy> strategies,
-            String pathPattern) {
+    public EnhancedResponseCallback(EnhancedExpectation config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, String pathPattern) {
         this(config, globalHeaders, strategies, pathPattern, null);
     }
 
-    public EnhancedResponseCallback(
-            EnhancedExpectation config,
-            List<GlobalHeader> globalHeaders,
-            List<ResponseStrategy> strategies,
-            String pathPattern,
-            List<RelayConfig> relays) {
+    public EnhancedResponseCallback(EnhancedExpectation config, List<GlobalHeader> globalHeaders, List<ResponseStrategy> strategies, String pathPattern, List<RelayConfig> relays) {
         this.config = config;
         this.globalHeaders = globalHeaders != null ? globalHeaders : List.of();
-        this.strategies = strategies.stream()
-                .sorted(Comparator.comparingInt(ResponseStrategy::getPriority).reversed())
-                .toList();
+        this.strategies = strategies.stream().sorted(Comparator.comparingInt(ResponseStrategy::getPriority).reversed()).toList();
         this.pathPattern = pathPattern;
         this.relays = relays;
     }
@@ -63,17 +48,10 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
             log.info("Callback handling {}", httpRequest);
             Map<String, Object> context = buildContext(httpRequest);
             ResponseStrategy strategy = findSupportingStrategy();
-
-            return ResponseUtils.mergeGlobalHeaders(
-                strategy.handle(httpRequest, config, context),
-                globalHeaders
-            );
+            return ResponseUtils.mergeGlobalHeaders(strategy.handle(httpRequest, config, context), globalHeaders);
         } catch (Exception e) {
             log.error("Error in enhanced callback", e);
-            return HttpResponse.response()
-                    .withStatusCode(500)
-                    .withHeader("Content-Type", "application/json")
-                    .withBody(new ErrorCode("CALLBACK_ERROR", e.getMessage()).toString());
+            return HttpResponse.response().withStatusCode(500).withHeader("Content-Type", "application/json").withBody(new ErrorCode("CALLBACK_ERROR", e.getMessage()).toString());
         }
     }
 
@@ -88,10 +66,7 @@ public class EnhancedResponseCallback implements ExpectationResponseCallback {
     }
 
     private ResponseStrategy findSupportingStrategy() {
-        return strategies.stream()
-                .filter(s -> s.supports(config))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No strategy found for configuration"));
+        return strategies.stream().filter(s -> s.supports(config)).findFirst().orElseThrow(() -> new IllegalStateException("No strategy found for configuration"));
     }
 
     private Map<String, String> extractPathVariables(HttpRequest httpRequest) {

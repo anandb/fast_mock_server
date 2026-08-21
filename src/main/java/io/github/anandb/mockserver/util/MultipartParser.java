@@ -1,9 +1,5 @@
 package io.github.anandb.mockserver.util;
 
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,22 +11,113 @@ import java.util.List;
  * Validates file names against path traversal attacks ({@code ..}, {@code /}, {@code \}).
  * </p>
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MultipartParser {
 
     /**
      * A single parsed part from a multipart body.
      */
-    @Data
     public static class Part {
-        /** The form field name (from Content-Disposition name=). */
+        /**
+         * The form field name (from Content-Disposition name=).
+         */
         private final String fieldName;
-        /** The original file name (from Content-Disposition filename=), null for non-file parts. */
+        /**
+         * The original file name (from Content-Disposition filename=), null for non-file parts.
+         */
         private final String fileName;
-        /** The Content-Type of this part, null if not specified. */
+        /**
+         * The Content-Type of this part, null if not specified.
+         */
         private final String contentType;
-        /** The raw bytes of this part's content. */
+        /**
+         * The raw bytes of this part's content.
+         */
         private final byte[] content;
+
+        /**
+         * Creates a new {@code Part} instance.
+         *
+         * @param fieldName The form field name (from Content-Disposition name=).
+         * @param fileName The original file name (from Content-Disposition filename=), null for non-file parts.
+         * @param contentType The Content-Type of this part, null if not specified.
+         * @param content The raw bytes of this part's content.
+         */
+        public Part(final String fieldName, final String fileName, final String contentType, final byte[] content) {
+            this.fieldName = fieldName;
+            this.fileName = fileName;
+            this.contentType = contentType;
+            this.content = content;
+        }
+
+        /**
+         * The form field name (from Content-Disposition name=).
+         */
+        public String getFieldName() {
+            return this.fieldName;
+        }
+
+        /**
+         * The original file name (from Content-Disposition filename=), null for non-file parts.
+         */
+        public String getFileName() {
+            return this.fileName;
+        }
+
+        /**
+         * The Content-Type of this part, null if not specified.
+         */
+        public String getContentType() {
+            return this.contentType;
+        }
+
+        /**
+         * The raw bytes of this part's content.
+         */
+        public byte[] getContent() {
+            return this.content;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (o == this) return true;
+            if (!(o instanceof MultipartParser.Part)) return false;
+            final MultipartParser.Part other = (MultipartParser.Part) o;
+            if (!other.canEqual((Object) this)) return false;
+            final Object this$fieldName = this.getFieldName();
+            final Object other$fieldName = other.getFieldName();
+            if (this$fieldName == null ? other$fieldName != null : !this$fieldName.equals(other$fieldName)) return false;
+            final Object this$fileName = this.getFileName();
+            final Object other$fileName = other.getFileName();
+            if (this$fileName == null ? other$fileName != null : !this$fileName.equals(other$fileName)) return false;
+            final Object this$contentType = this.getContentType();
+            final Object other$contentType = other.getContentType();
+            if (this$contentType == null ? other$contentType != null : !this$contentType.equals(other$contentType)) return false;
+            if (!java.util.Arrays.equals(this.getContent(), other.getContent())) return false;
+            return true;
+        }
+
+        protected boolean canEqual(final Object other) {
+            return other instanceof MultipartParser.Part;
+        }
+
+        @Override
+        public int hashCode() {
+            final int PRIME = 59;
+            int result = 1;
+            final Object $fieldName = this.getFieldName();
+            result = result * PRIME + ($fieldName == null ? 43 : $fieldName.hashCode());
+            final Object $fileName = this.getFileName();
+            result = result * PRIME + ($fileName == null ? 43 : $fileName.hashCode());
+            final Object $contentType = this.getContentType();
+            result = result * PRIME + ($contentType == null ? 43 : $contentType.hashCode());
+            result = result * PRIME + java.util.Arrays.hashCode(this.getContent());
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "MultipartParser.Part(fieldName=" + this.getFieldName() + ", fileName=" + this.getFileName() + ", contentType=" + this.getContentType() + ", content=" + java.util.Arrays.toString(this.getContent()) + ")";
+        }
     }
 
     /**
@@ -48,57 +135,46 @@ public final class MultipartParser {
         if (contentType == null || contentType.isBlank()) {
             throw new IllegalArgumentException("Content-Type header is required for multipart parsing");
         }
-
         String boundary = extractBoundary(contentType);
         if (boundary == null || boundary.isBlank()) {
             throw new IllegalArgumentException("No boundary found in Content-Type: " + contentType);
         }
-
         byte[] boundaryBytes = ("--" + boundary).getBytes(StandardCharsets.UTF_8);
         byte[] closingBoundary = (boundaryBytes.length + 2 >= body.length) ? new byte[0] : null;
-
         List<Part> parts = new ArrayList<>();
         int pos = 0;
-
         // Find first boundary
         int firstBoundary = indexOf(body, boundaryBytes, 0);
         if (firstBoundary == -1) {
             throw new IllegalArgumentException("Boundary not found in multipart body");
         }
         pos = firstBoundary + boundaryBytes.length;
-
         while (pos < body.length) {
             // Skip CRLF after boundary
             pos = skipCrlf(body, pos);
             if (pos >= body.length) {
                 break;
             }
-
             // Check for closing boundary (--boundary--)
             if (pos + 2 < body.length && body[pos] == '-' && body[pos + 1] == '-') {
                 break;
             }
-
             // Parse part headers
             int headerEnd = findHeaderEnd(body, pos);
             if (headerEnd == -1) {
                 break;
             }
-
             String headers = new String(body, pos, headerEnd - pos, StandardCharsets.UTF_8);
             String fieldName = extractHeaderValue(headers, "name");
             String fileName = extractHeaderValue(headers, "filename");
             String partContentType = extractContentType(headers);
-
             // Skip past header end (CRLF CRLF)
             pos = headerEnd + 4;
-
             // Find next boundary
             int nextBoundary = indexOf(body, boundaryBytes, pos);
             if (nextBoundary == -1) {
                 break;
             }
-
             // Content is between pos and nextBoundary, minus trailing CRLF
             int contentEnd = nextBoundary - 2; // -2 for CRLF before boundary
             if (contentEnd < pos) {
@@ -106,16 +182,13 @@ public final class MultipartParser {
             }
             byte[] content = new byte[contentEnd - pos];
             System.arraycopy(body, pos, content, 0, content.length);
-
             // Validate file name against path traversal
             if (fileName != null) {
                 validateFileName(fileName);
             }
-
             parts.add(new Part(fieldName, fileName, partContentType, content));
             pos = nextBoundary + boundaryBytes.length;
         }
-
         return parts;
     }
 
@@ -147,7 +220,7 @@ public final class MultipartParser {
      */
     static void validateFileName(String fileName) {
         if (fileName.contains("..")) {
-            throw new IllegalArgumentException("Path traversal rejected: file name contains '..': " + fileName);
+            throw new IllegalArgumentException("Path traversal rejected: file name contains \'..\': " + fileName);
         }
         if (fileName.contains("/") || fileName.contains("\\")) {
             throw new IllegalArgumentException("Path traversal rejected: file name contains path separator: " + fileName);
@@ -178,7 +251,6 @@ public final class MultipartParser {
         String lower = headers.toLowerCase();
         String attrLower = headerName.toLowerCase();
         int searchFrom = 0;
-
         while (searchFrom < lower.length()) {
             int nameIdx = lower.indexOf(attrLower + "=\"", searchFrom);
             if (nameIdx == -1) {
@@ -187,7 +259,6 @@ public final class MultipartParser {
             if (nameIdx == -1) {
                 return null;
             }
-
             // Verify word boundary: attribute must be preceded by ';', ' ', or be at start
             if (nameIdx > 0) {
                 char prev = lower.charAt(nameIdx - 1);
@@ -196,16 +267,14 @@ public final class MultipartParser {
                     continue;
                 }
             }
-
-            int valueStart = headers.indexOf('"', nameIdx);
+            int valueStart = headers.indexOf('\"', nameIdx);
             if (valueStart == -1) {
                 return null;
             }
-            int valueEnd = headers.indexOf('"', valueStart + 1);
+            int valueEnd = headers.indexOf('\"', valueStart + 1);
             if (valueEnd == -1) {
                 return null;
             }
-
             String value = headers.substring(valueStart + 1, valueEnd);
             return value.isEmpty() ? null : value;
         }
@@ -243,5 +312,8 @@ public final class MultipartParser {
             return i;
         }
         return -1;
+    }
+
+    private MultipartParser() {
     }
 }

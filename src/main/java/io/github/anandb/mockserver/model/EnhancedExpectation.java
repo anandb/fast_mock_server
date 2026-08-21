@@ -1,32 +1,23 @@
 package io.github.anandb.mockserver.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.serialization.HttpRequestSerializer;
 import org.mockserver.serialization.HttpResponseSerializer;
 import org.mockserver.logging.MockServerLogger;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 
 /**
  * Data Transfer Object for enhanced expectations.
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class EnhancedExpectation {
-
     private JsonNode httpRequest;
     private JsonNode httpResponse;
     private JsonNode fileUploads;
     private Boolean sse;
     private Integer interval;
-
     private static final HttpRequestSerializer REQUEST_SERIALIZER = new HttpRequestSerializer(new MockServerLogger());
     private static final HttpResponseSerializer RESPONSE_SERIALIZER = new HttpResponseSerializer(new MockServerLogger());
 
@@ -113,6 +104,7 @@ public class EnhancedExpectation {
         return new EnhancedExpectationDTOBuilder();
     }
 
+
     public static class EnhancedExpectationDTOBuilder {
         private JsonNode httpRequest;
         private JsonNode httpResponse;
@@ -120,14 +112,126 @@ public class EnhancedExpectation {
         private Boolean sse;
         private Integer interval;
 
-        public EnhancedExpectationDTOBuilder httpRequest(JsonNode httpRequest) { this.httpRequest = httpRequest; return this; }
-        public EnhancedExpectationDTOBuilder httpResponse(JsonNode httpResponse) { this.httpResponse = httpResponse; return this; }
-        public EnhancedExpectationDTOBuilder fileUploads(JsonNode fileUploads) { this.fileUploads = fileUploads; return this; }
-        public EnhancedExpectationDTOBuilder sse(Boolean sse) { this.sse = sse; return this; }
-        public EnhancedExpectationDTOBuilder interval(Integer interval) { this.interval = interval; return this; }
+        public EnhancedExpectationDTOBuilder httpRequest(JsonNode httpRequest) {
+            this.httpRequest = httpRequest;
+            return this;
+        }
+
+        public EnhancedExpectationDTOBuilder httpResponse(JsonNode httpResponse) {
+            this.httpResponse = httpResponse;
+            return this;
+        }
+
+        public EnhancedExpectationDTOBuilder fileUploads(JsonNode fileUploads) {
+            this.fileUploads = fileUploads;
+            return this;
+        }
+
+        public EnhancedExpectationDTOBuilder sse(Boolean sse) {
+            this.sse = sse;
+            return this;
+        }
+
+        public EnhancedExpectationDTOBuilder interval(Integer interval) {
+            this.interval = interval;
+            return this;
+        }
 
         public EnhancedExpectation build() {
             return new EnhancedExpectation(httpRequest, httpResponse, fileUploads, sse, interval);
         }
+    }
+
+    public JsonNode getFileUploads() {
+        return this.fileUploads;
+    }
+
+    public Boolean getSse() {
+        return this.sse;
+    }
+
+    public Integer getInterval() {
+        return this.interval;
+    }
+
+    public void setHttpRequest(final JsonNode httpRequest) {
+        this.httpRequest = httpRequest;
+    }
+
+    public void setHttpResponse(final JsonNode httpResponse) {
+        this.httpResponse = httpResponse;
+    }
+
+    public void setFileUploads(final JsonNode fileUploads) {
+        this.fileUploads = fileUploads;
+    }
+
+    public void setSse(final Boolean sse) {
+        this.sse = sse;
+    }
+
+    public void setInterval(final Integer interval) {
+        this.interval = interval;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (o == this) return true;
+        if (!(o instanceof EnhancedExpectation)) return false;
+        final EnhancedExpectation other = (EnhancedExpectation) o;
+        if (!other.canEqual((Object) this)) return false;
+        final Object this$sse = this.getSse();
+        final Object other$sse = other.getSse();
+        if (this$sse == null ? other$sse != null : !this$sse.equals(other$sse)) return false;
+        final Object this$interval = this.getInterval();
+        final Object other$interval = other.getInterval();
+        if (this$interval == null ? other$interval != null : !this$interval.equals(other$interval)) return false;
+        final Object this$httpRequest = this.getHttpRequest();
+        final Object other$httpRequest = other.getHttpRequest();
+        if (this$httpRequest == null ? other$httpRequest != null : !this$httpRequest.equals(other$httpRequest)) return false;
+        final Object this$httpResponse = this.getHttpResponse();
+        final Object other$httpResponse = other.getHttpResponse();
+        if (this$httpResponse == null ? other$httpResponse != null : !this$httpResponse.equals(other$httpResponse)) return false;
+        final Object this$fileUploads = this.getFileUploads();
+        final Object other$fileUploads = other.getFileUploads();
+        if (this$fileUploads == null ? other$fileUploads != null : !this$fileUploads.equals(other$fileUploads)) return false;
+        return true;
+    }
+
+    protected boolean canEqual(final Object other) {
+        return other instanceof EnhancedExpectation;
+    }
+
+    @Override
+    public int hashCode() {
+        final int PRIME = 59;
+        int result = 1;
+        final Object $sse = this.getSse();
+        result = result * PRIME + ($sse == null ? 43 : $sse.hashCode());
+        final Object $interval = this.getInterval();
+        result = result * PRIME + ($interval == null ? 43 : $interval.hashCode());
+        final Object $httpRequest = this.getHttpRequest();
+        result = result * PRIME + ($httpRequest == null ? 43 : $httpRequest.hashCode());
+        final Object $httpResponse = this.getHttpResponse();
+        result = result * PRIME + ($httpResponse == null ? 43 : $httpResponse.hashCode());
+        final Object $fileUploads = this.getFileUploads();
+        result = result * PRIME + ($fileUploads == null ? 43 : $fileUploads.hashCode());
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "EnhancedExpectation(httpRequest=" + this.getHttpRequest() + ", httpResponse=" + this.getHttpResponse() + ", fileUploads=" + this.getFileUploads() + ", sse=" + this.getSse() + ", interval=" + this.getInterval() + ")";
+    }
+
+    public EnhancedExpectation() {
+    }
+
+    public EnhancedExpectation(final JsonNode httpRequest, final JsonNode httpResponse, final JsonNode fileUploads, final Boolean sse, final Integer interval) {
+        this.httpRequest = httpRequest;
+        this.httpResponse = httpResponse;
+        this.fileUploads = fileUploads;
+        this.sse = sse;
+        this.interval = interval;
     }
 }

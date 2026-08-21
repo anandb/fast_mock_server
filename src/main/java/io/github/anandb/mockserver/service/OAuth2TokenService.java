@@ -2,15 +2,12 @@ package io.github.anandb.mockserver.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.github.anandb.mockserver.exception.OAuth2Exception;
 import io.github.anandb.mockserver.model.RelayConfig;
 import io.github.anandb.mockserver.util.HttpClientFactory;
-
-import lombok.extern.slf4j.Slf4j;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -29,9 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * </p>
  */
 @Service
-@Slf4j
 public class OAuth2TokenService {
-
+    private static final Logger log = LoggerFactory.getLogger(OAuth2TokenService.class);
     private final HttpClientFactory httpClientFactory;
     private final ObjectMapper objectMapper;
     private final Map<String, TokenCache> tokenCacheMap;
@@ -54,14 +50,12 @@ public class OAuth2TokenService {
      */
     public String getAccessToken(RelayConfig relayConfig) throws Exception {
         String cacheKey = generateCacheKey(relayConfig);
-
         // Fast lock-free check for valid cached token
         TokenCache cached = tokenCacheMap.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
             log.debug("Using cached access token for {}", relayConfig.getTokenUrl());
             return cached.getAccessToken();
         }
-
         // Synchronize on a per-key lock to prevent parallel fetches for the same endpoint/credentials
         Object lock = locks.computeIfAbsent(cacheKey, k -> new Object());
         synchronized (lock) {
@@ -71,7 +65,6 @@ public class OAuth2TokenService {
                 log.debug("Using cached access token (after lock wait) for {}", relayConfig.getTokenUrl());
                 return cached.getAccessToken();
             }
-
             log.info("Fetching new access token from {}", relayConfig.getTokenUrl());
             return fetchAccessToken(relayConfig);
         }
@@ -92,45 +85,28 @@ public class OAuth2TokenService {
         formData.put("grant_type", relayConfig.getGrantType());
         formData.put("client_id", relayConfig.getClientId());
         formData.put("client_secret", relayConfig.getClientSecret());
-
         if (relayConfig.getScope() != null && !relayConfig.getScope().isBlank()) {
             formData.put("scope", relayConfig.getScope());
         }
-
         String formBody = buildFormBody(formData);
-
         // Build HTTP request
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(relayConfig.getTokenUrl()))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(formBody))
-                .timeout(Duration.ofSeconds(30))
-                .build();
-
+        HttpRequest request = HttpRequest.newBuilder().uri(URI.create(relayConfig.getTokenUrl())).header("Content-Type", "application/x-www-form-urlencoded").POST(HttpRequest.BodyPublishers.ofString(formBody)).timeout(Duration.ofSeconds(30)).build();
         // Send request
         HttpClient httpClient = httpClientFactory.getHttpClient(relayConfig.isIgnoreSSLErrors());
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
         if (response.statusCode() != 200) {
-            throw new OAuth2Exception("Failed to fetch access token. Status: " + response.statusCode() +
-                                     ", Body: " + response.body());
+            throw new OAuth2Exception("Failed to fetch access token. Status: " + response.statusCode() + ", Body: " + response.body());
         }
-
         // Parse response
         JsonNode jsonNode = objectMapper.readTree(response.body());
         if (!jsonNode.has("access_token")) {
             throw new OAuth2Exception("Access token not found in response: " + response.body());
         }
-
         String accessToken = jsonNode.get("access_token").asText();
-        long expiresInSeconds = jsonNode.has("expires_in")
-                ? jsonNode.get("expires_in").asLong(DEFAULT_TOKEN_EXPIRY_SECONDS)
-                : DEFAULT_TOKEN_EXPIRY_SECONDS;
-
+        long expiresInSeconds = jsonNode.has("expires_in") ? jsonNode.get("expires_in").asLong(DEFAULT_TOKEN_EXPIRY_SECONDS) : DEFAULT_TOKEN_EXPIRY_SECONDS;
         // Cache with server-provided expiry (with safety margin)
         long cacheExpiry = Math.max(expiresInSeconds - 300, 60); // at least 60s
         tokenCacheMap.put(generateCacheKey(relayConfig), new TokenCache(accessToken, cacheExpiry));
-
         return accessToken;
     }
 
@@ -146,9 +122,7 @@ public class OAuth2TokenService {
             if (sb.length() > 0) {
                 sb.append("&");
             }
-            sb.append(URLEncoder.encode(entry.getKey(), java.nio.charset.StandardCharsets.UTF_8))
-              .append("=")
-              .append(URLEncoder.encode(entry.getValue(), java.nio.charset.StandardCharsets.UTF_8));
+            sb.append(URLEncoder.encode(entry.getKey(), java.nio.charset.StandardCharsets.UTF_8)).append("=").append(URLEncoder.encode(entry.getValue(), java.nio.charset.StandardCharsets.UTF_8));
         }
         return sb.toString();
     }
@@ -169,6 +143,7 @@ public class OAuth2TokenService {
     public void clearCache() {
         tokenCacheMap.clear();
     }
+
 
     /**
      * Internal class for caching tokens with expiry.

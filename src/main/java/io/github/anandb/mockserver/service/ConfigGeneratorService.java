@@ -1,9 +1,9 @@
 package io.github.anandb.mockserver.service;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -21,14 +21,14 @@ import java.util.Set;
  * Each template corresponds to a specific server feature (basic, TLS, relay, etc.).
  * </p>
  */
-@Slf4j
 @Component
 public class ConfigGeneratorService {
-
+    private static final Logger log = LoggerFactory.getLogger(ConfigGeneratorService.class);
     private static final String TEMPLATE_DIR = "config-templates/";
     private static final String TEMPLATE_SUFFIX = ".json";
-
-    /** Map of template type name → human-readable description */
+    /**
+     * Map of template type name → human-readable description
+     */
     private static final Map<String, String> TEMPLATE_DESCRIPTIONS = new LinkedHashMap<>();
 
     static {
@@ -75,14 +75,10 @@ public class ConfigGeneratorService {
      */
     public String loadTemplate(String type) throws IOException {
         String templateResource = TEMPLATE_DIR + type + TEMPLATE_SUFFIX;
-
         ClassPathResource resource = new ClassPathResource(templateResource);
         if (!resource.exists()) {
-            throw new IllegalArgumentException(
-                "Unknown config type: '" + type + "'. Available types: " + String.join(", ", getAvailableTypes())
-            );
+            throw new IllegalArgumentException("Unknown config type: \'" + type + "\'. Available types: " + String.join(", ", getAvailableTypes()));
         }
-
         try (InputStream is = resource.getInputStream()) {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         }
@@ -98,14 +94,12 @@ public class ConfigGeneratorService {
      */
     public void generate(String type, String outputPath) throws IOException {
         String content = loadTemplate(type);
-
         Path outPath = Paths.get(outputPath);
         if (outPath.getParent() != null) {
             Files.createDirectories(outPath.getParent());
         }
         Files.writeString(outPath, content, StandardCharsets.UTF_8);
-
-        log.info("Generated config type '{}' → {}", type, outPath.toAbsolutePath());
+        log.info("Generated config type \'{}\' → {}", type, outPath.toAbsolutePath());
     }
 
     /**
@@ -131,8 +125,6 @@ public class ConfigGeneratorService {
      */
     public void printAvailableTypes() {
         System.out.println("Available config types:");
-        TEMPLATE_DESCRIPTIONS.forEach((type, desc) ->
-            System.out.printf("  %-20s %s%n", type, desc)
-        );
+        TEMPLATE_DESCRIPTIONS.forEach((type, desc) -> System.out.printf("  %-20s %s%n", type, desc));
     }
 }

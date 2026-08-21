@@ -3,17 +3,12 @@ package io.github.anandb.mockserver.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-
 /**
  * Parser for JSON documents with extended syntax support:
  * - C++ style comments: // and /* *\/
  * - Multiline strings using backticks (`)
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class JsonCommentParser {
-
     private static final JsonMapper objectMapper = MapperSupplier.getMapper();
 
     /**
@@ -28,10 +23,8 @@ public final class JsonCommentParser {
         if (jsonWithComments == null) {
             throw new IllegalArgumentException("JSON string cannot be null");
         }
-
         String processedJson = removeCommentsAndConvertMultilineStrings(jsonWithComments);
         String expandedJson = VariableExpander.expand(processedJson);
-
         try {
             return objectMapper.readTree(expandedJson);
         } catch (Exception e) {
@@ -51,7 +44,6 @@ public final class JsonCommentParser {
         if (jsonWithComments == null) {
             throw new IllegalArgumentException("JSON string cannot be null");
         }
-
         String cleaned = removeCommentsAndConvertMultilineStrings(jsonWithComments);
         return VariableExpander.expand(cleaned);
     }
@@ -63,37 +55,31 @@ public final class JsonCommentParser {
         StringBuilder result = new StringBuilder();
         int i = 0;
         int length = json.length();
-
         while (i < length) {
             // Check for multiline string (`)
             if (json.charAt(i) == '`') {
                 i = processMultilineString(json, i, result);
                 continue;
             }
-
             // Check for single-line comment (//)
             if (i + 1 < length && json.charAt(i) == '/' && json.charAt(i + 1) == '/') {
                 i = skipSingleLineComment(json, i);
                 continue;
             }
-
             // Check for multi-line comment (/* */)
             if (i + 1 < length && json.charAt(i) == '/' && json.charAt(i + 1) == '*') {
                 i = skipMultiLineComment(json, i);
                 continue;
             }
-
             // Check for regular string (to avoid treating // or /* inside strings as comments)
-            if (json.charAt(i) == '"') {
+            if (json.charAt(i) == '\"') {
                 i = processRegularString(json, i, result);
                 continue;
             }
-
             // Regular character
             result.append(json.charAt(i));
             i++;
         }
-
         return result.toString();
     }
 
@@ -103,20 +89,17 @@ public final class JsonCommentParser {
     private static int processMultilineString(String json, int start, StringBuilder result) {
         int i = start + 1; // Skip opening `
         StringBuilder multilineContent = new StringBuilder();
-
         // Find the closing `
         while (i < json.length()) {
             if (json.charAt(i) == '`') {
                 // Found closing `, convert the content
                 String converted = convertMultilineToJsonString(multilineContent.toString());
-                result.append('"').append(converted).append('"');
+                result.append('\"').append(converted).append('\"');
                 return i + 1; // Skip closing `
             }
-
             multilineContent.append(json.charAt(i));
             i++;
         }
-
         throw new IllegalArgumentException("Unclosed multiline string starting at position " + start);
     }
 
@@ -128,21 +111,20 @@ public final class JsonCommentParser {
      */
     private static String convertMultilineToJsonString(String content) {
         StringBuilder result = new StringBuilder();
-
         for (int i = 0; i < content.length(); i++) {
             char c = content.charAt(i);
-
             switch (c) {
                 case '\n' -> result.append("\\n");
                 case '\r' -> {
                     // Skip \r or convert to \n if not followed by \n
                     if (i + 1 < content.length() && content.charAt(i + 1) == '\n') {
-                        // \r\n -> will be handled by \n case
-                    } else {
+                    } else 
+                    // \r\n -> will be handled by \n case
+                    {
                         result.append("\\n");
                     }
                 }
-                case '"' -> result.append("\\\"");
+                case '\"' -> result.append("\\\"");
                 case '\\' -> result.append("\\\\");
                 case '\t' -> result.append("\\t");
                 case '\b' -> result.append("\\b");
@@ -150,7 +132,6 @@ public final class JsonCommentParser {
                 default -> result.append(c);
             }
         }
-
         return result.toString();
     }
 
@@ -160,25 +141,21 @@ public final class JsonCommentParser {
     private static int processRegularString(String json, int start, StringBuilder result) {
         result.append(json.charAt(start)); // Append opening "
         int i = start + 1;
-
         while (i < json.length()) {
             char c = json.charAt(i);
             result.append(c);
-
             if (c == '\\') {
                 // Escape sequence, skip next character
                 i++;
                 if (i < json.length()) {
                     result.append(json.charAt(i));
                 }
-            } else if (c == '"') {
+            } else if (c == '\"') {
                 // End of string
                 return i + 1;
             }
-
             i++;
         }
-
         throw new IllegalArgumentException("Unclosed string starting at position " + start);
     }
 
@@ -187,11 +164,9 @@ public final class JsonCommentParser {
      */
     private static int skipSingleLineComment(String json, int start) {
         int i = start + 2; // Skip //
-
         while (i < json.length() && json.charAt(i) != '\n' && json.charAt(i) != '\r') {
             i++;
         }
-
         // Include the newline character if present
         if (i < json.length() && (json.charAt(i) == '\n' || json.charAt(i) == '\r')) {
             i++;
@@ -200,7 +175,6 @@ public final class JsonCommentParser {
                 i++;
             }
         }
-
         return i;
     }
 
@@ -209,14 +183,15 @@ public final class JsonCommentParser {
      */
     private static int skipMultiLineComment(String json, int start) {
         int i = start + 2; // Skip /*
-
         while (i + 1 < json.length()) {
             if (json.charAt(i) == '*' && json.charAt(i + 1) == '/') {
                 return i + 2; // Skip */
             }
             i++;
         }
-
         throw new IllegalArgumentException("Unclosed multi-line comment starting at position " + start);
+    }
+
+    private JsonCommentParser() {
     }
 }

@@ -1,10 +1,8 @@
 package io.github.anandb.mockserver.util;
 
-import lombok.experimental.UtilityClass;
-import lombok.extern.slf4j.Slf4j;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.mockserver.model.HttpRequest;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,9 +11,8 @@ import java.util.stream.Collectors;
 /**
  * Utility class for common HTTP request processing tasks.
  */
-@Slf4j
-@UtilityClass
-public class RequestUtils {
+public final class RequestUtils {
+    private static final Logger log = LoggerFactory.getLogger(RequestUtils.class);
 
     /**
      * Extracts path variables from a request path based on a path pattern.
@@ -26,30 +23,23 @@ public class RequestUtils {
      */
     public static Map<String, String> extractPathVariables(String requestPath, String pathPattern) {
         Map<String, String> pathVariables = new HashMap<>();
-
         if (pathPattern == null || requestPath == null) {
             return pathVariables;
         }
-
         String[] patternSegments = pathPattern.split("/");
         String[] pathSegments = requestPath.split("/");
-
         if (patternSegments.length != pathSegments.length) {
-            log.debug("Path segment count mismatch: pattern has {} segments, request has {}",
-                     patternSegments.length, pathSegments.length);
+            log.debug("Path segment count mismatch: pattern has {} segments, request has {}", patternSegments.length, pathSegments.length);
             return pathVariables;
         }
-
         for (int i = 0; i < patternSegments.length; i++) {
             String patternSegment = patternSegments[i];
             String pathSegment = pathSegments[i];
-
             if (patternSegment.startsWith("{") && patternSegment.endsWith("}")) {
                 String variableName = patternSegment.substring(1, patternSegment.length() - 1);
                 pathVariables.put(variableName, pathSegment);
             }
         }
-
         return pathVariables;
     }
 
@@ -63,17 +53,11 @@ public class RequestUtils {
         if (request.getHeaders() == null || request.getHeaders().isEmpty()) {
             return new HashMap<>();
         }
+        return request.getHeaders().getEntries().stream().filter(header -> header.getName() != null && header.getName().getValue() != null).filter(header -> header.getValues() != null && !header.getValues().isEmpty()).collect(Collectors.toMap(header -> header.getName().getValue(), header -> header.getValues().stream().map(val -> val.getValue()).filter(java.util.Objects::nonNull).collect(Collectors.toList()), (v1, v2) -> v1 // Handle duplicates
+        ));
+    }
 
-        return request.getHeaders().getEntries().stream()
-                .filter(header -> header.getName() != null && header.getName().getValue() != null)
-                .filter(header -> header.getValues() != null && !header.getValues().isEmpty())
-                .collect(Collectors.toMap(
-                        header -> header.getName().getValue(),
-                        header -> header.getValues().stream()
-                                .map(val -> val.getValue())
-                                .filter(java.util.Objects::nonNull)
-                                .collect(Collectors.toList()),
-                        (v1, v2) -> v1 // Handle duplicates
-                ));
+    private RequestUtils() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 }

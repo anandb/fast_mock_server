@@ -5,13 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.mockserver.integration.ClientAndServer;
 import org.springframework.stereotype.Service;
-
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import io.github.anandb.mockserver.exception.ServerAlreadyExistsException;
 import io.github.anandb.mockserver.exception.ServerCreationException;
 import io.github.anandb.mockserver.exception.ServerNotFoundException;
@@ -24,29 +23,22 @@ import io.github.anandb.mockserver.strategy.ResponseStrategy;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Service for managing multiple MockServer instances.
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class MockServerManager {
-
+    private static final Logger log = LoggerFactory.getLogger(MockServerManager.class);
     private final TlsConfigurationService tlsConfigService;
     private final KubernetesTunnelService kubernetesTunnelService;
     private final MockServerOperationsFactory operationsFactory;
     private final List<ResponseStrategy> strategies;
     private Map<String, ServerInstance> servers = new ConcurrentHashMap<>();
     private volatile boolean shuttingDown = false;
-
     private final Object serverCreationLock = new Object();
 
     public ServerInfo createServer(ServerCreationRequest request) {
         String serverId = request.getServerId();
-
         // Synchronized duplicate check — server creation is inherently slow
         // (network calls, file I/O), so the lock cost is negligible vs. the work.
         synchronized (serverCreationLock) {
@@ -54,12 +46,10 @@ public class MockServerManager {
                 throw new ServerAlreadyExistsException(serverId);
             }
         }
-
         ClientAndServer server = null;
         ServerInstance instance = null;
         try {
             log.info("Creating server: {} on port {}", serverId, request.getPort());
-
             // For TLS servers, we must hold the TLS lock from configuration through
             // server creation to prevent concurrent servers from overwriting the
             // global ConfigurationProperties.
@@ -68,28 +58,14 @@ public class MockServerManager {
                 if (request.isTlsEnabled()) {
                     tlsConfigService.configureTls(serverId, request.getTlsConfig());
                 }
-
                 server = ClientAndServer.startClientAndServer(request.getPort());
             }
-
-            instance = new ServerInstance(
-                serverId,
-                request.getPort(),
-                server,
-                request.getTlsConfig(),
-                request.getGlobalHeaders(),
-                request.getBasicAuthConfig(),
-                request.getRelays(),
-                LocalDateTime.now(),
-                request.getDescription()
-            );
-
+            instance = new ServerInstance(serverId, request.getPort(), server, request.getTlsConfig(), request.getGlobalHeaders(), request.getBasicAuthConfig(), request.getRelays(), LocalDateTime.now(), request.getDescription());
             if (request.isRelayEnabled()) {
                 log.info("Configuring relay for server: {}", serverId);
                 startTunnelsSequentially(instance, request.getRelays());
                 configureRelay(instance);
             }
-
             // Register inside synchronized block to prevent duplicate creation
             synchronized (serverCreationLock) {
                 if (servers.containsKey(serverId)) {
@@ -101,7 +77,6 @@ public class MockServerManager {
             }
             log.info("Successfully created server: {} at {}", serverId, instance.getBaseUrl());
             return toServerInfo(instance);
-
         } catch (Exception e) {
             log.error("Failed to create server: {}", serverId, e);
             // Clean up any tunnels that were started before the failure
@@ -134,9 +109,7 @@ public class MockServerManager {
     }
 
     public List<ServerInfo> listServers() {
-        return servers.values().stream()
-            .map(this::toServerInfo)
-            .toList();
+        return servers.values().stream().map(this::toServerInfo).toList();
     }
 
     public boolean deleteServer(String serverId) {
@@ -144,7 +117,6 @@ public class MockServerManager {
         if (instance == null) {
             throw new ServerNotFoundException(serverId);
         }
-
         cleanupResources(instance, serverId);
         log.info("Successfully deleted server: {}", serverId);
         return true;
@@ -156,10 +128,8 @@ public class MockServerManager {
         boolean tunnelsStopped = stopTunnels(instance);
         boolean serverStopped = stopMockServer(instance);
         tlsConfigService.cleanupServerCertificates(serverId);
-
         if (!tunnelsStopped || !serverStopped) {
-            log.warn("Partial cleanup for server: {} — tunnels={}, server={}",
-                serverId, tunnelsStopped, serverStopped);
+            log.warn("Partial cleanup for server: {} — tunnels={}, server={}", serverId, tunnelsStopped, serverStopped);
         }
     }
 
@@ -184,43 +154,24 @@ public class MockServerManager {
     }
 
     private ServerInfo toServerInfo(ServerInstance instance) {
-        return ServerInfo.builder()
-            .serverId(instance.serverId())
-            .port(instance.port())
-            .description(instance.description())
-            .protocol(instance.getProtocol())
-            .baseUrl(instance.getBaseUrl())
-            .tlsEnabled(instance.isTlsEnabled())
-            .mtlsEnabled(instance.isMtlsEnabled())
-            .globalHeaders(instance.globalHeaders())
-            .basicAuthEnabled(instance.isBasicAuthEnabled())
-            .relayEnabled(instance.isRelayEnabled())
-            .createdAt(instance.createdAt())
-            .status(instance.isRunning() ? "running" : "stopped")
-            .build();
+        return ServerInfo.builder().serverId(instance.serverId()).port(instance.port()).description(instance.description()).protocol(instance.getProtocol()).baseUrl(instance.getBaseUrl()).tlsEnabled(instance.isTlsEnabled()).mtlsEnabled(instance.isMtlsEnabled()).globalHeaders(instance.globalHeaders()).basicAuthEnabled(instance.isBasicAuthEnabled()).relayEnabled(instance.isRelayEnabled()).createdAt(instance.createdAt()).status(instance.isRunning() ? "running" : "stopped").build();
     }
 
     private void startTunnelsSequentially(ServerInstance instance, List<RelayConfig> relays) {
         if (relays == null) {
             return;
         }
-
         for (RelayConfig relay : relays) {
             if (relay.isTunnelEnabled()) {
                 try {
-                    log.info("Starting tunnel for relay in namespace: {} with pod prefix: {}",
-                            relay.getTunnelConfig().getNamespace(), relay.getTunnelConfig().getPodPrefix());
-
+                    log.info("Starting tunnel for relay in namespace: {} with pod prefix: {}", relay.getTunnelConfig().getNamespace(), relay.getTunnelConfig().getPodPrefix());
                     if (!kubernetesTunnelService.validateKubectl()) {
                         throw new ServerCreationException("kubectl is not installed or not accessible");
                     }
-
                     int hostPort = kubernetesTunnelService.findAvailablePort();
                     Process tunnelProcess = kubernetesTunnelService.startTunnel(relay.getTunnelConfig(), hostPort);
-
                     relay.setAssignedHostPort(hostPort);
                     instance.addTunnel(relay.getTunnelConfig().getNamespace() + ":" + relay.getTunnelConfig().getPodPrefix(), tunnelProcess);
-
                     log.info("Tunnel started on host port: {}", hostPort);
                 } catch (Exception e) {
                     log.error("Failed to start tunnel for relay", e);
@@ -235,7 +186,6 @@ public class MockServerManager {
         if (tunnels == null || tunnels.isEmpty()) {
             return true;
         }
-
         log.info("Stopping {} tunnels for server: {}", tunnels.size(), instance.serverId());
         boolean allStopped = true;
         for (Map.Entry<String, Process> entry : tunnels.entrySet()) {
@@ -271,13 +221,16 @@ public class MockServerManager {
         // Use a standard glob catch-all path
         ObjectNode requestNode = JsonNodeFactory.instance.objectNode();
         requestNode.put("path", "/**");
-
-        EnhancedExpectation relayDto = EnhancedExpectation.builder()
-                .httpRequest(requestNode)
-                .build();
-
+        EnhancedExpectation relayDto = EnhancedExpectation.builder().httpRequest(requestNode).build();
         MockServerOperations operations = operationsFactory.create(instance.server());
         // Use very low priority to ensure this acts as a fallback for specific expectations
         operations.configureEnhancedExpectation(relayDto, instance.globalHeaders(), strategies, instance.relays(), -1000);
+    }
+
+    public MockServerManager(final TlsConfigurationService tlsConfigService, final KubernetesTunnelService kubernetesTunnelService, final MockServerOperationsFactory operationsFactory, final List<ResponseStrategy> strategies) {
+        this.tlsConfigService = tlsConfigService;
+        this.kubernetesTunnelService = kubernetesTunnelService;
+        this.operationsFactory = operationsFactory;
+        this.strategies = strategies;
     }
 }

@@ -3,15 +3,13 @@ package io.github.anandb.mockserver.strategy;
 import io.github.anandb.mockserver.model.EnhancedExpectation;
 import io.github.anandb.mockserver.service.FreemarkerTemplateService;
 import io.github.anandb.mockserver.util.FreemarkerTemplateDetector;
-
-import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.lang3.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.model.MediaType;
 import org.springframework.stereotype.Component;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,12 +21,10 @@ import java.util.stream.Stream;
 /**
  * Strategy for handling dynamic responses involving files or templates.
  */
-@Slf4j
 @Component
 public class DynamicFileStrategy implements ResponseStrategy {
-
+    private static final Logger log = LoggerFactory.getLogger(DynamicFileStrategy.class);
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
-
     private final FreemarkerTemplateService templateService;
 
     public DynamicFileStrategy(FreemarkerTemplateService templateService) {
@@ -38,12 +34,10 @@ public class DynamicFileStrategy implements ResponseStrategy {
     @Override
     public HttpResponse handle(HttpRequest request, EnhancedExpectation config, Map<String, Object> context) {
         String pathPattern = (String) context.get("pathPattern");
-
         if (config.getHttpResponse() == null) {
             log.error("No HTTP response configured for request: {}", request.getPath());
             return HttpResponse.response().withStatusCode(500).withBody("No response configured");
         }
-
         if (config.isFileResponse()) {
             return handleFileResponse(request, config, pathPattern);
         } else {
@@ -56,14 +50,12 @@ public class DynamicFileStrategy implements ResponseStrategy {
         try {
             // 1. Evaluate file path template
             String filePath = evaluateFilePathTemplate(filePathTemplate, request, pathPattern);
-
             // 2. Find file with prefix (glob logic)
             File file = findFirstFileWithPrefix(filePath);
             if (file == null) {
                 log.error("File not found using prefix: {}", filePath);
                 return HttpResponse.response().withStatusCode(404).withBody("File not found: " + filePath);
             }
-
             // Determine configured base directory from template
             String staticPrefix = filePathTemplate;
             int templateStart = filePathTemplate.indexOf("${");
@@ -84,7 +76,6 @@ public class DynamicFileStrategy implements ResponseStrategy {
             } catch (IOException e) {
                 allowedBaseLimit = baseDirFile.getAbsoluteFile().toPath().normalize();
             }
-
             // 3. Path traversal check — reject if the evaluated path contains ".." segments
             // or if the resolved file lies outside the allowed base limit directory.
             Path canonicalPath = file.getCanonicalFile().toPath();
@@ -93,35 +84,24 @@ public class DynamicFileStrategy implements ResponseStrategy {
                 log.warn("Path traversal attempt blocked: file {} is outside allowed base directory {}", canonicalPath, allowedBaseLimit);
                 return HttpResponse.response().withStatusCode(403).withBody("Access denied");
             }
-
             // 4. File size guard — prevent OOM on large files
             long fileSize = Files.size(canonicalPath);
             if (fileSize > MAX_FILE_SIZE) {
                 log.warn("File too large ({} bytes): {}", fileSize, filePath);
-                return HttpResponse.response().withStatusCode(413)
-                    .withBody("File too large: " + fileSize + " bytes (max " + MAX_FILE_SIZE + ")");
+                return HttpResponse.response().withStatusCode(413).withBody("File too large: " + fileSize + " bytes (max " + MAX_FILE_SIZE + ")");
             }
-
             // 5. Serve file
             byte[] fileContent = Files.readAllBytes(canonicalPath);
             String fileName = file.getName();
             String contentType = determineContentType(canonicalPath);
-
-            HttpResponse response = HttpResponse.response()
-                    .withStatusCode(config.getHttpResponse().getStatusCode())
-                    .withHeaders(config.getHttpResponse().getHeaderList())
-                    .withContentType(MediaType.parse(contentType));
-
+            HttpResponse response = HttpResponse.response().withStatusCode(config.getHttpResponse().getStatusCode()).withHeaders(config.getHttpResponse().getHeaderList()).withContentType(MediaType.parse(contentType));
             String disposition = config.getFileDisposition();
             if ("inline".equalsIgnoreCase(disposition)) {
                 response.withBody(fileContent);
             } else {
-                response.withHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
-                        .withBody(fileContent);
+                response.withHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"").withBody(fileContent);
             }
-
             return response;
-
         } catch (Exception e) {
             log.error("Error creating file response", e);
             return HttpResponse.response().withStatusCode(500).withBody("Error creating file response: " + e.getMessage());
@@ -132,11 +112,7 @@ public class DynamicFileStrategy implements ResponseStrategy {
         try {
             String templateString = config.getHttpResponse().getBodyAsString();
             String processedBody = templateService.processTemplateWithRequest(templateString, request, pathPattern);
-
-            return HttpResponse.response()
-                    .withStatusCode(config.getHttpResponse().getStatusCode())
-                    .withHeaders(config.getHttpResponse().getHeaderList())
-                    .withBody(processedBody);
+            return HttpResponse.response().withStatusCode(config.getHttpResponse().getStatusCode()).withHeaders(config.getHttpResponse().getHeaderList()).withBody(processedBody);
         } catch (Exception e) {
             log.error("Error processing Freemarker template", e);
             return HttpResponse.response().withStatusCode(500).withBody("Error processing template: " + e.getMessage());
@@ -169,7 +145,7 @@ public class DynamicFileStrategy implements ResponseStrategy {
             }
             return filePathTemplate.strip();
         } catch (Exception e) {
-            log.warn("Failed to evaluate file path template '{}', using as-is: {}", filePathTemplate, e.getMessage());
+            log.warn("Failed to evaluate file path template \'{}\', using as-is: {}", filePathTemplate, e.getMessage());
             return filePathTemplate.strip();
         }
     }
@@ -179,18 +155,11 @@ public class DynamicFileStrategy implements ResponseStrategy {
             int lastSlash = filePathPrefix.lastIndexOf('/');
             String baseDir = lastSlash != -1 ? filePathPrefix.substring(0, lastSlash) : ".";
             String fileNamePrefix = lastSlash != -1 ? filePathPrefix.substring(lastSlash + 1) : filePathPrefix;
-
             try (Stream<Path> paths = Files.walk(Paths.get(baseDir).normalize(), 2)) {
-                return paths
-                        .limit(10000)
-                        .filter(Files::isRegularFile)
-                        .filter(path -> {
-                            String name = ObjectUtils.getIfNull(path.getFileName(), () -> "").toString();
-                            return name.startsWith(fileNamePrefix);
-                        })
-                        .map(Path::toFile)
-                        .findFirst()
-                        .orElse(null);
+                return paths.limit(10000).filter(Files::isRegularFile).filter(path -> {
+                    String name = ObjectUtils.getIfNull(path.getFileName(), () -> "").toString();
+                    return name.startsWith(fileNamePrefix);
+                }).map(Path::toFile).findFirst().orElse(null);
             }
         } catch (Exception e) {
             log.debug("Error searching for file with prefix: {}", filePathPrefix, e);

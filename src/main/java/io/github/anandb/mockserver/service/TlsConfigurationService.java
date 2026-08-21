@@ -2,12 +2,11 @@ package io.github.anandb.mockserver.service;
 
 import io.github.anandb.mockserver.exception.InvalidCertificateException;
 import io.github.anandb.mockserver.model.TlsConfig;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.mockserver.configuration.ConfigurationProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
@@ -37,13 +36,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * across all MockServer instances in the JVM.
  * </p>
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class TlsConfigurationService {
-
+    private static final Logger log = LoggerFactory.getLogger(TlsConfigurationService.class);
     private final CertificateValidator certificateValidator;
-
     /**
      * Lock protecting MockServer's global static {@code ConfigurationProperties}.
      * Must be held when writing TLS cert/key paths AND during server creation
@@ -52,16 +48,19 @@ public class TlsConfigurationService {
      * ClientAndServer.startClientAndServer().
      */
     private final Object tlsConfigLock = new Object();
-
-    /** Directory path for storing temporary certificate files */
+    /**
+     * Directory path for storing temporary certificate files
+     */
     @Value("${mockserver.cert.temp-dir:/tmp/mockserver-certs}")
     private String tempCertDir;
-
-    /** Whether to clean up certificate files on application shutdown */
+    /**
+     * Whether to clean up certificate files on application shutdown
+     */
     @Value("${mockserver.cert.cleanup-on-shutdown:true}")
     private boolean cleanupOnShutdown;
-
-    /** Registry tracking certificate files for each server to enable cleanup */
+    /**
+     * Registry tracking certificate files for each server to enable cleanup
+     */
     private final Map<String, List<Path>> serverCertFiles = new ConcurrentHashMap<>();
 
     /**
@@ -112,26 +111,18 @@ public class TlsConfigurationService {
      */
     public void configureTls(String serverId, TlsConfig tlsConfig) throws IOException {
         log.info("Configuring TLS for server: {}", serverId);
-
         // Validate certificates
-        certificateValidator.validateCertificateKeyPair(
-            tlsConfig.getCertificate(),
-            tlsConfig.getPrivateKey()
-        );
-
+        certificateValidator.validateCertificateKeyPair(tlsConfig.getCertificate(), tlsConfig.getPrivateKey());
         // Write certificates to temp files
         String certPath = writeCertificateToTemp(serverId, tlsConfig.getCertificate(), "cert");
         String keyPath = writeCertificateToTemp(serverId, tlsConfig.getPrivateKey(), "key");
-
         // Configure MockServer with certificate paths — synchronized because
         // ConfigurationProperties is global static state shared across all MockServer instances.
         synchronized (tlsConfigLock) {
             ConfigurationProperties.certificateAuthorityCertificate(certPath);
             ConfigurationProperties.privateKeyPath(keyPath);
         }
-
         log.info("TLS configured for server {} with cert: {} and key: {}", serverId, certPath, keyPath);
-
         // Configure mTLS if provided
         if (tlsConfig.hasMtls()) {
             configureMtls(serverId, tlsConfig);
@@ -152,29 +143,16 @@ public class TlsConfigurationService {
      */
     private void configureMtls(String serverId, TlsConfig tlsConfig) throws IOException {
         log.info("Configuring mTLS for server: {}", serverId);
-
         // Validate CA certificate
-        certificateValidator.validateCaCertificate(
-            tlsConfig.getMtlsConfig().getCaCertificate()
-        );
-
+        certificateValidator.validateCaCertificate(tlsConfig.getMtlsConfig().getCaCertificate());
         // Write CA certificate to temp file
-        String caCertPath = writeCertificateToTemp(
-            serverId,
-            tlsConfig.getMtlsConfig().getCaCertificate(),
-            "ca"
-        );
-
+        String caCertPath = writeCertificateToTemp(serverId, tlsConfig.getMtlsConfig().getCaCertificate(), "ca");
         // Configure MockServer for mTLS — same global state concern as configureTls
         synchronized (tlsConfigLock) {
-            ConfigurationProperties.tlsMutualAuthenticationRequired(
-                tlsConfig.getMtlsConfig().isRequireClientAuth()
-            );
+            ConfigurationProperties.tlsMutualAuthenticationRequired(tlsConfig.getMtlsConfig().isRequireClientAuth());
             ConfigurationProperties.tlsMutualAuthenticationCertificateChain(caCertPath);
         }
-
-        log.info("mTLS configured for server {} with CA cert: {}, requireClientAuth: {}",
-            serverId, caCertPath, tlsConfig.getMtlsConfig().isRequireClientAuth());
+        log.info("mTLS configured for server {} with CA cert: {}, requireClientAuth: {}", serverId, caCertPath, tlsConfig.getMtlsConfig().isRequireClientAuth());
     }
 
     /**
@@ -191,38 +169,26 @@ public class TlsConfigurationService {
      * @throws IOException if the file cannot be written
      * @throws InvalidCertificateException if the content is empty
      */
-    String writeCertificateToTemp(String serverId, String content, String prefix)
-            throws IOException {
-
+    String writeCertificateToTemp(String serverId, String content, String prefix) throws IOException {
         if (content == null || content.trim().isEmpty()) {
             throw new InvalidCertificateException("Certificate content is empty");
         }
-
         // Create temp file
-        Path tempFile = Files.createTempFile(
-            Paths.get(tempCertDir),
-            serverId + "-" + prefix + "-",
-            ".pem"
-        );
-
+        Path tempFile = Files.createTempFile(Paths.get(tempCertDir), serverId + "-" + prefix + "-", ".pem");
         // Write content
         Files.writeString(tempFile, content, StandardCharsets.UTF_8);
-
         // Set restrictive permissions (owner read/write only) on Unix systems
         try {
             String osName = System.getProperty("os.name");
             if (osName == null || !osName.toLowerCase().contains("win")) {
-                Files.setPosixFilePermissions(tempFile,
-                    PosixFilePermissions.fromString("rw-------"));
+                Files.setPosixFilePermissions(tempFile, PosixFilePermissions.fromString("rw-------"));
                 log.debug("Set restrictive permissions on: {}", tempFile);
             }
         } catch (UnsupportedOperationException e) {
             log.warn("Cannot set POSIX permissions on this file system");
         }
-
         // Track for cleanup
         serverCertFiles.computeIfAbsent(serverId, k -> new CopyOnWriteArrayList<>()).add(tempFile);
-
         log.debug("Wrote {} certificate to temp file: {}", prefix, tempFile);
         return tempFile.toString();
     }
@@ -283,5 +249,9 @@ public class TlsConfigurationService {
     public int getCertificateFileCount(String serverId) {
         List<Path> files = serverCertFiles.get(serverId);
         return files != null ? files.size() : 0;
+    }
+
+    public TlsConfigurationService(final CertificateValidator certificateValidator) {
+        this.certificateValidator = certificateValidator;
     }
 }

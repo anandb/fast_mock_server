@@ -4,17 +4,14 @@ import io.github.anandb.mockserver.model.HttpRequestContext;
 import io.github.anandb.mockserver.util.RequestUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-
-import lombok.extern.slf4j.Slf4j;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.mockserver.model.Cookie;
 import org.mockserver.model.HttpRequest;
 import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -30,10 +27,9 @@ import java.util.stream.Collectors;
  * and cookies, then evaluates Freemarker templates using this context.
  * </p>
  */
-@Slf4j
 @Service
 public class FreemarkerTemplateService {
-
+    private static final Logger log = LoggerFactory.getLogger(FreemarkerTemplateService.class);
     private final Configuration freemarkerConfig;
     private final ObjectMapper objectMapper;
     private final Map<String, Template> templateCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -59,14 +55,11 @@ public class FreemarkerTemplateService {
         if (httpRequest.getHeaderList() != null) {
             httpRequest.getHeaderList().forEach(header -> {
                 if (header.getValues() != null && !header.getValues().isEmpty()) {
-                    String joined = header.getValues().stream()
-                            .map(v -> v.getValue())
-                            .collect(Collectors.joining(", "));
+                    String joined = header.getValues().stream().map(v -> v.getValue()).collect(Collectors.joining(", "));
                     headers.put(header.getName().getValue(), joined);
                 }
             });
         }
-
         // Parse body as JSON
         JsonNode body;
         if (httpRequest.getBodyAsString() != null && !httpRequest.getBodyAsString().isEmpty()) {
@@ -79,7 +72,6 @@ public class FreemarkerTemplateService {
         } else {
             body = objectMapper.createObjectNode();
         }
-
         // Parse cookies
         Map<String, String> cookies = new HashMap<>();
         if (httpRequest.getCookieList() != null) {
@@ -87,19 +79,9 @@ public class FreemarkerTemplateService {
                 cookies.put(cookie.getName().getValue(), cookie.getValue().getValue());
             }
         }
-
         // Extract path variables using utility
-        Map<String, String> pathVariables = RequestUtils.extractPathVariables(
-            httpRequest.getPath().getValue(),
-            pathPattern
-        );
-
-        return HttpRequestContext.builder()
-                .headers(headers)
-                .body(body)
-                .cookies(cookies)
-                .pathVariables(pathVariables)
-                .build();
+        Map<String, String> pathVariables = RequestUtils.extractPathVariables(httpRequest.getPath().getValue(), pathPattern);
+        return HttpRequestContext.builder().headers(headers).body(body).cookies(cookies).pathVariables(pathVariables).build();
     }
 
     /**
@@ -111,32 +93,23 @@ public class FreemarkerTemplateService {
      * @throws IOException if template processing fails
      * @throws TemplateException if template evaluation fails
      */
-    public String processTemplate(String templateString, HttpRequestContext context)
-            throws IOException, TemplateException {
-
+    public String processTemplate(String templateString, HttpRequestContext context) throws IOException, TemplateException {
         Template template = templateCache.get(templateString);
         if (template == null) {
-            template = new Template(
-                "response-template",
-                new StringReader(templateString),
-                freemarkerConfig
-            );
+            template = new Template("response-template", new StringReader(templateString), freemarkerConfig);
             if (templateCache.size() < 1000) {
                 templateCache.putIfAbsent(templateString, template);
             }
         }
-
         // Prepare data model for Freemarker
         Map<String, Object> dataModel = new HashMap<>();
         dataModel.put("headers", context.getHeaders());
         dataModel.put("body", objectMapper.convertValue(context.getBody(), Map.class));
         dataModel.put("cookies", context.getCookies());
         dataModel.put("pathVariables", context.getPathVariables() != null ? context.getPathVariables() : new HashMap<>());
-
         // Process template
         StringWriter writer = new StringWriter();
         template.process(dataModel, writer);
-
         return writer.toString();
     }
 
@@ -153,8 +126,7 @@ public class FreemarkerTemplateService {
      * @throws IOException if template processing fails
      * @throws TemplateException if template evaluation fails
      */
-    public String processTemplateWithRequest(String templateString, HttpRequest httpRequest, String pathPattern)
-            throws IOException, TemplateException {
+    public String processTemplateWithRequest(String templateString, HttpRequest httpRequest, String pathPattern) throws IOException, TemplateException {
         HttpRequestContext context = parseHttpRequest(httpRequest, pathPattern);
         return processTemplate(templateString, context);
     }

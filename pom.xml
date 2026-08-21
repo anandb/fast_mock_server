@@ -68,12 +68,7 @@
             </exclusions>
         </dependency>
 
-        <!-- Lombok (Optional, for reducing boilerplate) -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
+
 
         <!-- FreeMarker Template Engine -->
         <dependency>
@@ -139,12 +134,7 @@
                             <BP_JVM_TYPE>JRE</BP_JVM_TYPE>
                         </env>
                     </image>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
+
                 </configuration>
             </plugin>
             <plugin>
