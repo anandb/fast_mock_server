@@ -4,7 +4,9 @@ import io.github.anandb.mockserver.exception.InvalidCertificateException;
 import io.github.anandb.mockserver.model.MtlsConfig;
 import io.github.anandb.mockserver.model.TlsConfig;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +39,31 @@ import static org.mockito.Mockito.doThrow;
  */
 @DisplayName("TlsConfigurationService Tests")
 class TlsConfigurationServiceTest {
+
+    /**
+     * MockServer's {@code ConfigurationProperties} is JVM-global static state.
+     * Capture the original values before any test mutates them so they can be
+     * restored afterwards, otherwise other test classes sharing the JVM (e.g.
+     * integration tests starting MockServer instances with TLS) will observe
+     * corrupted global configuration.
+     */
+    private static String originalCertificateAuthorityCertificate;
+    private static String originalPrivateKeyPath;
+    private static String originalTlsMutualAuthenticationCertificateChain;
+    private static boolean originalTlsMutualAuthenticationRequired;
+
+    @BeforeAll
+    static void captureGlobalConfiguration() {
+        originalCertificateAuthorityCertificate = ConfigurationProperties.certificateAuthorityCertificate();
+        originalPrivateKeyPath = ConfigurationProperties.privateKeyPath();
+        originalTlsMutualAuthenticationCertificateChain = ConfigurationProperties.tlsMutualAuthenticationCertificateChain();
+        originalTlsMutualAuthenticationRequired = ConfigurationProperties.tlsMutualAuthenticationRequired();
+    }
+
+    @AfterAll
+    static void restoreGlobalConfiguration() {
+        restoreCapturedConfiguration();
+    }
 
     @Mock
     private CertificateValidator certificateValidator;
@@ -77,11 +104,22 @@ class TlsConfigurationServiceTest {
 
     @AfterEach
     void tearDown() {
-        // Use empty strings instead of null to avoid NPE in ConcurrentHashMap used by mockserver
-        ConfigurationProperties.certificateAuthorityCertificate("");
-        ConfigurationProperties.privateKeyPath("");
-        ConfigurationProperties.tlsMutualAuthenticationCertificateChain("");
-        ConfigurationProperties.tlsMutualAuthenticationRequired(false);
+        // MockServer's ConfigurationProperties is JVM-global static state, so reset
+        // it to the values captured at class start after every test. Setting empty
+        // strings here would corrupt the global state (e.g. clobbering the default
+        // Certificate Authority) for any later test class in the same JVM.
+        restoreCapturedConfiguration();
+    }
+
+    private static void restoreCapturedConfiguration() {
+        if (originalCertificateAuthorityCertificate == null) {
+            // captureGlobalConfiguration() never ran (e.g. @BeforeAll failed) — nothing to restore
+            return;
+        }
+        ConfigurationProperties.certificateAuthorityCertificate(originalCertificateAuthorityCertificate);
+        ConfigurationProperties.privateKeyPath(originalPrivateKeyPath);
+        ConfigurationProperties.tlsMutualAuthenticationCertificateChain(originalTlsMutualAuthenticationCertificateChain);
+        ConfigurationProperties.tlsMutualAuthenticationRequired(originalTlsMutualAuthenticationRequired);
     }
 
     // Initialization Tests

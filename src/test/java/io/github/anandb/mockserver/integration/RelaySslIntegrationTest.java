@@ -7,6 +7,7 @@ import io.github.anandb.mockserver.util.HttpClientFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.HttpRequest;
@@ -19,6 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+/**
+ * Integration tests for relayed HTTPS requests. Performs real TLS handshakes
+ * against a MockServer instance and is therefore tagged {@code local-only}:
+ * it runs for local development but is excluded on CI via the {@code ci}
+ * Maven profile (activated by the {@code CI} environment variable).
+ */
+@Tag("local-only")
 class RelaySslIntegrationTest {
 
     private static ClientAndServer targetServer;

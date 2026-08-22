@@ -180,4 +180,29 @@
             </plugin>
         </plugins>
     </build>
+
+    <!--
+        CI profile: excludes tests that are environment-sensitive or intended
+        for local development only. Matches JUnit @Tag("local-only") (e.g.
+        RelaySslIntegrationTest, which performs real TLS handshakes and can be
+        affected by environment-specific behaviour).
+
+        Auto-activates on CI runners via the CI environment variable (set by
+        GitHub Actions and most other CI systems); can also be enabled
+        explicitly with: mvn -Pci ...
+    -->
+    <profiles>
+        <profile>
+            <id>ci</id>
+            <activation>
+                <property>
+                    <name>env.CI</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <excludedGroups>local-only</excludedGroups>
+            </properties>
+        </profile>
+    </profiles>
 </project>

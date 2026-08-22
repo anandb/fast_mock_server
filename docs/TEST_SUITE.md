@@ -26,6 +26,24 @@ src/test/
     └── application-test.properties             # Test configuration
 ```
 
+## Local-Only Tests
+
+Some tests are environment-sensitive and only run locally, not on CI:
+
+- **`RelaySslIntegrationTest`** performs real TLS handshakes against a MockServer
+  instance and is tagged `@Tag("local-only")`.
+
+These tests are excluded on CI by the `ci` Maven profile (auto-activated when the
+`CI` environment variable is set, as it is by GitHub Actions):
+
+```bash
+mvn test              # local: runs everything, including @Tag("local-only") tests
+mvn -Pci test         # explicit: excludes @Tag("local-only") tests
+CI=true mvn test      # automatic: same as -Pci (e.g. on a CI runner)
+```
+
+To run a local-only test directly regardless of profile: `mvn test -Dtest=RelaySslIntegrationTest`
+
 ## Test Categories
 
 ### 1. Service Layer Tests
