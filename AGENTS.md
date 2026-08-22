@@ -4,7 +4,7 @@ This document provides essential information for AI agents operating in this rep
 
 ## 🛠 Build and Test Commands
 
-The project uses **Maven** and **Java 25** (see `pom.xml` for current version).
+The project uses **Maven** and **Java 21** (see `pom.xml` for current version).
 
 ### Build
 ```bash
